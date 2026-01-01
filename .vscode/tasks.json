@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "📊 Generate File Tree Documentation",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/generate-file-tree.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "🔍 Analyze TypeScript Files",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Get-ChildItem -Path ${workspaceFolder}/src -Recurse -Filter *.ts | Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "📋 List Features",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Get-ChildItem -Path ${workspaceFolder}/src/features -Directory | ForEach-Object { Write-Host \"Feature: $($_.Name)\"; Get-ChildItem -Path $_.FullName -Recurse -Filter *.ts | Measure-Object | Select-Object -ExpandProperty Count | ForEach-Object { Write-Host \"  TypeScript files: $_\" } }"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

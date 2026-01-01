@@ -5,7 +5,7 @@
  * Version 2.0: i18n-ready with dynamic categories
  */
 
-import { createScraperClient } from '@/shared/infrastructure/supabase/client';
+import { createScraperClient } from '@/lib/supabase/client';
 import { DictionaryMapping, Category, CategoryType, SourceType } from '../domain/DictionaryMapping';
 import type { Locale } from '../domain/types';
 

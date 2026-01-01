@@ -1,12 +1,16 @@
 /**
- * Scraping Repository
+ * Scraping Repository - WITH NORMALIZATION
  * 
- * Purpose: Persist scraping jobs and products to database
+ * Purpose: Persist scraping jobs and products with intelligent normalization
  * Tables: scraping_jobs, textiles
+ * 
+ * Session 3: Integrated normalization system
  */
 
 import { createClient } from '@supabase/supabase-js';
 import type { ShopifyProduct, ScrapingConfig, ScrapingResult } from '../services/scrapingService';
+import { extractTermsFromShopify } from '../utils/extractTerms';
+import { normalizeTextile, type NormalizeTextileOutput } from '@/features/normalization/application/normalizeTextile';
 
 // ============================================================================
 // TYPES
@@ -86,6 +90,56 @@ function normalizeUrl(url: string): string {
 }
 
 // ============================================================================
+// HELPER: QUALITY SCORE CALCULATION
+// ============================================================================
+
+function calculateQualityScore(
+  product: ShopifyProduct,
+  normalized: NormalizeTextileOutput
+): number {
+  let score = 0;
+  
+  // Core attributes (40 points total)
+  if (normalized.material) score += 15;
+  if (normalized.color) score += 15;
+  if (normalized.pattern) score += 10;
+  
+  // Product completeness (30 points)
+  if (product.title) score += 10;
+  if (product.body_html) score += 5;
+  if (product.images && product.images.length > 0) score += 10;
+  if (product.images && product.images.length > 1) score += 5;
+  
+  // Availability (15 points)
+  if (product.variants && product.variants.length > 0) score += 10;
+  if (product.variants && product.variants[0]?.available) score += 5;
+  
+  // Price (15 points)
+  if (product.variants && product.variants[0]?.price) score += 15;
+  
+  return Math.min(100, score);
+}
+
+// ============================================================================
+// HELPER: BUILD REVIEW REASONS
+// ============================================================================
+
+function buildReviewReasons(unknowns: Record<string, string>): any[] | null {
+  const reasons = [];
+  
+  for (const [field, originalValue] of Object.entries(unknowns)) {
+    reasons.push({
+      field: `${field}_type`,
+      reason: 'unknown_term',
+      original_value: originalValue,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  return reasons.length > 0 ? reasons : null;
+}
+
+// ============================================================================
 // REPOSITORY
 // ============================================================================
 
@@ -99,15 +153,22 @@ export const scrapingRepo = {
     const normalizedUrl = normalizeUrl(params.siteUrl);
     
     try {
-      // Get site ID
-      const { data: site, error: siteError } = await supabase
+      // Get or create site
+      let { data: site } = await supabase
         .from('sites')
         .select('id')
         .eq('url', normalizedUrl)
         .single();
       
-      if (siteError || !site) {
-        throw new Error(`Site not found: ${normalizedUrl}`);
+      if (!site) {
+        const { data: newSite, error: siteError } = await supabase
+          .from('sites')
+          .insert({ url: normalizedUrl, name: normalizedUrl })
+          .select('id')
+          .single();
+        
+        if (siteError) throw siteError;
+        site = newSite;
       }
       
       // Create job
@@ -127,11 +188,9 @@ export const scrapingRepo = {
         .select('id')
         .single();
       
-      if (jobError || !job) {
-        throw new Error(`Failed to create job: ${jobError?.message}`);
-      }
+      if (jobError) throw jobError;
       
-      console.log(`✅ Scraping job created: ${job.id}`);
+      console.log(`✅ Job created: ${job.id}`);
       return job.id;
       
     } catch (error: any) {
@@ -146,22 +205,15 @@ export const scrapingRepo = {
   async startJob(jobId: string): Promise<void> {
     const supabase = createScraperClient();
     
-    try {
-      const { error } = await supabase
-        .from('scraping_jobs')
-        .update({
-          status: 'running',
-          started_at: new Date().toISOString(),
-        })
-        .eq('id', jobId);
-      
-      if (error) {
-        throw new Error(`Failed to start job: ${error.message}`);
-      }
-      
-      console.log(`▶️  Job started: ${jobId}`);
-      
-    } catch (error: any) {
+    const { error } = await supabase
+      .from('scraping_jobs')
+      .update({
+        status: 'running',
+        started_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+    
+    if (error) {
       console.error('[startJob] Error:', error.message);
       throw error;
     }
@@ -170,26 +222,21 @@ export const scrapingRepo = {
   /**
    * Update job progress
    */
-  async updateJobProgress(params: UpdateJobProgressParams): Promise<void> {
+  async updateProgress(params: UpdateJobProgressParams): Promise<void> {
     const supabase = createScraperClient();
     
-    try {
-      const { error } = await supabase
-        .from('scraping_jobs')
-        .update({
-          products_fetched: params.productsFetched,
-          products_saved: params.productsSaved,
-          products_skipped: params.productsSkipped,
-          errors_count: params.errorsCount,
-        })
-        .eq('id', params.jobId);
-      
-      if (error) {
-        console.error('[updateJobProgress] Error:', error.message);
-      }
-      
-    } catch (error: any) {
-      console.error('[updateJobProgress] Error:', error.message);
+    const { error } = await supabase
+      .from('scraping_jobs')
+      .update({
+        products_fetched: params.productsFetched,
+        products_saved: params.productsSaved,
+        products_skipped: params.productsSkipped,
+        errors_count: params.errorsCount,
+      })
+      .eq('id', params.jobId);
+    
+    if (error) {
+      console.error('[updateProgress] Error:', error.message);
     }
   },
   
@@ -199,97 +246,31 @@ export const scrapingRepo = {
   async completeJob(params: CompleteJobParams): Promise<void> {
     const supabase = createScraperClient();
     
-    try {
-      const { error } = await supabase
-        .from('scraping_jobs')
-        .update({
-          status: params.status,
-          ended_at: new Date().toISOString(),
-          products_fetched: params.result.productsFetched,
-          products_saved: params.result.productsValid,
-          products_skipped: params.result.productsSkipped,
-          errors_count: params.result.errorsCount,
-          quality_score: params.result.qualityScore,
-          error_details: params.result.errors.length > 0 ? params.result.errors : null,
-        })
-        .eq('id', params.jobId);
-      
-      if (error) {
-        throw new Error(`Failed to complete job: ${error.message}`);
-      }
-      
-      const statusEmoji = params.status === 'completed' ? '✅' : params.status === 'partial' ? '⚠️' : '❌';
-      console.log(`${statusEmoji} Job ${params.status}: ${params.jobId}`);
-      
-    } catch (error: any) {
+    const { error } = await supabase
+      .from('scraping_jobs')
+      .update({
+        status: params.status,
+        ended_at: new Date().toISOString(),
+        products_fetched: params.result.productsFetched,
+        products_saved: params.result.productsValid,
+        products_skipped: params.result.productsSkipped,
+        products_updated: 0, // Not tracked in ScrapingResult
+        errors_count: params.result.errorsCount,
+        quality_score: params.result.qualityScore,
+        logs: [], // Not tracked in ScrapingResult
+      })
+      .eq('id', params.jobId);
+    
+    if (error) {
       console.error('[completeJob] Error:', error.message);
       throw error;
     }
   },
   
   /**
-   * Get a job by ID
-   */
-  async getJob(jobId: string): Promise<DbScrapingJob | null> {
-    const supabase = createScraperClient();
-    
-    try {
-      const { data, error } = await supabase
-        .from('scraping_jobs')
-        .select('*')
-        .eq('id', jobId)
-        .single();
-      
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-        throw error;
-      }
-      
-      return data;
-      
-    } catch (error: any) {
-      console.error('[getJob] Error:', error.message);
-      return null;
-    }
-  },
-  
-  /**
-   * List jobs for a site
-   */
-  async listJobs(siteUrl: string, limit: number = 10): Promise<DbScrapingJob[]> {
-    const supabase = createScraperClient();
-    const normalizedUrl = normalizeUrl(siteUrl);
-    
-    try {
-      const { data, error } = await supabase
-        .from('scraping_jobs')
-        .select(`
-          *,
-          sites!inner (url)
-        `)
-        .eq('sites.url', normalizedUrl)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      
-      if (error) {
-        throw error;
-      }
-      
-      return data || [];
-      
-    } catch (error: any) {
-      console.error('[listJobs] Error:', error.message);
-      return [];
-    }
-  },
-  
-  /**
-   * Save products to textiles table
+   * Save products to database WITH NORMALIZATION
    * 
-   * Uses UPSERT to handle both new products and updates
-   * Maps Shopify product structure to textiles schema
+   * Session 3: Integrated intelligent normalization
    */
   async saveProducts(
     products: ShopifyProduct[],
@@ -303,33 +284,96 @@ export const scrapingRepo = {
     let updated = 0;
     let skipped = 0;
     
-    console.log(`\n💾 Saving ${products.length} products to database...`);
+    console.log(`\n💾 Saving ${products.length} products with normalization...`);
     
     for (const product of products) {
       try {
-        // Extract first variant price
+        // ========================================================================
+        // STEP 1: Extract terms from Shopify tags
+        // ========================================================================
+        const extractedTerms = extractTermsFromShopify(product);
+        
+        console.log(`   📝 Product: ${product.title}`);
+        console.log(`      Extracted: materials=${extractedTerms.materials.length}, colors=${extractedTerms.colors.length}, patterns=${extractedTerms.patterns.length}`);
+        
+        // ========================================================================
+        // STEP 2: Normalize using dictionary
+        // ========================================================================
+        const normalized = await normalizeTextile({
+          name: product.title,
+          description: product.body_html,
+          extractedTerms,
+          sourcePlatform: normalizedUrl,
+          productId: product.id.toString(),
+          imageUrl: product.images[0]?.src,
+          productUrl: `https://${normalizedUrl}/products/${product.handle}`
+        });
+        
+        console.log(`      Normalized: material=${normalized.material?.value || 'null'}, color=${normalized.color?.value || 'null'}, pattern=${normalized.pattern?.value || 'null'}`);
+        
+        if (Object.keys(normalized.unknowns).length > 0) {
+          console.log(`      ⚠️  Unknowns: ${JSON.stringify(normalized.unknowns)}`);
+        }
+        
+        // ========================================================================
+        // STEP 3: Calculate quality score
+        // ========================================================================
+        const qualityScore = calculateQualityScore(product, normalized);
+        
+        // ========================================================================
+        // STEP 4: Map to database schema
+        // ========================================================================
         const price = parseFloat(product.variants[0]?.price || '0');
         
-        // Map Shopify product to textiles schema
         const textileData = {
+          // Basic product info
           name: product.title,
           description: product.body_html || '',
           price_value: price,
-          price_currency: 'EUR', // TODO: detect from site
+          price_currency: 'EUR',
           available: product.variants[0]?.available || false,
           image_url: product.images[0]?.src || null,
-          additional_images: product.images.slice(1).map(img => img.src),
+          additional_images: product.images.length > 1 ? product.images.slice(1).map(img => img.src) : [],
+          
+          // Source tracking
           source_url: `https://${normalizedUrl}/products/${product.handle}`,
           source_platform: normalizedUrl,
           source_product_id: product.id.toString(),
           raw_data: product,
           scraped_at: new Date().toISOString(),
+          
+          // Normalized attributes
+          material_type: normalized.material?.value || null,
+          color: normalized.color?.value || null,
+          pattern: normalized.pattern?.value || null,
+          
+          // Original values (for traceability)
+          material_original: extractedTerms.materials[0] || null,
+          color_original: extractedTerms.colors[0] || null,
+          pattern_original: extractedTerms.patterns[0] || null,
+          tags_original: product.tags,
+          
+          // Confidence scores (1.0 if found in dictionary, 0.0 if not)
+          material_confidence: normalized.material ? 1.0 : 0.0,
+          color_confidence: normalized.color ? 1.0 : 0.0,
+          pattern_confidence: normalized.pattern ? 1.0 : 0.0,
+          
+          // Supervision flags
+          needs_review: Object.keys(normalized.unknowns).length > 0,
+          review_reasons: buildReviewReasons(normalized.unknowns),
+          
+          // Quality
+          data_quality_score: qualityScore,
+          
+          // Metadata
           quantity_value: product.variants[0]?.inventory_quantity || 1,
           quantity_unit: 'unit',
           updated_at: new Date().toISOString(),
         };
         
-        // UPSERT: Insert or update if source_url already exists
+        // ========================================================================
+        // STEP 5: UPSERT to database
+        // ========================================================================
         const { data, error } = await supabase
           .from('textiles')
           .upsert(textileData, {
@@ -345,30 +389,28 @@ export const scrapingRepo = {
           const record = data[0];
           
           // Determine if INSERT or UPDATE
-          // If created_at === updated_at → new INSERT
-          // Otherwise → UPDATE
           const createdAt = new Date(record.created_at).getTime();
           const updatedAt = new Date(record.updated_at).getTime();
           
           if (Math.abs(createdAt - updatedAt) < 1000) {
-            // Less than 1 second difference → INSERT
             saved++;
+            console.log(`      ✅ Saved (new)`);
           } else {
-            // UPDATE
             updated++;
+            console.log(`      ♻️  Updated (existing)`);
           }
         } else {
-          // Edge case: no error but no data
           skipped++;
         }
         
         // Progress indicator
         if ((saved + updated + skipped) % 10 === 0) {
-          console.log(`   Progress: ${saved + updated + skipped}/${products.length}`);
+          console.log(`\n   📊 Progress: ${saved + updated + skipped}/${products.length}`);
         }
         
       } catch (error: any) {
-        console.error(`   ⚠️  Error saving product ${product.id}:`, error.message);
+        console.error(`   ⚠️  Error processing product ${product.id}:`, error.message);
+        console.error(error.stack);
         skipped++;
       }
     }
@@ -376,7 +418,8 @@ export const scrapingRepo = {
     console.log(`\n✅ Save complete:`);
     console.log(`   New: ${saved}`);
     console.log(`   Updated: ${updated}`);
-    console.log(`   Skipped: ${skipped}\n`);
+    console.log(`   Skipped: ${skipped}`);
+    console.log(`   Normalization coverage: ${Math.round((saved + updated) / (saved + updated + skipped) * 100)}%\n`);
     
     return { saved, updated, skipped };
   },
@@ -394,7 +437,6 @@ export const scrapingRepo = {
     const normalizedUrl = normalizeUrl(siteUrl);
     
     try {
-      // Get site
       const { data: site } = await supabase
         .from('sites')
         .select('id')
@@ -410,7 +452,6 @@ export const scrapingRepo = {
         };
       }
       
-      // Get jobs stats
       const { data: jobs } = await supabase
         .from('scraping_jobs')
         .select('status, products_saved, ended_at')

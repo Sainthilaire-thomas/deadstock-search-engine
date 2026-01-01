@@ -4,7 +4,7 @@
  * Accès aux données des unknown terms dans Supabase
  */
 
-import { createScraperClient } from '@/shared/infrastructure/supabase/client';
+import { createScraperClient } from '@/lib/supabase/client';
 import { UnknownTerm, UnknownTermStatus } from '../domain/UnknownTerm';
 import { Category, CategoryType } from '../domain/DictionaryMapping';
 
