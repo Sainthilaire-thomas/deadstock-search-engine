@@ -1,7 +1,7 @@
 
 # 🧠 CONTEXT SUMMARY - Deadstock Search Engine
 
-**Dernière MAJ** : 1 Janvier 2026
+**Dernière MAJ** : 2 Janvier 2026
 
 **Auteur** : Thomas
 
@@ -51,256 +51,404 @@
 
 ---
 
+## 🎨 Parcours Designer (9 Étapes)
+
+Le cœur de l'expérience utilisateur :
+
+1. **💡 Idée** - Définir le concept de projet
+2. **🎨 Inspiration** - Mood boards, palettes (Phase 2)
+3. **✏️ Design** - Choix patron, type vêtement
+4. **📏 Calcul** - Calculateur métrage automatique
+5. **🔍 Sourcing** - Recherche unifiée multi-sources ✅
+6. **✅ Validation** - Comparaison détaillée favoris ✅
+7. **🛒 Achat** - Redirection vers sources externes ✅
+8. **🏭 Production** - Tracking avancement (Phase 4)
+9. **🌱 Impact** - Mesure CO2/eau économisés (Phase 5)
+
+**État actuel** : Étapes 5, 6, 7 complètement fonctionnelles (Session 7)
+
+---
+
 ## 🏗️ Architecture Technique
 
-### Stack
+### Stack Principal
 
-* **Frontend** : Next.js 15, TypeScript, Tailwind CSS, Lucide React
-* **Backend** : Supabase (PostgreSQL)
-* **Scraping** : Node.js adapters pattern
+* **Frontend** : Next.js 16 (App Router), React 19, TypeScript
+* **UI** : Tailwind CSS, Radix UI, Lucide Icons
+* **Backend** : Supabase (PostgreSQL, Auth, Storage)
+* **Scraping** : Node.js adapters (Shopify API)
+* **State** : React Context (favoris), Server Components
 * **Deployment** : Vercel
 
-### Database (PostgreSQL)
+### Base de Données
 
 **Schema `deadstock`** :
 
-* `textiles` - Produits normalisés
-* `sites` - Sources deadstock
-* `collections` - Collections Shopify
-* `attribute_categories` - Système attributs dynamiques
-* `textile_attributes` - Relations textiles-attributs
-* `dictionary_mappings` - Normalisation FR/EN/ES
-* `unknown_terms` - Termes non reconnus
-* `discovery_jobs`, `scraping_jobs` - Tracking
+* `textiles` - Produits indexés (112 actuellement)
+* `sites` - Sources scraped (3 actives)
+* `site_profiles` - Configurations scraping
+* `scraping_jobs` - Historique jobs
+* `attribute_categories` - Taxonomie textile
+* `textile_attributes` - Attributs normalisés
+* `dictionary_mappings` - Normalisation FR→EN
+* `favorites` - Favoris utilisateur (Session 7) ⭐
 
-### Principes Architecturaux
+**RLS** : Row Level Security activé sur `favorites`
 
-1. **DDD Light** : Domain-driven sans over-engineering
-2. **Adapter Pattern** : Scrapers modulaires par plateforme
-3. **i18n First** : Architecture multilingue dès le début
-4. **Dynamic Attributes** : Catégories en DB, pas en code
-5. **Admin-Driven** : Workflow tuning permanent
+### Patterns Architecturaux
+
+* **Adapter Pattern** : Scrapers multi-sources
+* **Repository Pattern** : Accès données (client + server)
+* **DDD Léger** : Organisation features/ par domaine
+* **Server Actions** : Mutations Next.js 15+
+* **Optimistic Updates** : UX instantanée favoris
 
 ---
 
-## 📊 État des Données
+## 📊 État Actuel (Session 7)
 
-### Sources Actives
+### Données Indexées
 
-1. **My Little Coupon** (FR) - 67 produits
-2. **The Fabric Sales** (UK) - 45 produits
-3. **Recovo** (ES) - Découvert, pas encore scrappé
+* **112 textiles** (67 MLC + 45 TFS)
+* **3 sources** : My Little Coupon, The Fabric Sales, Recovo
+* **8 collections** validées pour scraping
+* **Quality Score** : 82% moyen
 
-### Qualité Données
+### Complétude Champs
 
-* **Quality Score Moyen** : 82%
-* **Composition** : 6% complétude
-* **Dimensions (width/weight)** : 0% complétude
-* **Normalisation Material** : 80% accuracy
-* **Normalisation Color** : 40% accuracy
+| Champ                 | Complétude | Priorité      |
+| --------------------- | ----------- | -------------- |
+| name, price, quantity | 100%        | ✅ Critique    |
+| material, color       | 80%/40%     | ⚠️ Important |
+| composition           | 6%          | ❌ Manquant    |
+| width, weight         | 0%          | ❌ Manquant    |
+| certifications        | 0%          | ⏳ Phase 2     |
 
-### Dictionary
+### Normalisation
 
-* **Fiber** : 156 mappings
-* **Color** : 89 mappings
+* **Material** : 80% accuracy (156 mappings)
+* **Color** : 40% accuracy (89 mappings)
 * **Weave** : 34 mappings
-* **Unknowns pending** : ~45 termes
+* **Unknowns** : ~45 termes en attente
 
 ---
 
-## 🎨 Design System
+## 🎨 Design System (Session 6-7)
 
 ### Principes
 
-* **Sobre** : Minimal, pas de fioritures
-* **Moderne** : Typographie claire, spacing généreux
-* **Épuré** : Monochrome + 1 accent color
-* **Professional** : Inspiré Linear, Vercel, Stripe
+* **Sobre & moderne** : Inspiration Linear, Vercel
+* **Monochrome** : Gris + noir accent
+* **Outline icons** : Lucide React
+* **Hiérarchie claire** : Typographie Inter
 
-### Palette
+### Composants Clés
 
-* **Background** : #FFFFFF, #FAFAFA, #F5F5F5
-* **Text** : #171717, #737373, #A3A3A3
-* **Accent** : #0A0A0A (noir presque pur)
-* **Borders** : #E5E5E5, #F0F0F0
+* **Sidebar** : Collapsible 240px ↔ 56px
+* **Cards** : Textiles, favoris
+* **Badges** : Status, catégories
+* **Filters** : Recherche avancée
+* **Tooltips** : Aide contextuelle
 
-### Composants
+### Design Tokens (Session 7)
 
-* Sidebar collapsible (56px → 240px)
-* Cards sobre avec shadows légères
-* Filters accordéon
-* Icons Lucide React outline
-* Animations subtiles (200ms cubic-bezier)
-
----
-
-## 🚀 Parcours Designer (9 Étapes)
-
-Interface structurée autour du workflow naturel :
-
-1. 💡 **Idée** - Définir concept projet
-2. 🎨 **Inspiration** - Mood boards, nuancier
-3. ✏️ **Design** - Patron, type vêtement
-4. 📏 **Calcul** - Métrage nécessaire
-5. 🔍 **Sourcing** - Recherche deadstock
-6. ✅ **Validation** - Vérifier caractéristiques
-7. 🛒 **Achat** - Commander
-8. 🏭 **Production** - Suivre avancement
-9. 🌱 **Impact** - Mesurer CO2/eau économisés
-
-**MVP** : Étapes 1, 3, 4, 5, 6, 7
-
-**Phase 2+** : Étapes 2, 8, 9
-
----
-
-## 📁 Structure Documentation
-
-```
-/mnt/project/
-├── docs/
-│   ├── specs/
-│   │   ├── SPEC_MODULE_RECHERCHE_DESIGNER.md
-│   │   ├── SPEC_MODULE_ADMIN.md
-│   │   ├── SPEC_DESIGN_SYSTEM_PARCOURS.md
-│   │   └── SYNTHESE_DONNEES_DESIGNER.md
-│   ├── CURRENT_STATE.md
-│   ├── CONTEXT_SUMMARY.md
-│   └── NEXT_STEPS.md
-├── ADR_001_database_architecture.md
-├── ADR_002_normalization_english_i18n.md
-├── ... (ADR 003-012)
-├── PRODUCT_VISION.md
-├── PROJECT_OVERVIEW.md
-├── PHASES_V2.md
-├── DATABASE_ARCHITECTURE.md
-└── TUNING_SYSTEM.md
+```css
+--sidebar-width: 240px;
+--sidebar-collapsed-width: 56px;
+--transition-fast: 150ms;
+--transition-base: 200ms;
 ```
 
 ---
 
-## 🎯 Décisions Architecturales Clés
+## 💡 Innovations Clés
 
-### ADR-002 : Normalisation EN + i18n
+### 1. Système de Favoris (Session 7) ⭐
 
-* Stockage EN pour scale international
-* Traductions JSONB pour affichage locale
-* Source locale trackée (FR/EN/ES)
+**Problème** : Impossible de comparer plusieurs textiles avant achat
 
-### ADR-010 : Attributs Dynamiques
+**Solution** :
 
-* Catégories en DB (pas hardcodées)
-* Hiérarchie 3 niveaux (Weave > Twill > Herringbone)
-* MVP : Fiber, Color, Weave, Pattern
-* Future : Properties, Weight, Use, Finish
+* Ajout favoris instantané (❤️ button)
+* Liste favoris avec comparaison
+* Détail complet par favori
+* Navigation prev/next entre favoris
+* Synchro instantanée (optimistic updates)
+
+**Architecture** :
+
+* Session temporaire (cookie 90 jours)
+* React Context pour state partagé
+* Server Actions pour persistence
+* Migration user_id prévue Phase 2
+
+### 2. Normalisation Intelligente
+
+**Problème** : FR "Coton bio bleu" vs EN "Blue organic cotton"
+
+**Solution** :
+
+* Dictionary-based normalization
+* FR → EN automatique
+* LLM fallback pour unknowns
+* Tuning continu par admin
+
+### 3. Multi-Source Unified Search
+
+**Problème** : 10+ sites avec formats différents
+
+**Solution** :
+
+* Adapter pattern par plateforme
+* Schema unifié `textiles`
+* Agrégation temps réel
+
+---
+
+## 🚀 Roadmap & Phases
+
+### Phase 1 : MVP (En Cours - 70% ✅)
+
+**Objectif** : Démontrer value prop core
+
+**Fonctionnalités** :
+
+* ✅ Recherche unifiée avec filtres
+* ✅ Système de favoris complet
+* ✅ Détail produit avec specs
+* ✅ Design system & navigation
+* ⏳ Calculateur métrage
+* ⏳ Projets basiques
+
+**Timeline** : Semaines 1-2 (Janvier 2026)
+
+### Phase 2 : Product-Market Fit
+
+**Objectif** : Features demandées par early adopters
+
+**Fonctionnalités** :
+
+* Authentification (Supabase Auth)
+* Mood boards & palettes
+* Upload patron PDF
+* Sauvegarde projets
+* Partage collaboratif
+
+**Timeline** : Q1 2026
+
+### Phase 3 : Monétisation
+
+**Objectif** : Générer revenus
+
+**Modèles** :
+
+* API professionnelle (€49/mois)
+* Reverse marketplace (commission)
+* Premium features (projets illimités)
+
+**Timeline** : Q2 2026
+
+### Phase 4 : Workflow Complet
+
+**Objectif** : Accompagner production
+
+**Fonctionnalités** :
+
+* Tracking production
+* Gestion commandes
+* Communication fournisseurs
+
+**Timeline** : Q3-Q4 2026
+
+### Phase 5 : Impact & Certifications
+
+**Objectif** : Mesurer impact environnemental
+
+**Fonctionnalités** :
+
+* Calcul CO2 économisé
+* Calcul eau économisée
+* Certificats impact
+* Rapport RSE
+
+**Timeline** : 2027
+
+---
+
+## 🎯 Métriques de Succès
+
+### MVP (Phase 1)
+
+* **Utilisateurs** : 10-20 designers testeurs
+* **Recherches** : 100+ par semaine
+* **Favoris** : 50+ produits ajoutés
+* **Feedback** : NPS > 40
+
+### Product-Market Fit (Phase 2)
+
+* **Utilisateurs actifs** : 500+
+* **Rétention** : 40% semaine 2
+* **Engagement** : 3+ projets/user
+* **Référencement** : 30% par bouche-à-oreille
+
+### Scale (Phase 3+)
+
+* **ARR** : €50k+
+* **Utilisateurs payants** : 100+
+* **Churn** : < 5%/mois
+* **Sources** : 20+ sites indexés
+
+---
+
+## 🔧 Décisions Architecturales Importantes
+
+### ADR-001 : Database Architecture
+
+* PostgreSQL avec schema dédié `deadstock`
+* Séparation e-commerce vs deadstock
+* Justification : Isolation, scalabilité
+
+### ADR-005 : Light DDD Architecture
+
+* Features organisées par domaine
+* domain/, infrastructure/, application/
+* Justification : Maintenabilité, clarté
+
+### ADR-007 : Adapter Pattern Scrapers
+
+* Interface uniforme, implémentations spécifiques
+* Shopify, WooCommerce, custom
+* Justification : Extensibilité, testabilité
 
 ### ADR-011 : Admin-Driven Scraping
 
-* Discovery → Scraping → Normalization → Tuning
-* Workflow permanent supervision
-* LLM suggestions + validation humaine
-* Dictionary évolutif
+* Découverte manuelle puis automatisation
+* Quality > quantité
+* Justification : Contrôle qualité, coûts
 
-### Design System
+### ADR-013 : Favorites Architecture (Session 7) ⭐
 
-* Sidebar collapsible (Option 5 hybrid)
-* Icons Lucide React outline
-* Palette monochrome sobre
-* Mobile : Bottom nav
-
----
-
-## 💡 Insights Clés
-
-### Apprentissages Techniques
-
-1. **i18n early** évite refactoring coûteux
-2. **Dynamic attributes** > hardcoded categories
-3. **Quality score** guide amélioration données
-4. **Admin workflow** essentiel pour data quality
-
-### Insights Produit
-
-1. **Parcours complet** > simple agrégateur
-2. **Design sobre** > bling-bling
-3. **Progressive disclosure** > tout montrer d'un coup
-4. **Données manquantes** = opportunité amélioration scrapers
-
-### Choix Design
-
-1. **Sidebar toujours visible** (contexte permanent)
-2. **Étapes futures visibles** (créer anticipation)
-3. **Statuts clairs** (✓ ● 🔒 ⏳)
-4. **Mobile-first** (bottom nav responsive)
+* Session temporaire (cookie) pour MVP
+* Migration user_id en Phase 2
+* React Context + optimistic updates
+* Justification : Friction zéro, UX instantanée
 
 ---
 
-## 🎭 Personas de Référence
+## 📚 Documentation Clé
 
-### Sophie - Designer Indépendante
+### Spécifications Produit
 
-* Crée collection capsule 10 pièces
-* Budget 500€ matières
-* Besoin : Rapidité, qualité/prix
-* Pain : Cherche 3h sur 10 sites
+* **SPEC_MODULE_RECHERCHE_DESIGNER.md** - UX complète
+* **SPEC_MODULE_ADMIN.md** - Interface admin
+* **SPEC_DESIGN_SYSTEM_PARCOURS.md** - Design & navigation
+* **SYNTHESE_DONNEES_DESIGNER.md** - Analyse données
 
-### Marc - Étudiant Mode
+### Architecture & Décisions
 
-* Projet fin d'année
-* Budget serré 200€
-* Besoin : Calcul précis, pas de gaspillage
-* Pain : Comprendre types tissus
+* **ADR-001 à ADR-012** - Décisions techniques
+* **DATABASE_ARCHITECTURE.md** - Schema détaillé
+* **TUNING_SYSTEM.md** - Normalisation
 
-### Atelier Luna - Studio 3 personnes
+### Roadmap & Vision
 
-* Production 50 robes/mois
-* Besoin : Volumes, collaboration, devis
-* Pain : Gérer projets multiples
+* **PRODUCT_VISION.md** - Vision long terme
+* **PROJECT_OVERVIEW.md** - Vue d'ensemble
+* **PHASES_V2.md** - Roadmap détaillée
 
----
+### Sessions
 
-## 📈 Métriques de Succès
-
-### Court Terme (MVP)
-
-* 50+ designers beta
-* 500+ produits indexés
-* 85%+ quality score
-* 5+ sources actives
-
-### Moyen Terme (Phase 2-3)
-
-* 500+ utilisateurs actifs
-* 10+ sources
-* Calculateur utilisé 60%+
-* Devis générés 100+/mois
-
-### Long Terme (Phase 4-6)
-
-* 2000+ designers
-* 15+ sources
-* €25K MRR
-* API publique
+* **SESSION_4_STRATEGIC_PIVOT.md** - Pivot vers designers
+* **SESSION_7_FAVORITES_SYSTEM.md** - Implémentation favoris ⭐
 
 ---
 
-## 🔄 Workflow Développement
+## 🎓 Apprentissages Clés
 
-### Méthodologie
+### Produit
 
-1. **Spec first** - Documentation avant code
-2. **Incremental** - Step by step, pas de big bang
-3. **Validation** - Preview/test avant full deploy
-4. **Quality focus** - Mieux vaut 100 produits qualité que 1000 médiocres
+1. **Designers ≠ Grandes marques** : Besoin outils, pas marketplace
+2. **Killer feature** : Pattern PDF + calcul + sourcing combinés
+3. **Deadstock = Urgence** : Stock limité, besoin décision rapide
+4. **Quality > Quantity** : 100 bons produits > 10k médiocres
 
-### Pattern de Session
+### Technique
 
-1. Analyse contexte (ADRs, specs)
-2. Définition objectifs
-3. Implémentation incrémentale
-4. Tests & validation
-5. Documentation mise à jour
+1. **Optimistic updates** : Essentiels pour UX moderne
+2. **React Context** : Parfait pour state partagé simple
+3. **Server Components** : Simplifier fetch data
+4. **Session temporaire** : Réduire friction onboarding
+
+### Business
+
+1. **Niche claire** : Designers indépendants, pas B2B textile
+2. **Value prop immédiate** : Gain temps mesurable (3-4h → 30min)
+3. **Network effects faibles** : Valeur = données, pas users
+4. **Monétisation** : API pro + features premium
 
 ---
 
-**Ce document sert de référence rapide pour onboarding et context switching.**
+## 🚧 Challenges Actuels
+
+### Technique
+
+* **Données incomplètes** : Width/weight manquants (0%)
+* **Normalisation color** : 40% accuracy seulement
+* **Anti-bot protection** : Certains sites bloquent scrapers
+
+### Produit
+
+* **Calculateur précis** : Nécessite dimensions exactes
+* **Validation qualité** : Pas de retours/avis produits
+* **Stock temps réel** : Pas d'API direct fournisseurs
+
+### Business
+
+* **Validation PMF** : Besoin tester avec vrais designers
+* **Acquisition** : Comment toucher la niche ?
+* **Concurrence indirecte** : Marketplaces génériques
+
+---
+
+## 🎯 Prochaines Étapes
+
+### Immédiat (Cette Semaine)
+
+1. ✅ ~~Implémenter système favoris~~ **FAIT Session 7**
+2. ⏳ Créer calculateur métrage
+3. ⏳ Enrichir données scrapers (width, weight)
+4. ⏳ Tests utilisateur avec designers
+
+### Court Terme (2-3 Semaines)
+
+1. Finaliser MVP Phase 1
+2. Onboarding 10-20 designers beta
+3. Itérations rapides sur feedback
+4. Module admin pour tuning
+
+### Moyen Terme (1-2 Mois)
+
+1. Authentification Supabase
+2. Migration favoris → users
+3. Mood boards & projets
+4. Monétisation early adopters
+
+---
+
+## 💭 Citations & Insights
+
+### Thomas (Founder)
+
+> "Le but c'est pas de faire une marketplace, c'est de faire un outil pour designers."
+
+> "Combining pattern PDF with yardage calculation and fabric sourcing — that's the killer feature."
+
+> "Quality over quantity. Better 100 perfect textiles than 10k mediocre ones."
+
+### Vision Long Terme
+
+> "Accompagner le designer de l'idée jusqu'à la mesure de son impact CO2."
+
+---
+
+**Contexte maintenu à jour** - Session 7 : Système de favoris fonctionnel ✅

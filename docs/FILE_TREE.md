@@ -1,6 +1,6 @@
 ﻿# Project File Tree
 
-**Generated:** 2026-01-01 11:00:50
+**Generated:** 2026-01-02 15:06:14
 
 ---
 
@@ -8,14 +8,14 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 92 |
-| Total Directories | 2407 |
-| TypeScript Files | 34 |
+| Total Files | 161 |
+| Total Directories | 2971 |
+| TypeScript Files | 86 |
 | JavaScript Files | 0 |
-| Markdown Files | 38 |
-| SQL Files | 8 |
-| JSON Files | 4 |
-| Other Files | 8 |
+| Markdown Files | 50 |
+| SQL Files | 11 |
+| JSON Files | 5 |
+| Other Files | 9 |
 
 ---
 
@@ -23,7 +23,7 @@
 
 ```
 deadstock-search-engine/
-|-- .env.local |-- .gitignore |-- eslint.config.mjs |-- GUIDE_DEMARRAGE.md |-- next.config.ts |-- next-env.d.ts |-- package.json |-- package-lock.json |-- postcss.config.mjs |-- README.md |-- tsconfig.json |-- tsconfig.tsbuildinfo |-- .vscode/ |   +-- tasks.json |-- database/ |   |-- DATABASE_ARCHITECTURE.md |   |-- schema.sql |   |-- USAGE_GUIDE.md |   |-- migrations/ |   |   |-- 001_initial_schema.sql |   |   |-- 004_dictionary_mappings_table.sql |   |   |-- 007_admin_scraping_system.sql |   |   |-- 008_add_currency_to_textiles.sql |   |   |-- 009_clean_dictionary_schema.sql |   |   |-- 010_add_normalization_metadata.sql |   |   +-- MIGRATIONS.md |   +-- seeds/ |       +-- enrich_dictionaries.sql |-- docs/ |   |-- FILE_TREE.md |   |-- README.md |   |-- ai_context/ |   |   |-- CONTEXT_SUMMARY.md |   |   +-- NEXT_STEPS.md |   |-- decisions/ |   |   |-- ADR_001_database_architecture.md |   |   |-- ADR_002_normalization_english_i18n.md |   |   |-- ADR_003_multi_project_architecture.md |   |   |-- ADR_004_normalization_tuning_system.md |   |   |-- ADR_005_light_ddd_architecture.md |   |   |-- ADR_006_product_context_enrichment.md |   |   |-- ADR_007_adapter_pattern_scrapers.md |   |   |-- ADR_008_intelligent_data_extraction.md |   |   |-- ADR_009_internationalization_strategy.md |   |   |-- ADR_010_dynamic_attribute_system.md |   |   |-- ADR_011_admin_driven_scraping_strategy.md |   |   |-- ADR_012_STOPWORDS_FILTER.md |   |   |-- ADR_TEMPLATE.md |   |   +-- ARCHITECTURE_DECISION_SUMMARY.md |   |-- project/ |   |   |-- PHASES.md |   |   |-- PHASES_V2.md |   |   |-- PRODUCT_VISION.md |   |   |-- PROJECT_OVERVIEW.md |   |   |-- RECAP_MISE_A_JOUR_DOCS.md |   |   +-- SCRAPING_PLAN.md |   |-- sessions/ |   |   |-- SESSION_2024-12-28_architecture-ddd-interface-admin.md |   |   |-- SESSION_3_NORMALIZATION_SUCCESS.md |   |   |-- SESSION_3_PLAN.md |   |   |-- SESSION_NOTE_2025-12-27.md |   |   |-- SESSION_NOTES_2024-12-28.md |   |   +-- SESSION_NOTES_2024-12-28_PART2.md |   |-- state/ |   |   |-- CURRENT_STATE.md |   |   +-- TECH_STACK.md |   +-- technical/ |       +-- TUNING_SYSTEM.md |-- scripts/ |   |-- analyze-unknowns.ts |   |-- generate-file-tree.ps1 |   |-- load-env.ts |   |-- scrape-mlc-to-db.ts |   |-- scrape-tfs-to-db.ts |   |-- test-mlc.ts |   |-- test-scrape.ts |   +-- admin/ |       |-- discover-site.ts |       |-- preview-scraping.ts |       +-- scrape-site.ts +-- src/     |-- app/     |   |-- favicon.ico     |   |-- globals.css     |   |-- layout.tsx     |   |-- page.tsx     |   |-- admin/     |   |   +-- tuning/     |   |       |-- actions.ts     |   |       |-- page.tsx     |   |       +-- components/     |   |           +-- UnknownsList.tsx     |   +-- textiles/     |       +-- page.tsx     |-- features/     |   |-- admin/     |   |   |-- infrastructure/     |   |   |   |-- discoveryRepo.ts     |   |   |   +-- scrapingRepo.ts     |   |   |-- services/     |   |   |   |-- discoveryService.ts     |   |   |   +-- scrapingService.ts     |   |   +-- utils/     |   |       +-- extractTerms.ts     |   |-- normalization/     |   |   |-- application/     |   |   |   +-- normalizeTextile.ts     |   |   |-- domain/     |   |   |   +-- ValueObjects.ts     |   |   +-- infrastructure/     |   |       +-- normalizationService.ts     |   +-- tuning/     |       |-- application/     |       |   |-- approveMapping.ts     |       |   |-- getUnknowns.ts     |       |   +-- rejectUnknown.ts     |       |-- domain/     |       |   |-- DictionaryMapping.ts     |       |   |-- types.ts     |       |   +-- UnknownTerm.ts     |       +-- infrastructure/     |           |-- dictionaryRepo.ts     |           +-- unknownsRepo.ts     +-- lib/         +-- supabase/             +-- client.ts
+|-- .env.local |-- .gitignore |-- components.json |-- eslint.config.mjs |-- GUIDE_DEMARRAGE.md |-- next.config.ts |-- next-env.d.ts |-- package.json |-- package-lock.json |-- postcss.config.mjs |-- README.md |-- tailwind.config.ts |-- tsconfig.json |-- tsconfig.tsbuildinfo |-- .vscode/ |   +-- tasks.json |-- database/ |   |-- DATABASE_ARCHITECTURE.md |   |-- schema.sql |   |-- USAGE_GUIDE.md |   |-- migrations/ |   |   |-- 001_initial_schema.sql |   |   |-- 004_dictionary_mappings_table.sql |   |   |-- 007_admin_scraping_system.sql |   |   |-- 008_add_currency_to_textiles.sql |   |   |-- 009_clean_dictionary_schema.sql |   |   |-- 010_add_normalization_metadata.sql |   |   |-- 011_add_favorites_table.sql |   |   |-- 012_enable_rls_favorites.sql |   |   |-- 013_grant_favorites_permissions.sql |   |   +-- MIGRATIONS.md |   +-- seeds/ |       +-- enrich_dictionaries.sql |-- docs/ |   |-- FILE_TREE.md |   |-- README.md |   |-- ai_context/ |   |   |-- CONTEXT_SUMMARY.md |   |   |-- NEXT_STEPS.md |   |   +-- NEXT_STEPS_MVP_DEMO.md |   |-- decisions/ |   |   |-- ADR_001_database_architecture.md |   |   |-- ADR_002_normalization_english_i18n.md |   |   |-- ADR_003_multi_project_architecture.md |   |   |-- ADR_004_normalization_tuning_system.md |   |   |-- ADR_005_light_ddd_architecture.md |   |   |-- ADR_006_product_context_enrichment.md |   |   |-- ADR_007_adapter_pattern_scrapers.md |   |   |-- ADR_008_intelligent_data_extraction.md |   |   |-- ADR_009_internationalization_strategy.md |   |   |-- ADR_010_dynamic_attribute_system.md |   |   |-- ADR_011_admin_driven_scraping_strategy.md |   |   |-- ADR_012_STOPWORDS_FILTER.md |   |   |-- ADR_TEMPLATE.md |   |   +-- ARCHITECTURE_DECISION_SUMMARY.md |   |-- market/ |   |   |-- ANALYSE_CONCURRENTIELLE.md |   |   +-- ANALYSE_OUTILS_CALCUL_METRAGE.md |   |-- project/ |   |   |-- ARCHITECTURE_3_LEVEL_SEARCH.md |   |   |-- PHASES.md |   |   |-- PHASES_V2.md |   |   |-- PRODUCT_VISION.md |   |   |-- PRODUCT_VISION_V2.1.md |   |   |-- PROJECT_OVERVIEW.md |   |   |-- RECAP_MISE_A_JOUR_DOCS.md |   |   +-- SCRAPING_PLAN.md |   |-- sessions/ |   |   |-- SESSION_2024-12-28_architecture-ddd-interface-admin.md |   |   |-- SESSION_3_NORMALIZATION_SUCCESS.md |   |   |-- SESSION_3_PLAN.md |   |   |-- SESSION_4_STRATEGIC_PIVOT.md |   |   |-- SESSION_7_FAVORITES_SYSTEM.md |   |   |-- SESSION_NOTE_2025-12-27.md |   |   |-- SESSION_NOTES_2024-12-28.md |   |   +-- SESSION_NOTES_2024-12-28_PART2.md |   |-- specs/ |   |   |-- SPEC_DESIGN_SYSTEM_PARCOURS.md |   |   |-- SPEC_MODULE_ADMIN.md |   |   |-- SPEC_MODULE_RECHERCHE_DESIGNER.md |   |   +-- SYNTHESE_DONNEES_DESIGNER (1).md |   |-- state/ |   |   |-- CURRENT_STATE.md |   |   |-- CURRENT_STATE_UPDATED.md |   |   +-- TECH_STACK.md |   +-- technical/ |       +-- TUNING_SYSTEM.md |-- scripts/ |   |-- analyze-unknowns.ts |   |-- generate-file-tree.ps1 |   |-- load-env.ts |   |-- scrape-mlc-to-db.ts |   |-- scrape-tfs-to-db.ts |   |-- test-mlc.ts |   |-- test-scrape.ts |   +-- admin/ |       |-- discover-site.ts |       |-- preview-scraping.ts |       +-- scrape-site.ts +-- src/     |-- app/     |   |-- favicon.ico     |   |-- globals.css     |   |-- layout.tsx     |   |-- page.tsx     |   |-- admin/     |   |   +-- tuning/     |   |       |-- actions.ts     |   |       |-- page.tsx     |   |       +-- components/     |   |           +-- UnknownsList.tsx     |   |-- api/     |   |   +-- search/     |   |       +-- route.ts     |   |-- favorites/     |   |   |-- page.tsx     |   |   +-- [id]/     |   |-- search/     |   |   +-- page.tsx     |   |-- textiles/     |   |   +-- page.tsx     |   +-- tools/     |       +-- yardage-calculator/     |-- components/     |   |-- search/     |   |   |-- Filters.tsx     |   |   |-- SearchBar.tsx     |   |   |-- SearchInterface.tsx     |   |   +-- TextileGrid.tsx     |   |-- textile/     |   |-- theme/     |   |   |-- ThemeProvider.tsx     |   |   +-- ThemeToggle.tsx     |   +-- ui/     |       |-- badge.tsx     |       |-- button.tsx     |       |-- card.tsx     |       |-- checkbox.tsx     |       |-- command.tsx     |       |-- dialog.tsx     |       |-- dropdown-menu.tsx     |       |-- form.tsx     |       |-- input.tsx     |       |-- label.tsx     |       |-- popover.tsx     |       |-- progress.tsx     |       |-- select.tsx     |       |-- separator.tsx     |       |-- sheet.tsx     |       |-- skeleton.tsx     |       |-- slider.tsx     |       |-- sonner.tsx     |       |-- table.tsx     |       |-- tabs.tsx     |       +-- tooltip.tsx     |-- features/     |   |-- admin/     |   |   |-- infrastructure/     |   |   |   |-- discoveryRepo.ts     |   |   |   +-- scrapingRepo.ts     |   |   |-- services/     |   |   |   |-- discoveryService.ts     |   |   |   +-- scrapingService.ts     |   |   +-- utils/     |   |       +-- extractTerms.ts     |   |-- favorites/     |   |   |-- actions/     |   |   |   +-- favoriteActions.ts     |   |   |-- components/     |   |   |   |-- FavoriteButton.tsx     |   |   |   |-- FavoriteDetailView.tsx     |   |   |   |-- FavoritesCountBadge.tsx     |   |   |   +-- FavoritesGrid.tsx     |   |   |-- context/     |   |   |   +-- FavoritesContext.tsx     |   |   |-- domain/     |   |   |   +-- types.ts     |   |   |-- infrastructure/     |   |   |   |-- favoritesRepository.ts     |   |   |   +-- favoritesRepositoryServer.ts     |   |   +-- utils/     |   |       +-- sessionManager.ts     |   |-- journey/     |   |   |-- components/     |   |   |   |-- MobileJourneyNav.tsx     |   |   |   |-- Sidebar.tsx     |   |   |   +-- SidebarStep.tsx     |   |   |-- config/     |   |   |   +-- steps.ts     |   |   +-- domain/     |   |       +-- types.ts     |   |-- normalization/     |   |   |-- application/     |   |   |   +-- normalizeTextile.ts     |   |   |-- domain/     |   |   |   +-- ValueObjects.ts     |   |   +-- infrastructure/     |   |       +-- normalizationService.ts     |   |-- search/     |   |   |-- application/     |   |   |   +-- searchTextiles.ts     |   |   |-- domain/     |   |   |   +-- types.ts     |   |   +-- infrastructure/     |   |       +-- textileRepository.ts     |   +-- tuning/     |       |-- application/     |       |   |-- approveMapping.ts     |       |   |-- getUnknowns.ts     |       |   +-- rejectUnknown.ts     |       |-- domain/     |       |   |-- DictionaryMapping.ts     |       |   |-- types.ts     |       |   +-- UnknownTerm.ts     |       +-- infrastructure/     |           |-- dictionaryRepo.ts     |           +-- unknownsRepo.ts     |-- lib/     |   |-- utils.ts     |   +-- supabase/     |       +-- client.ts     +-- styles/         +-- design-tokens.css
 ```
 
 ---
@@ -67,6 +67,9 @@ deadstock-search-engine/
 - `008_add_currency_to_textiles.sql`
 - `009_clean_dictionary_schema.sql`
 - `010_add_normalization_metadata.sql`
+- `011_add_favorites_table.sql`
+- `012_enable_rls_favorites.sql`
+- `013_grant_favorites_permissions.sql`
 
 ### Seeds
 
@@ -80,13 +83,13 @@ deadstock-search-engine/
 - `tsconfig.json` [EXISTS]
 - `next.config.js` [MISSING]
 - `.env.example` [MISSING]
-- `tailwind.config.ts` [MISSING]
+- `tailwind.config.ts` [EXISTS]
 
 ---
 
 ## Last Updated
 
-**Date:** 2026-01-01 11:01:02
+**Date:** 2026-01-02 15:06:23
 
 **Command to regenerate:**
 ```powershell

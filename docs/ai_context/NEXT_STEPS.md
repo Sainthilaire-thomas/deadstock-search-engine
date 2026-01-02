@@ -1,11 +1,13 @@
 
 # 🚀 NEXT STEPS - Deadstock Search Engine
 
-**Dernière MAJ** : 1 Janvier 2026
+**Dernière MAJ** : 2 Janvier 2026
 
 **Phase Actuelle** : MVP Demo Week 1
 
-**Prochaine Session** : Session 7 - Implémentation Design System
+**Session Complétée** : Session 7 - Système de Favoris ✅
+
+**Prochaine Session** : Session 8 - Calculateur de Métrage OU Enrichissement Données
 
 ---
 
@@ -15,369 +17,316 @@
 
 **Deliverable** : Application fonctionnelle démontrant le parcours complet designer
 
+**État d'avancement : ~70% ✅**
+
 **Composants** :
 
 * ✅ Page recherche avec filtres avancés
-* ✅ Page détail produit
-* ✅ Calculateur métrage
+* ✅ Page détail produit (favoris)
+* ✅ Système de favoris complet
 * ✅ Sidebar parcours designer
 * ✅ Dark/Light mode
 * ✅ Responsive mobile
+* ⏳ Calculateur métrage
+* ⏳ Page projets basique
 
 ---
 
-## 📋 Session 7 : Design System & Composants Base
+## ✅ Session 7 Complétée (2 Janvier)
+
+### Réalisations
+
+**Design System** :
+
+* ✅ Sidebar collapsible implémentée
+* ✅ Design tokens CSS
+* ✅ 9 étapes parcours designer
+* ✅ Mobile navigation (bottom nav)
+
+**Système de Favoris** :
+
+* ✅ Architecture complète (DB, Repository, Actions, Context)
+* ✅ 3 migrations appliquées (table, RLS, permissions)
+* ✅ Boutons ❤️ avec optimistic updates
+* ✅ Badge compteur synchronisé
+* ✅ Page `/favorites` - Liste
+* ✅ Page `/favorites/[id]` - Détail avec navigation
+* ✅ Page 404 personnalisée
+
+**Messages d'Aide** :
+
+* ✅ Guide recherche contextuel
+* ✅ Empty state favoris avec CTA
+* ✅ Instructions navigation favoris
+
+**Documentation** :
+
+* ✅ SESSION_7_FAVORITES_SYSTEM.md
+* ⏳ ADR-013 (Architecture favoris) - à créer
+
+---
+
+## 📋 Options pour Session 8
+
+### Option A : Calculateur de Métrage (Recommandé)
+
+**Priorité** : Haute - Fonctionnalité critique MVP
 
 **Durée estimée** : 2-3h
 
-### 1. Setup Design Tokens (30min)
+**Objectif** : Implémenter l'étape 4 du parcours designer
 
-#### Tailwind Configuration
-
-```bash
-# Fichiers à créer/modifier
-src/styles/design-tokens.css
-tailwind.config.ts
-```
-
-**Actions** :
-
-* [ ] Définir palette couleurs (neutral, accent, semantic)
-* [ ] Setup typographie (Inter font)
-* [ ] Spacing scale (base 4px)
-* [ ] Border radius & shadows
-* [ ] Dark mode variables
-
-**Validation** : Page test avec tous les tokens
-
----
-
-### 2. Composants UI Base (1h)
-
-#### Créer dans `/src/components/ui/`
-
-* [ ] `Button.tsx` - Variants (primary, secondary, ghost)
-* [ ] `Card.tsx` - Container standard
-* [ ] `Badge.tsx` - Labels (fiber, color, status)
-* [ ] `Input.tsx` - Form fields
-* [ ] `Select.tsx` - Dropdowns
-* [ ] `Checkbox.tsx` - Filters
-* [ ] `Slider.tsx` - Prix range
-
-**Base** : Utiliser Radix UI + Tailwind (pattern shadcn/ui)
-
-**Validation** : Storybook ou page `/dev/components`
-
----
-
-### 3. Sidebar Parcours Designer (1h)
-
-#### Fichiers à créer
-
-```bash
-src/features/journey/
-├── domain/
-│   └── types.ts                    # Types TypeScript
-├── config/
-│   └── steps.ts                    # Configuration 9 étapes
-└── components/
-    ├── Sidebar.tsx                 # Container principal
-    ├── SidebarStep.tsx             # Item individuel
-    └── MobileJourneyNav.tsx        # Bottom nav mobile
-```
-
-**Actions** :
-
-* [ ] Créer types `DesignJourneyStep`
-* [ ] Définir config 9 étapes avec icons Lucide
-* [ ] Implémenter Sidebar collapsible
-* [ ] Gérer état (collapsed/expanded) avec localStorage
-* [ ] Tooltips au hover
-* [ ] Animations transitions
-* [ ] Responsive mobile (bottom nav)
-
-**Validation** :
-
-* Toggle collapse/expand fonctionne
-* État persiste au refresh
-* Tooltips s'affichent
-* Mobile devient bottom nav
-
----
-
-### 4. Intégration Layout (30min)
-
-#### Fichier : `src/app/layout.tsx`
-
-**Actions** :
-
-* [ ] Wrapper `<Sidebar>` autour de {children}
-* [ ] Calculer currentStep selon pathname
-* [ ] Ajouter padding-left pour sidebar desktop
-* [ ] Ajouter padding-bottom pour bottom nav mobile
-
-**Validation** : Sidebar visible sur toutes les pages
-
----
-
-## 📋 Session 8 : Page Recherche Complète
-
-**Durée estimée** : 3-4h
-
-### 1. Filtres Sidebar (1h30)
-
-#### Composants
-
-```bash
-src/features/search/
-└── components/
-    ├── SearchFilters.tsx           # Container filtres
-    ├── FilterSection.tsx           # Section accordéon
-    ├── MaterialFilter.tsx          # Checkboxes matières
-    ├── ColorFilter.tsx             # Checkboxes couleurs + preview
-    ├── PatternFilter.tsx           # Checkboxes motifs
-    ├── WeaveFilter.tsx             # Checkboxes tissages
-    ├── PriceFilter.tsx             # Slider range
-    └── QuantityFilter.tsx          # Input + checkbox
-```
-
-**Actions** :
-
-* [ ] Fetch categories depuis `attribute_categories`
-* [ ] Render checkboxes dynamiques
-* [ ] Preview couleur (dot coloré)
-* [ ] Count produits par filtre
-* [ ] Slider prix responsive
-* [ ] État filtres dans URL (searchParams)
-
-**Validation** : Filtres appliquent query DB correctement
-
----
-
-### 2. Grille Résultats (1h)
-
-#### Composant : `TextileGrid.tsx`
-
-**Actions** :
-
-* [ ] Layout responsive (3/2/1 colonnes)
-* [ ] Infinite scroll OU pagination
-* [ ] Loading states (skeletons)
-* [ ] Empty state ("Aucun résultat")
-* [ ] Tri (récent, prix croissant/décroissant)
-
-**Validation** : Scroll fluide, images chargent bien
-
----
-
-### 3. Cards Produit (1h)
-
-#### Composant : `TextileCard.tsx`
-
-**Actions** :
-
-* [ ] Image avec fallback
-* [ ] Badges matière/couleur/motif
-* [ ] Prix formaté
-* [ ] Quantité disponible
-* [ ] Source platform
-* [ ] Bouton favoris (❤️)
-* [ ] Hover state subtle
-* [ ] Click → navigation `/textiles/[id]`
-
-**Validation** : Cards affichent toutes infos correctement
-
----
-
-### 4. Barre Recherche (30min)
-
-#### Composant : `SearchBar.tsx`
-
-**Actions** :
-
-* [ ] Input avec icon Search
-* [ ] Debounce 300ms
-* [ ] Auto-complétion (optionnel Phase 2)
-* [ ] Clear button (×)
-* [ ] Enter → submit
-
-**Validation** : Recherche fonctionne, debounce OK
-
----
-
-## 📋 Session 9 : Page Détail Produit
-
-**Durée estimée** : 2-3h
-
-### Structure
-
-```bash
-src/app/textiles/[id]/
-└── page.tsx
-```
-
-### Sections
-
-**1. Galerie Images** (30min)
-
-* [ ] Image principale grande taille
-* [ ] Vignettes additional_images
-* [ ] Zoom au hover
-* [ ] Navigation prev/next
-
-**2. Info Block** (30min)
-
-* [ ] Titre produit (h1)
-* [ ] Prix + unité
-* [ ] Quantité disponible
-* [ ] Minimum order (si existe)
-* [ ] Bouton favoris
-* [ ] Bouton "Acheter sur [source]"
-
-**3. Caractéristiques** (45min)
-
-* [ ] Tableau composition, matière, couleur, motif, tissage
-* [ ] Width, weight (si disponibles)
-* [ ] Certifications (si disponibles)
-* [ ] Affichage conditionnel (hide si null)
-* [ ] Disclaimers pour données manquantes
-
-**4. Description** (15min)
-
-* [ ] Texte formaté
-* [ ] Truncate si long + "Lire plus"
-
-**5. Source Info** (15min)
-
-* [ ] Platform badge
-* [ ] Lien externe vers source
-* [ ] Supplier (si disponible)
-
-**Validation** : Toutes données affichées proprement
-
----
-
-## 📋 Session 10 : Calculateur Métrage
-
-**Durée estimée** : 2h
-
-### Structure
+#### Structure à créer
 
 ```bash
 src/app/tools/yardage-calculator/
 └── page.tsx
+
+src/features/calculator/
+├── domain/
+│   ├── types.ts               # Types vêtements, tailles
+│   └── formulas.ts            # Logique calcul
+└── components/
+    ├── CalculatorForm.tsx     # Formulaire inputs
+    └── ResultDisplay.tsx      # Affichage résultat
 ```
 
-### Fonctionnalités
+#### Fonctionnalités
 
-**1. Formulaire** (1h)
+**1. Formulaire (1h)**
 
 * [ ] Dropdown type vêtement (dress, skirt, pants, shirt, jacket)
 * [ ] Dropdown taille (XS, S, M, L, XL, XXL)
-* [ ] Input quantité pièces
+* [ ] Input quantité pièces (default 1)
 * [ ] Input largeur tissu (default 140cm)
 * [ ] Bouton "Calculer"
 
-**2. Logic Calcul** (30min)
+**2. Logic Calcul (45min)**
 
-* [ ] Formules par type/taille
-* [ ] Ajustement largeur tissu
+* [ ] Formules métrage par type/taille
+* [ ] Ajustement selon largeur tissu
 * [ ] Marge sécurité 10%
-* [ ] Arrondi recommandation (0.5m)
+* [ ] Arrondi smart (0.5m)
 
-**3. Affichage Résultat** (30min)
+**3. Affichage Résultat (45min)**
 
-* [ ] Métrage par pièce
-* [ ] Total
-* [ ] Marge
-* [ ] Recommandation finale
-* [ ] Bouton "Chercher des tissus" → /search avec filter quantity
+* [ ] Card résultat claire
+* [ ] Métrage par pièce + total
+* [ ] Explication calcul (optionnel)
+* [ ] Bouton "Chercher des tissus" → `/search?minQuantity=X`
 
-**Validation** : Calculs corrects, redirection fonctionne
+**Validation** :
+
+* Calculs corrects pour tous types/tailles
+* Redirection vers recherche fonctionne
+* Design cohérent avec reste de l'app
+
+---
+
+### Option B : Enrichissement Données Scrapers
+
+**Priorité** : Moyenne - Bloque qualité calculateur
+
+**Durée estimée** : 3-4h
+
+**Objectif** : Améliorer complétude données (width, weight, composition)
+
+#### Actions
+
+**1. Audit Scrapers Existants (30min)**
+
+* [ ] Analyser HTML sources pour champs manquants
+* [ ] Identifier patterns width/weight/composition
+* [ ] Documenter sélecteurs CSS
+
+**2. Améliorer Adapters (2h)**
+
+* [ ] Ajouter extraction width_value, width_unit
+* [ ] Ajouter extraction weight_value, weight_unit
+* [ ] Améliorer extraction composition (parse HTML tables)
+* [ ] Tester sur 10+ produits par source
+
+**3. Re-scraping & Validation (1h)**
+
+* [ ] Run scrapers sur collections validées
+* [ ] Vérifier complétude champs
+* [ ] Calculer nouveaux quality scores
+* [ ] Mettre à jour métriques
+
+**Validation** :
+
+* Width complétude : 0% → 60%+
+* Weight complétude : 0% → 50%+
+* Composition complétude : 6% → 30%+
+
+---
+
+### Option C : Page Projets Basique
+
+**Priorité** : Faible - Nice to have MVP
+
+**Durée estimée** : 3-4h
+
+**Objectif** : Étape 3 du parcours (Design)
+
+#### Fonctionnalités Minimales
+
+* [ ] CRUD projets (nom, description, date)
+* [ ] Liste projets
+* [ ] Détail projet
+* [ ] Associer favoris à projet (optionnel)
+
+---
+
+## 🎯 Recommandation : Option A (Calculateur)
+
+### Justification
+
+**Pour** :
+
+* ✅ Complète parcours MVP essentiel (étape 4)
+* ✅ Killer feature différenciante
+* ✅ Utilisable même avec données incomplètes (largeur par défaut)
+* ✅ Démontre value prop immédiate
+
+**Contre** :
+
+* ⚠️ Précision limitée sans width exact (mitigation : indiquer "estimation")
+
+**Blockers** :
+
+* Aucun - Faisable avec données actuelles
+
+---
+
+## 📋 Session 9 : Tests & Polish MVP
+
+**Durée estimée** : 2-3h
+
+**Objectif** : Finaliser MVP pour démonstration
+
+### Actions
+
+**1. Tests Parcours Complet (1h)**
+
+* [ ] Test end-to-end : Sourcing → Validation → Achat
+* [ ] Test calculateur → recherche intégration
+* [ ] Test responsive mobile/desktop
+* [ ] Test dark/light mode toutes pages
+
+**2. Corrections Bugs (1h)**
+
+* [ ] Fix issues découverts en tests
+* [ ] Vérifier loading states partout
+* [ ] Vérifier empty states
+* [ ] Vérifier messages erreur
+
+**3. Polish Final (1h)**
+
+* [ ] Optimiser images (Next.js Image)
+* [ ] Vérifier performance Lighthouse
+* [ ] Ajouter meta tags SEO
+* [ ] Vérifier accessibilité (ARIA labels)
 
 ---
 
 ## 📋 Sessions Suivantes (Semaine 2)
 
-### Session 11 : Favoris
+### Session 10 : Module Admin - Sites
 
-* Page `/favorites`
-* Système sauvegarde (localStorage ou DB)
-* Grille similaire à recherche
+**Objectif** : Interface gestion sources de scraping
 
-### Session 12 : Projets Basiques
+**Fonctionnalités** :
 
-* CRUD projets simples
-* Associer textiles à projets
-* Budget tracker
-
-### Session 13 : Tests & Polish
-
-* Tests composants critiques
-* Corrections bugs
-* Performance optimizations
-* Animations finales
-
-### Session 14 : Module Admin - Sites
-
-* Page `/admin/sites`
-* Liste sources
+* Liste sites avec status
 * Discovery interface
-* Scraping interface
+* Configuration scraping
+* Trigger scraping manuel
 
-### Session 15 : Module Admin - Tuning
+### Session 11 : Module Admin - Tuning
 
-* Page `/admin/tuning`
-* Interface unknowns
+**Objectif** : Interface normalisation données
+
+**Fonctionnalités** :
+
+* Review unknowns terms
 * Dictionary management
+* LLM suggestions
 * Batch approvals
+
+### Session 12 : Enrichissement Données
+
+**Objectif** : Améliorer quality score global
+
+**Actions** :
+
+* Enrichir scrapers (si pas fait Session 8)
+* Ajouter nouveaux sites (5-10 sources)
+* Améliorer normalisation color (80%+ accuracy)
+* Compléter compositions
+
+### Session 13 : Authentification
+
+**Objectif** : Préparer Phase 2
+
+**Actions** :
+
+* Setup Supabase Auth
+* Magic link login
+* Migration favoris session → user_id
+* User profile basique
 
 ---
 
 ## 🚧 Bloqueurs Potentiels
 
-### Données
+### Données (Résolu partiellement)
 
-* **Width/Weight manquants** → Enrichir scrapers avant Session 10
-* **Composition faible** → Améliorer extraction
+* ✅ ~~Favoris système~~ - **Implémenté Session 7**
+* ⚠️ **Width/Weight manquants** → Calculateur sera "estimation"
+* ⚠️ **Composition faible** → Limiter info produit
 
-**Action** : Intercaler session enrichissement scrapers si bloquant
+**Action** : Ajouter disclaimers "estimation" dans calculateur
 
-### Design
+### Technique
 
-* **Icons Lucide** → Vérifier tous icons disponibles
-* **Dark mode** → Tester toutes pages
+* ✅ ~~RLS Supabase~~ - **Résolu Session 7**
+* ✅ ~~Optimistic updates~~ - **Implémenté Session 7**
+* ⚠️ **Anti-bot protection** → Certains sites bloquent
 
-**Action** : Tests réguliers en dark mode
+**Action** : Documenter sites problématiques, rotation IPs Phase 2
 
 ---
 
 ## 🎯 Critères de Succès MVP Demo
 
-### Fonctionnel
+### Fonctionnel (70% ✅)
 
 * ✅ Recherche unifiée fonctionne
 * ✅ Filtres appliquent correctement
-* ✅ Détail produit affiche toutes données
-* ✅ Calculateur donne résultats justes
+* ✅ Système favoris complet
+* ✅ Détail produit affiche données
 * ✅ Navigation fluide entre pages
 * ✅ Responsive mobile/desktop
+* ⏳ Calculateur donne résultats (Session 8)
 
-### UX
+### UX (90% ✅)
 
 * ✅ Sidebar parcours visible et claire
 * ✅ Design sobre et professionnel
 * ✅ Dark mode impeccable
-* ✅ Animations subtiles
-* ✅ Loading states partout
+* ✅ Messages d'aide contextuels
+* ✅ Loading states (favoris)
 * ✅ Empty states informatifs
+* ⏳ Animations subtiles (à peaufiner)
 
-### Performance
+### Performance (80% ✅)
 
 * ✅ Pages chargent < 2s
-* ✅ Images optimisées
-* ✅ Pas de layout shifts
-* ✅ Transitions 60fps
+* ✅ Optimistic updates instantanés
+* ⚠️ Images optimisées (à vérifier)
+* ⚠️ Pas de layout shifts (à tester)
+* ✅ Transitions fluides
 
 ---
 
@@ -385,46 +334,137 @@ src/app/tools/yardage-calculator/
 
 **Semaine 1 (1-7 Jan)** : Frontend MVP Designer
 
-* Jour 1 : Design System + Sidebar ✅
-* Jour 2 : Page Recherche
-* Jour 3 : Page Détail
-* Jour 4 : Calculateur
-* Jour 5 : Favoris + Polish
-* Weekend : Tests & bugs
+* ✅ Jour 1 : Specs + Design System
+* ✅ Jour 2 : Système de Favoris
+* ⏳ Jour 3 : Calculateur Métrage
+* ⏳ Jour 4 : Tests & Polish
+* ⏳ Jour 5 : Corrections + Documentation
+* Weekend : Buffer & préparation démo
 
 **Semaine 2 (8-14 Jan)** : Admin + Data Quality
 
-* Enrichissement scrapers
 * Module Admin Sites
 * Module Admin Tuning
+* Enrichissement scrapers
 * Tests intégration
 
-**Semaine 3 (15-21 Jan)** : Features Phase 2
+**Semaine 3 (15-21 Jan)** : Phase 2 Prep
 
-* Projets basiques
+* Authentification Supabase
+* Migration favoris → users
+* Projets avec historique
 * Mood boards (si temps)
-* Optimisations
 
 ---
 
 ## 🎬 Prochaine Action Immédiate
 
-### Session 7 : Démarrer par
+### Session 8 : Démarrer par
 
-1. **Setup Tailwind tokens** (fichier design-tokens.css)
-2. **Installer Lucide React** : `npm install lucide-react`
-3. **Créer structure features/journey**
-4. **Implémanter Sidebar.tsx**
+**Si Option A (Calculateur)** - Recommandé :
 
-**Commande de départ** :
+1. **Créer structure calculateur**
 
 ```bash
-npm install lucide-react
-mkdir -p src/features/journey/{domain,config,components}
-mkdir -p src/components/ui
-touch src/styles/design-tokens.css
+mkdir -p src/features/calculator/{domain,components}
+mkdir -p src/app/tools/yardage-calculator
 ```
+
+2. **Définir formules métrage**
+   * Rechercher formules standards couture
+   * Créer fichier `formulas.ts` avec logique
+   * Documenter sources/références
+3. **Implémenter formulaire**
+   * Créer `CalculatorForm.tsx`
+   * Utiliser composants UI existants
+   * Validation inputs
+4. **Afficher résultats**
+   * Créer `ResultDisplay.tsx`
+   * Intégration avec recherche
+
+**Si Option B (Données)** :
+
+1. **Audit HTML sources**
+2. **Améliorer adapters scrapers**
+3. **Re-scraping collections validées**
+4. **Validation complétude**
 
 ---
 
-**Prêt pour Session 7 !** 🚀
+## 📊 Métriques à Suivre
+
+### Développement
+
+* **Code coverage** : Ajouter tests critiques
+* **Build time** : Optimiser si > 30s
+* **Bundle size** : Vérifier < 500kb
+
+### Données
+
+* **Products** : 112 → 200+ (semaine 2)
+* **Width complétude** : 0% → 60%+
+* **Composition** : 6% → 30%+
+* **Quality score** : 82% → 85%+
+
+### UX
+
+* **Lighthouse score** : > 90
+* **First Contentful Paint** : < 1.5s
+* **Time to Interactive** : < 3s
+
+---
+
+## 🎓 Apprentissages Session 7
+
+### Technique
+
+* **React Context + Optimistic Updates** : Pattern parfait pour favoris
+* **Server Components + Client Components** : Séparation claire nécessaire
+* **RLS + GRANT** : Combinaison essentielle Supabase
+* **Session temporaire** : Réduire friction onboarding
+
+### Produit
+
+* **Messages d'aide contextuels** : Critiques pour UX sans doc
+* **Empty states** : Opportunités conversion (CTA recherche)
+* **Navigation prev/next** : Attendue pour comparaison items
+
+### Process
+
+* **PowerShell limitations** : Éviter template strings complexes
+* **Audit DB avant requêtes** : Éviter tâtonnements
+* **Documentation progressive** : Session notes pendant dev
+
+---
+
+## 💡 Idées pour Plus Tard
+
+### Features
+
+* [ ] Export liste favoris (PDF, Excel)
+* [ ] Partage favoris (lien public)
+* [ ] Comparaison côte-à-côte (2-3 favoris)
+* [ ] Historique prix (si scrapé régulièrement)
+* [ ] Alertes stock (webhook sources)
+
+### Optimisations
+
+* [ ] Cache Redis (recherches populaires)
+* [ ] CDN images (Cloudinary)
+* [ ] Lazy loading images (viewport)
+* [ ] Service Worker (offline mode)
+
+### Monétisation
+
+* [ ] API professionnelle (€49/mois)
+* [ ] Projets illimités (€19/mois)
+* [ ] Reverse marketplace (commission 5%)
+* [ ] White label (€299/mois)
+
+---
+
+**Prêt pour Session 8 !** 🚀
+
+**Décision à prendre** : Option A (Calculateur) ou Option B (Données) ?
+
+**Recommandation** : **Option A** - Complète le parcours MVP essentiel
