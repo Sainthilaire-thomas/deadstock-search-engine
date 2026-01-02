@@ -1,5 +1,5 @@
 // src/features/admin/application/queries.ts
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { AdminMetrics } from '../domain/types';
 
 /**
@@ -7,7 +7,7 @@ import type { AdminMetrics } from '../domain/types';
  * Server-side only
  */
 export async function getAdminMetrics(): Promise<AdminMetrics> {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // ← Utilise admin client
 
   // Total sites
   const { count: totalSites } = await supabase
@@ -79,7 +79,7 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
  * Get all sites (server-side)
  */
 export async function getAllSites() {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // ← Utilise admin client
   
   const { data, error } = await supabase
     .from('sites')
@@ -98,7 +98,7 @@ export async function getAllSites() {
  * Get recent jobs (server-side)
  */
 export async function getRecentJobsWithSites(limit = 10) {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // ← Utilise admin client
   
   const { data: jobs, error } = await supabase
     .from('scraping_jobs')
@@ -121,7 +121,7 @@ export async function getRecentJobsWithSites(limit = 10) {
  * Get site by ID with profile (server-side)
  */
 export async function getSiteByIdServer(siteId: string) {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // ← Utilise admin client
   
   const { data: site, error: siteError } = await supabase
     .from('sites')
@@ -135,13 +135,14 @@ export async function getSiteByIdServer(siteId: string) {
   }
 
   // Get profile if exists
-  const { data: profile } = await supabase
+  const { data: profiles, error: profileError } = await supabase
     .from('site_profiles')
     .select('*')
     .eq('site_id', siteId)
     .order('discovered_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  console.log('Profile query result:', { profiles, profileError, siteId });
 
   // Get jobs count
   const { count: jobsCount } = await supabase
@@ -157,7 +158,7 @@ export async function getSiteByIdServer(siteId: string) {
 
   return {
     ...site,
-    profile: profile || undefined,
+    profile: profiles && profiles.length > 0 ? profiles[0] : undefined,
     jobsCount: jobsCount || 0,
     textilesCount: textilesCount || 0,
   };

@@ -141,7 +141,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
           <CardHeader>
             <CardTitle>Discovery Profile</CardTitle>
             <CardDescription>
-              Discovered on {new Date(site.profile.discovered_at).toLocaleDateString()}
+             Discovered on {site.profile.discovered_at ? new Date(site.profile.discovered_at).toLocaleDateString() : 'Unknown'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -169,18 +169,28 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
         </Card>
       )}
 
-     {/* Actions */}
+    {/* Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>Manage this site</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <SiteActions 
             siteId={site.id}
             siteUrl={site.url}
             hasProfile={!!site.profile}
           />
+          
+          {site.profile && (
+            <div className="pt-4 border-t">
+              <Link href={`/admin/sites/${site.id}/configure`}>
+                <Button variant="outline" className="w-full">
+                  Configure Scraping Settings
+                </Button>
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -228,7 +238,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
                       {job.status}
                     </Badge>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(job.created_at).toLocaleDateString()}
+                      {job.created_at ? new Date(job.created_at).toLocaleDateString() : 'N/A'}
                     </div>
                   </div>
                 </div>

@@ -164,7 +164,7 @@ export default async function JobsPage() {
                         {job.status}
                       </Badge>
                       <div className="text-xs text-muted-foreground mt-2">
-                        {new Date(job.created_at).toLocaleString()}
+                       {job.created_at ? new Date(job.created_at).toLocaleString() : 'N/A'}
                       </div>
                     </div>
                   </div>

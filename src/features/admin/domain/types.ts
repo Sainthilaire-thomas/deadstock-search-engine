@@ -1,20 +1,22 @@
 // src/features/admin/domain/types.ts
+import { Database } from '@/types/database.types';
 
-export interface Site {
-  id: string;
-  name: string;
-  url: string;
-  platform_type: 'shopify' | 'woocommerce' | 'custom';
-  status: 'new' | 'discovered' | 'active' | 'paused' | 'archived';
-  priority: 'high' | 'medium' | 'low';
-  discovery_completed_at: string | null;
-  last_scraped_at: string | null;
-  scraping_config: ScrapingConfig | null;
-  quality_score: number | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+// ============================================================================
+// TYPES DE BASE DEPUIS SUPABASE (Source de vérité)
+// ============================================================================
+
+type SiteRow = Database['deadstock']['Tables']['sites']['Row'];
+type ScrapingJobRow = Database['deadstock']['Tables']['scraping_jobs']['Row'];
+type SiteProfileRow = Database['deadstock']['Tables']['site_profiles']['Row'];
+
+// Export des types DB directement pour garantir la cohérence
+export type Site = SiteRow;
+export type ScrapingJob = ScrapingJobRow;
+export type SiteProfile = SiteProfileRow;
+
+// ============================================================================
+// TYPES MÉTIER (Extensions et configurations)
+// ============================================================================
 
 export interface ScrapingConfig {
   collections?: string[];
@@ -33,45 +35,6 @@ export interface ScrapingConfig {
   };
 }
 
-export interface ScrapingJob {
-  id: string;
-  site_id: string;
-  profile_id: string | null;
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
-  started_at: string | null;
-  ended_at: string | null;
-  config: ScrapingConfig | null;
-  products_fetched: number;
-  products_saved: number;
-  products_skipped: number;
-  products_updated: number;
-  errors_count: number;
-  quality_score: number | null;
-  logs: any;
-  error_details: any;
-  created_at: string;
-}
-
-export interface SiteProfile {
-  id: string;
-  site_id: string;
-  discovered_at: string;
-  valid_until: string;
-  profile_version: number;
-  collections: any;
-  sample_products: any;
-  data_structure: any;
-  quality_metrics: any;
-  recommendations: any;
-  is_shopify: boolean;
-  total_collections: number;
-  relevant_collections: number;
-  estimated_products: number;
-  needs_rediscovery: boolean;
-  rediscovery_reason: string | null;
-  created_at: string;
-}
-
 export interface AdminMetrics {
   totalSites: number;
   activeSites: number;
@@ -82,6 +45,10 @@ export interface AdminMetrics {
   pendingUnknowns: number;
   lastScrapingAt: string | null;
 }
+
+// ============================================================================
+// TYPES ENRICHIS (Avec relations)
+// ============================================================================
 
 export interface SiteWithProfile extends Site {
   profile?: SiteProfile;
