@@ -19,6 +19,7 @@ import type { Site } from '../domain/types';
 function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile {
   return {
     siteUrl: siteUrl,
+    platform: dbProfile.is_shopify ? 'shopify' : 'unknown', // ← AJOUTER CETTE LIGNE
     isShopify: dbProfile.is_shopify ?? true,
     discoveredAt: new Date(dbProfile.discovered_at),
     validUntil: new Date(dbProfile.valid_until),
