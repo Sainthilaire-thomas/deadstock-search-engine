@@ -69,7 +69,7 @@ Le cœur de l'expérience utilisateur :
 
 ---
 
-## 🏗️ Architecture Technique
+## 🗂️ Architecture Technique
 
 ### Stack Principal
 
@@ -93,7 +93,9 @@ Le cœur de l'expérience utilisateur :
 * `dictionary_mappings` - Normalisation FR→EN
 * `favorites` - Favoris utilisateur (Session 7) ⭐
 
-**RLS** : Row Level Security activé sur `favorites`
+**RLS** : Row Level Security activé sur certaines tables
+
+**Service Role** : Client admin avec bypass RLS (Session 8) 🔑
 
 ### Patterns Architecturaux
 
@@ -102,10 +104,11 @@ Le cœur de l'expérience utilisateur :
 * **DDD Léger** : Organisation features/ par domaine
 * **Server Actions** : Mutations Next.js 15+
 * **Optimistic Updates** : UX instantanée favoris
+* **Types Générés** : Source de vérité depuis Supabase (Session 8) 📋
 
 ---
 
-## 📊 État Actuel (Session 7)
+## 📊 État Actuel (Session 8)
 
 ### Données Indexées
 
@@ -149,6 +152,7 @@ Le cœur de l'expérience utilisateur :
 * **Badges** : Status, catégories
 * **Filters** : Recherche avancée
 * **Tooltips** : Aide contextuelle
+* **Toasts** : Notifications actions (Session 8) 🔔
 
 ### Design Tokens (Session 7)
 
@@ -182,7 +186,35 @@ Le cœur de l'expérience utilisateur :
 * Server Actions pour persistence
 * Migration user_id prévue Phase 2
 
-### 2. Normalisation Intelligente
+### 2. Module Admin Complet (Session 8) 🔧
+
+**Problème** : Besoin outils pour gérer sources, scraping, qualité données
+
+**Solution** :
+
+* Dashboard admin avec métriques temps réel
+* Gestion sites (liste, détail, création)
+* Discovery automatique structure sites
+* Configuration scraping par collection
+* Monitoring jobs avec historique
+* Interface tuning normalisation (à venir)
+
+**Architecture** :
+
+* Client Supabase admin (service role key)
+* Types TypeScript générés depuis DB
+* Repository pattern pour data access
+* Server Actions pour mutations
+* Toast notifications pour feedback
+
+**Workflow** :
+
+1. **Discovery** : Analyser structure site automatiquement
+2. **Configure** : Sélectionner collections + filtres
+3. **Scraping** : Preview (10 produits) ou Full
+4. **Monitoring** : Suivre jobs, erreurs, quality scores
+
+### 3. Normalisation Intelligente
 
 **Problème** : FR "Coton bio bleu" vs EN "Blue organic cotton"
 
@@ -193,7 +225,7 @@ Le cœur de l'expérience utilisateur :
 * LLM fallback pour unknowns
 * Tuning continu par admin
 
-### 3. Multi-Source Unified Search
+### 4. Multi-Source Unified Search
 
 **Problème** : 10+ sites avec formats différents
 
@@ -207,7 +239,7 @@ Le cœur de l'expérience utilisateur :
 
 ## 🚀 Roadmap & Phases
 
-### Phase 1 : MVP (En Cours - 70% ✅)
+### Phase 1 : MVP (En Cours - 85% ✅)
 
 **Objectif** : Démontrer value prop core
 
@@ -217,6 +249,7 @@ Le cœur de l'expérience utilisateur :
 * ✅ Système de favoris complet
 * ✅ Détail produit avec specs
 * ✅ Design system & navigation
+* ✅ Module Admin complet (Dashboard, Sites, Jobs, Configure)
 * ⏳ Calculateur métrage
 * ⏳ Projets basiques
 
@@ -333,6 +366,27 @@ Le cœur de l'expérience utilisateur :
 * React Context + optimistic updates
 * Justification : Friction zéro, UX instantanée
 
+### ADR-014 : Admin Service Role Key (Session 8) 🔑
+
+* Client Supabase admin avec service_role_key
+* Bypass RLS pour opérations admin
+* Séparation client user vs client admin
+* Justification : Sécurité, permissions granulaires
+
+### ADR-015 : TypeScript Types Generation (Session 8) 📋
+
+* Types générés depuis Supabase (database.types.ts)
+* Source de vérité unique
+* Utilisation dans domain types
+* Justification : Cohérence, maintenabilité
+
+### ADR-016 : Configure Scraping UX (Session 8) 🎨
+
+* Page dédiée `/admin/sites/[id]/configure`
+* Workflow linéaire : Discovery → Configure → Scraping
+* Sélection collections + filtres + preview
+* Justification : UX claire, espace suffisant
+
 ---
 
 ## 📚 Documentation Clé
@@ -346,7 +400,7 @@ Le cœur de l'expérience utilisateur :
 
 ### Architecture & Décisions
 
-* **ADR-001 à ADR-012** - Décisions techniques
+* **ADR-001 à ADR-016** - Décisions techniques
 * **DATABASE_ARCHITECTURE.md** - Schema détaillé
 * **TUNING_SYSTEM.md** - Normalisation
 
@@ -360,6 +414,7 @@ Le cœur de l'expérience utilisateur :
 
 * **SESSION_4_STRATEGIC_PIVOT.md** - Pivot vers designers
 * **SESSION_7_FAVORITES_SYSTEM.md** - Implémentation favoris ⭐
+* **SESSION_8_ADMIN_MODULE_COMPLETE.md** - Module admin complet 🔧
 
 ---
 
@@ -371,6 +426,7 @@ Le cœur de l'expérience utilisateur :
 2. **Killer feature** : Pattern PDF + calcul + sourcing combinés
 3. **Deadstock = Urgence** : Stock limité, besoin décision rapide
 4. **Quality > Quantity** : 100 bons produits > 10k médiocres
+5. **Admin tools = MVP** : Impossible de scaler sans outils admin
 
 ### Technique
 
@@ -378,6 +434,9 @@ Le cœur de l'expérience utilisateur :
 2. **React Context** : Parfait pour state partagé simple
 3. **Server Components** : Simplifier fetch data
 4. **Session temporaire** : Réduire friction onboarding
+5. **Service role key** : Nécessaire pour admin (bypass RLS)
+6. **Types générés** : Source vérité évite drift DB ↔ code
+7. **Client serveur** : Cookies() pour auth, service_role pour admin
 
 ### Business
 
@@ -395,6 +454,7 @@ Le cœur de l'expérience utilisateur :
 * **Données incomplètes** : Width/weight manquants (0%)
 * **Normalisation color** : 40% accuracy seulement
 * **Anti-bot protection** : Certains sites bloquent scrapers
+* **9 erreurs TypeScript** : Scripts legacy (non bloquant)
 
 ### Produit
 
@@ -415,16 +475,17 @@ Le cœur de l'expérience utilisateur :
 ### Immédiat (Cette Semaine)
 
 1. ✅ ~~Implémenter système favoris~~ **FAIT Session 7**
-2. ⏳ Créer calculateur métrage
-3. ⏳ Enrichir données scrapers (width, weight)
-4. ⏳ Tests utilisateur avec designers
+2. ✅ ~~Créer module admin complet~~ **FAIT Session 8**
+3. ⏳ Tester workflow admin end-to-end
+4. ⏳ Créer calculateur métrage
+5. ⏳ Enrichir données scrapers (width, weight)
 
 ### Court Terme (2-3 Semaines)
 
-1. Finaliser MVP Phase 1
+1. Finaliser MVP Phase 1 (calculateur + tests)
 2. Onboarding 10-20 designers beta
 3. Itérations rapides sur feedback
-4. Module admin pour tuning
+4. Enrichir données (300+ produits)
 
 ### Moyen Terme (1-2 Mois)
 
@@ -445,10 +506,12 @@ Le cœur de l'expérience utilisateur :
 
 > "Quality over quantity. Better 100 perfect textiles than 10k mediocre ones."
 
+> "Admin tools are not optional - they're the foundation for scalable quality."
+
 ### Vision Long Terme
 
 > "Accompagner le designer de l'idée jusqu'à la mesure de son impact CO2."
 
 ---
 
-**Contexte maintenu à jour** - Session 7 : Système de favoris fonctionnel ✅
+**Contexte maintenu à jour** - Session 8 : Module Admin complet ✅

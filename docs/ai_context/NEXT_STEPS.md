@@ -5,19 +5,19 @@
 
 **Phase Actuelle** : MVP Demo Week 1
 
-**Session Complétée** : Session 7 - Système de Favoris ✅
+**Session Completée** : Session 8 - Module Admin Complet ✅
 
-**Prochaine Session** : Session 8 - Calculateur de Métrage OU Enrichissement Données
+**Prochaine Session** : Session 9 - Tests & Finalisation Admin OU Session 10 - Calculateur de Métrage
 
 ---
 
 ## 🎯 Objectifs Semaine 1 (1-7 Janvier)
 
-### MVP Demo : Interface Designer Complète
+### MVP Demo : Interface Designer + Admin Complète
 
-**Deliverable** : Application fonctionnelle démontrant le parcours complet designer
+**Deliverable** : Application fonctionnelle démontrant le parcours complet designer + outils admin
 
-**État d'avancement : ~70% ✅**
+**État d'avancement : ~85% ✅**
 
 **Composants** :
 
@@ -27,48 +27,111 @@
 * ✅ Sidebar parcours designer
 * ✅ Dark/Light mode
 * ✅ Responsive mobile
+* ✅ Module Admin complet (Dashboard, Sites, Jobs, Configure)
 * ⏳ Calculateur métrage
 * ⏳ Page projets basique
 
 ---
 
-## ✅ Session 7 Complétée (2 Janvier)
+## ✅ Session 8 Completée (2 Janvier)
 
-### Réalisations
+### Réalisations Majeures
 
-**Design System** :
+**Module Admin Complet** :
 
-* ✅ Sidebar collapsible implémentée
-* ✅ Design tokens CSS
-* ✅ 9 étapes parcours designer
-* ✅ Mobile navigation (bottom nav)
+* ✅ Dashboard admin avec métriques temps réel
+* ✅ Page liste sites avec statuts
+* ✅ Page détail site avec profile discovery
+* ✅ Page configure scraping avec sélection collections
+* ✅ Page liste jobs avec statistiques
+* ✅ Formulaire création site
 
-**Système de Favoris** :
+**Architecture Admin** :
 
-* ✅ Architecture complète (DB, Repository, Actions, Context)
-* ✅ 3 migrations appliquées (table, RLS, permissions)
-* ✅ Boutons ❤️ avec optimistic updates
-* ✅ Badge compteur synchronisé
-* ✅ Page `/favorites` - Liste
-* ✅ Page `/favorites/[id]` - Détail avec navigation
-* ✅ Page 404 personnalisée
+* ✅ Types générés depuis Supabase (database.types.ts)
+* ✅ Client Supabase admin avec service role key
+* ✅ Client Supabase serveur avec cookies
+* ✅ Repository pattern (sitesRepo, jobsRepo)
+* ✅ Server Actions pour mutations
+* ✅ Queries server-side avec schéma deadstock
 
-**Messages d'Aide** :
+**Composants Admin** :
 
-* ✅ Guide recherche contextuel
-* ✅ Empty state favoris avec CTA
-* ✅ Instructions navigation favoris
+* ✅ SiteActions (Discovery + Scraping buttons)
+* ✅ ScrapingConfigForm (collections, filtres, limites)
+* ✅ AddSiteForm (création site)
+* ✅ Toast notifications (sonner)
 
-**Documentation** :
+**Configuration Scraping** :
 
-* ✅ SESSION_7_FAVORITES_SYSTEM.md
-* ⏳ ADR-013 (Architecture favoris) - à créer
+* ✅ Sélection collections à scraper
+* ✅ Filtres : prix min/max, images requises, disponibles uniquement
+* ✅ Limite produits par collection
+* ✅ Preview (10 produits) et Full scraping
+* ✅ Sauvegarde configuration
+
+**Décisions Techniques** :
+
+* ✅ ADR-013 : Service role key pour admin (bypass RLS)
+* ✅ ADR-014 : Types générés depuis Supabase
+* ✅ ADR-015 : UX configure scraping (page dédiée)
+
+**Corrections TypeScript** :
+
+* ✅ Migration vers types Supabase générés
+* ✅ Async params Next.js 15+
+* ✅ Dates nullables gérées
+* ✅ Json types castés correctement
+* ⚠️ 9 erreurs restantes (scripts legacy, non bloquant)
 
 ---
 
-## 📋 Options pour Session 8
+## 📋 Options pour Session 9
 
-### Option A : Calculateur de Métrage (Recommandé)
+### Option A : Tests & Finalisation Admin (Recommandé)
+
+**Priorité** : Haute - Valider module créé Session 8
+
+**Durée estimée** : 1-2h
+
+**Objectif** : Tester et peaufiner module admin
+
+#### Actions
+
+**1. Tests Workflow Admin (45min)**
+
+* [ ] Tester Discovery sur un nouveau site
+* [ ] Vérifier que profile s'affiche après discovery
+* [ ] Accéder à page configure
+* [ ] Sélectionner collections et configurer filtres
+* [ ] Tester bouton "Save Configuration"
+* [ ] Tester bouton "Preview (10 products)"
+* [ ] Tester bouton "Start Full Scraping"
+* [ ] Vérifier que job apparaît dans liste jobs
+
+**2. Corrections Bugs (30min)**
+
+* [ ] Résoudre erreurs refetch console
+* [ ] Vérifier tous loading states
+* [ ] Tester gestion erreurs (site invalide, scraping failed)
+* [ ] Valider que toasts apparaissent correctement
+
+**3. Documentation Admin (15min)**
+
+* [ ] Créer README module admin
+* [ ] Documenter workflow Discovery → Configure → Scraping
+* [ ] Screenshots des pages admin
+* [ ] Guide utilisation pour futurs admins
+
+**Validation** :
+
+* Workflow complet fonctionne end-to-end
+* Aucune erreur console critique
+* Documentation claire pour réutilisation
+
+---
+
+### Option B : Calculateur de Métrage
 
 **Priorité** : Haute - Fonctionnalité critique MVP
 
@@ -123,13 +186,32 @@ src/features/calculator/
 
 ---
 
-### Option B : Enrichissement Données Scrapers
+## 🎯 Recommandation : Option A puis Option B
 
-**Priorité** : Moyenne - Bloque qualité calculateur
+### Justification
+
+**Session 9 : Tests Admin (1-2h)**
+
+* ✅ Valider travail Session 8 (risque bugs cachés)
+* ✅ S'assurer que module est réutilisable
+* ✅ Corriger avant d'empiler nouveautés
+
+**Session 10 : Calculateur (2-3h)**
+
+* ✅ Complète parcours MVP essentiel (étape 4)
+* ✅ Killer feature différenciante
+* ✅ Utilisable même avec données incomplètes
+* ✅ Démontre value prop immédiate
+
+---
+
+## 📋 Sessions Suivantes (Semaine 1-2)
+
+### Session 11 : Enrichissement Données Scrapers
+
+**Objectif** : Améliorer complétude width, weight, composition
 
 **Durée estimée** : 3-4h
-
-**Objectif** : Améliorer complétude données (width, weight, composition)
 
 #### Actions
 
@@ -161,56 +243,19 @@ src/features/calculator/
 
 ---
 
-### Option C : Page Projets Basique
-
-**Priorité** : Faible - Nice to have MVP
-
-**Durée estimée** : 3-4h
-
-**Objectif** : Étape 3 du parcours (Design)
-
-#### Fonctionnalités Minimales
-
-* [ ] CRUD projets (nom, description, date)
-* [ ] Liste projets
-* [ ] Détail projet
-* [ ] Associer favoris à projet (optionnel)
-
----
-
-## 🎯 Recommandation : Option A (Calculateur)
-
-### Justification
-
-**Pour** :
-
-* ✅ Complète parcours MVP essentiel (étape 4)
-* ✅ Killer feature différenciante
-* ✅ Utilisable même avec données incomplètes (largeur par défaut)
-* ✅ Démontre value prop immédiate
-
-**Contre** :
-
-* ⚠️ Précision limitée sans width exact (mitigation : indiquer "estimation")
-
-**Blockers** :
-
-* Aucun - Faisable avec données actuelles
-
----
-
-## 📋 Session 9 : Tests & Polish MVP
+### Session 12 : Tests & Polish MVP
 
 **Durée estimée** : 2-3h
 
 **Objectif** : Finaliser MVP pour démonstration
 
-### Actions
+#### Actions
 
 **1. Tests Parcours Complet (1h)**
 
 * [ ] Test end-to-end : Sourcing → Validation → Achat
 * [ ] Test calculateur → recherche intégration
+* [ ] Test admin : Discovery → Configure → Scraping
 * [ ] Test responsive mobile/desktop
 * [ ] Test dark/light mode toutes pages
 
@@ -220,6 +265,7 @@ src/features/calculator/
 * [ ] Vérifier loading states partout
 * [ ] Vérifier empty states
 * [ ] Vérifier messages erreur
+* [ ] Corriger 9 erreurs TypeScript legacy
 
 **3. Polish Final (1h)**
 
@@ -227,80 +273,88 @@ src/features/calculator/
 * [ ] Vérifier performance Lighthouse
 * [ ] Ajouter meta tags SEO
 * [ ] Vérifier accessibilité (ARIA labels)
+* [ ] Screenshots documentation
 
 ---
 
-## 📋 Sessions Suivantes (Semaine 2)
+### Session 13 : Ajouter Nouveaux Sites
 
-### Session 10 : Module Admin - Sites
-
-**Objectif** : Interface gestion sources de scraping
-
-**Fonctionnalités** :
-
-* Liste sites avec status
-* Discovery interface
-* Configuration scraping
-* Trigger scraping manuel
-
-### Session 11 : Module Admin - Tuning
-
-**Objectif** : Interface normalisation données
-
-**Fonctionnalités** :
-
-* Review unknowns terms
-* Dictionary management
-* LLM suggestions
-* Batch approvals
-
-### Session 12 : Enrichissement Données
-
-**Objectif** : Améliorer quality score global
+**Objectif** : Élargir catalogue textile
 
 **Actions** :
 
-* Enrichir scrapers (si pas fait Session 8)
-* Ajouter nouveaux sites (5-10 sources)
-* Améliorer normalisation color (80%+ accuracy)
-* Compléter compositions
+* [ ] Identifier 5-10 nouveaux sites deadstock
+* [ ] Run discovery sur chaque site
+* [ ] Configurer scraping pertinent
+* [ ] Valider quality scores
+* [ ] Objectif : 112 → 300+ produits
 
-### Session 13 : Authentification
+---
 
-**Objectif** : Préparer Phase 2
+## 📋 Phase 2 Préparation (Semaine 3+)
+
+### Session 14 : Authentification Supabase
+
+**Objectif** : Préparer migration favoris session → user
 
 **Actions** :
 
 * Setup Supabase Auth
 * Magic link login
-* Migration favoris session → user_id
 * User profile basique
+* Migration strategy favoris
+
+### Session 15 : Page Projets
+
+**Objectif** : Sauvegarder calculs + favoris
+
+**Actions** :
+
+* CRUD projets
+* Associer favoris à projet
+* Historique calculs métrage
+* Export projet (PDF)
+
+### Session 16 : Mood Boards
+
+**Objectif** : Étape 2 du parcours (Inspiration)
+
+**Actions** :
+
+* Upload images inspiration
+* Génération palette couleurs
+* Recherche par couleur palette
+* Sauvegarde mood board
 
 ---
 
-## 🚧 Bloqueurs Potentiels
+## 🚧 Bloqueurs Actuels
 
-### Données (Résolu partiellement)
+### Données (Partiellement résolu)
 
 * ✅ ~~Favoris système~~ - **Implémenté Session 7**
+* ✅ ~~Module Admin~~ - **Implémenté Session 8**
 * ⚠️ **Width/Weight manquants** → Calculateur sera "estimation"
 * ⚠️ **Composition faible** → Limiter info produit
 
-**Action** : Ajouter disclaimers "estimation" dans calculateur
+**Action** : Session 11 - Enrichir scrapers
 
 ### Technique
 
 * ✅ ~~RLS Supabase~~ - **Résolu Session 7**
 * ✅ ~~Optimistic updates~~ - **Implémenté Session 7**
+* ✅ ~~Client Supabase serveur~~ - **Créé Session 8**
+* ✅ ~~Types générés~~ - **Créés Session 8**
+* ⚠️ **9 erreurs TypeScript legacy** - Non bloquant mais à corriger
 * ⚠️ **Anti-bot protection** → Certains sites bloquent
 
-**Action** : Documenter sites problématiques, rotation IPs Phase 2
+**Action** : Session 12 - Corriger erreurs legacy
 
 ---
 
 ## 🎯 Critères de Succès MVP Demo
 
-### Fonctionnel (70% ✅)
+### Fonctionnel (85% ✅)
 
 * ✅ Recherche unifiée fonctionne
 * ✅ Filtres appliquent correctement
@@ -308,9 +362,10 @@ src/features/calculator/
 * ✅ Détail produit affiche données
 * ✅ Navigation fluide entre pages
 * ✅ Responsive mobile/desktop
-* ⏳ Calculateur donne résultats (Session 8)
+* ✅ Module Admin complet (Dashboard, Sites, Jobs, Configure)
+* ⏳ Calculateur donne résultats (Session 10)
 
-### UX (90% ✅)
+### UX (95% ✅)
 
 * ✅ Sidebar parcours visible et claire
 * ✅ Design sobre et professionnel
@@ -318,35 +373,38 @@ src/features/calculator/
 * ✅ Messages d'aide contextuels
 * ✅ Loading states (favoris)
 * ✅ Empty states informatifs
+* ✅ Toast notifications admin
 * ⏳ Animations subtiles (à peaufiner)
 
-### Performance (80% ✅)
+### Performance (85% ✅)
 
 * ✅ Pages chargent < 2s
 * ✅ Optimistic updates instantanés
 * ⚠️ Images optimisées (à vérifier)
 * ⚠️ Pas de layout shifts (à tester)
 * ✅ Transitions fluides
+* ⚠️ Quelques refetch console (à corriger)
 
 ---
 
 ## 📅 Timeline Suggérée
 
-**Semaine 1 (1-7 Jan)** : Frontend MVP Designer
+**Semaine 1 (1-7 Jan)** : Frontend MVP Designer + Admin
 
 * ✅ Jour 1 : Specs + Design System
-* ✅ Jour 2 : Système de Favoris
-* ⏳ Jour 3 : Calculateur Métrage
-* ⏳ Jour 4 : Tests & Polish
-* ⏳ Jour 5 : Corrections + Documentation
+* ✅ Jour 2 : Système de Favoris + Module Admin Complet
+* ⏳ Jour 3 : Tests Admin + Calculateur Métrage
+* ⏳ Jour 4 : Enrichissement Données
+* ⏳ Jour 5 : Tests & Polish + Documentation
 * Weekend : Buffer & préparation démo
 
-**Semaine 2 (8-14 Jan)** : Admin + Data Quality
+**Semaine 2 (8-14 Jan)** : Data Quality + Tests
 
-* Module Admin Sites
-* Module Admin Tuning
-* Enrichissement scrapers
-* Tests intégration
+* Enrichissement scrapers (Session 11)
+* Ajout nouveaux sites (5-10 sources)
+* Tests end-to-end (Session 12)
+* Corrections bugs
+* Performance optimization
 
 **Semaine 3 (15-21 Jan)** : Phase 2 Prep
 
@@ -359,9 +417,28 @@ src/features/calculator/
 
 ## 🎬 Prochaine Action Immédiate
 
-### Session 8 : Démarrer par
+### Session 9 : Démarrer par
 
-**Si Option A (Calculateur)** - Recommandé :
+**Option A (Tests Admin)** - Recommandé :
+
+1. **Tester workflow complet admin**
+
+   * Créer nouveau site via formulaire
+   * Lancer discovery
+   * Configurer scraping
+   * Vérifier jobs list
+2. **Corriger bugs découverts**
+
+   * Résoudre refetch errors
+   * Valider tous loading states
+   * Tester edge cases (site invalide, etc.)
+3. **Documenter module admin**
+
+   * Créer README admin
+   * Screenshots workflow
+   * Guide utilisation
+
+**OU Option B (Calculateur)** :
 
 1. **Créer structure calculateur**
 
@@ -371,23 +448,19 @@ mkdir -p src/app/tools/yardage-calculator
 ```
 
 2. **Définir formules métrage**
+
    * Rechercher formules standards couture
    * Créer fichier `formulas.ts` avec logique
    * Documenter sources/références
 3. **Implémenter formulaire**
+
    * Créer `CalculatorForm.tsx`
    * Utiliser composants UI existants
    * Validation inputs
 4. **Afficher résultats**
+
    * Créer `ResultDisplay.tsx`
    * Intégration avec recherche
-
-**Si Option B (Données)** :
-
-1. **Audit HTML sources**
-2. **Améliorer adapters scrapers**
-3. **Re-scraping collections validées**
-4. **Validation complétude**
 
 ---
 
@@ -395,6 +468,7 @@ mkdir -p src/app/tools/yardage-calculator
 
 ### Développement
 
+* **TypeScript errors** : 9 → 0
 * **Code coverage** : Ajouter tests critiques
 * **Build time** : Optimiser si > 30s
 * **Bundle size** : Vérifier < 500kb
@@ -403,6 +477,7 @@ mkdir -p src/app/tools/yardage-calculator
 
 * **Products** : 112 → 200+ (semaine 2)
 * **Width complétude** : 0% → 60%+
+* **Weight complétude** : 0% → 50%+
 * **Composition** : 6% → 30%+
 * **Quality score** : 82% → 85%+
 
@@ -414,32 +489,42 @@ mkdir -p src/app/tools/yardage-calculator
 
 ---
 
-## 🎓 Apprentissages Session 7
+## 🎓 Apprentissages Session 8
 
 ### Technique
 
-* **React Context + Optimistic Updates** : Pattern parfait pour favoris
-* **Server Components + Client Components** : Séparation claire nécessaire
-* **RLS + GRANT** : Combinaison essentielle Supabase
-* **Session temporaire** : Réduire friction onboarding
+* **Service Role Key** : Essentiel pour admin (bypass RLS)
+* **Types générés Supabase** : Source de vérité pour cohérence types
+* **Client serveur vs client** : Séparation claire nécessaire
+* **Async params Next.js 15+** : Breaking change à gérer
+* **Schema Supabase** : Spécifier `db: { schema: 'deadstock' }` dans client
 
 ### Produit
 
-* **Messages d'aide contextuels** : Critiques pour UX sans doc
-* **Empty states** : Opportunités conversion (CTA recherche)
-* **Navigation prev/next** : Attendue pour comparaison items
+* **Page configure dédiée** : Meilleure UX que modal pour configuration complexe
+* **Workflow Discovery → Configure → Scraping** : Logique et intuitive
+* **Preview avant full scraping** : Critique pour validation
+* **Toast notifications** : Feedback essentiel pour actions admin
 
 ### Process
 
-* **PowerShell limitations** : Éviter template strings complexes
-* **Audit DB avant requêtes** : Éviter tâtonnements
-* **Documentation progressive** : Session notes pendant dev
+* **Types générés d'abord** : Évite refactoring TypeScript massif
+* **RLS vs Service Role** : Admin nécessite bypass RLS
+* **Documentation progressive** : ADRs pendant décisions, pas après
 
 ---
 
 ## 💡 Idées pour Plus Tard
 
-### Features
+### Features Admin
+
+* [ ] Monitoring jobs temps réel (websockets)
+* [ ] Logs détaillés par job
+* [ ] Retry failed jobs
+* [ ] Schedule scraping automatique
+* [ ] Dashboard analytics (produits/jour, sources populaires)
+
+### Features Designer
 
 * [ ] Export liste favoris (PDF, Excel)
 * [ ] Partage favoris (lien public)
@@ -453,6 +538,7 @@ mkdir -p src/app/tools/yardage-calculator
 * [ ] CDN images (Cloudinary)
 * [ ] Lazy loading images (viewport)
 * [ ] Service Worker (offline mode)
+* [ ] Incremental Static Regeneration
 
 ### Monétisation
 
@@ -463,8 +549,8 @@ mkdir -p src/app/tools/yardage-calculator
 
 ---
 
-**Prêt pour Session 8 !** 🚀
+**Prêt pour Session 9 !** 🚀
 
-**Décision à prendre** : Option A (Calculateur) ou Option B (Données) ?
+**Décision à prendre** : Option A (Tests Admin) ou Option B (Calculateur) ?
 
-**Recommandation** : **Option A** - Complète le parcours MVP essentiel
+**Recommandation** : **Option A** - Valider module admin avant de continuer
