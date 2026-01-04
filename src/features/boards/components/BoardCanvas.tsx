@@ -278,8 +278,19 @@ function ElementCard({
 
 // Previews par type
 function TextilePreview({ data }: { data: any }) {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.textileId) {
+      window.open(`/favorites/${data.textileId}`, '_blank');
+    }
+  };
+
   return (
-    <div className="flex gap-2 h-full">
+    <div 
+      className="flex gap-2 h-full cursor-pointer hover:opacity-80 transition-opacity"
+      onDoubleClick={handleClick}
+      title="Double-clic pour voir le détail"
+    >
       {data.snapshot?.imageUrl && (
         <img 
           src={data.snapshot.imageUrl} 
