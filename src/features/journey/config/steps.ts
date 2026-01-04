@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Factory,
   Leaf,
+   Layout,
 } from "lucide-react";
 import type { DesignJourneyStep } from "../domain/types";
 
@@ -46,6 +47,16 @@ export const DESIGNER_JOURNEY_STEPS: DesignJourneyStep[] = [
     phase: "conception",
     availableInMVP: false, // Phase 2
     emoji: "🎨",
+  },  {
+    id: "boards",
+    order: 2.5, // Entre Inspiration (2) et Design (3)
+    title: "Boards",
+    description: "Organiser vos idées et inspirations",
+    icon: Layout,
+    path: "/boards",
+    phase: "conception",
+    availableInMVP: true,
+    emoji: "📋",
   },
   {
     id: "design",
