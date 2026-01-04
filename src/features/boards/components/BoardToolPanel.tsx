@@ -3,11 +3,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, StickyNote, Palette, Calculator, Image, Trash2, Square, X } from 'lucide-react';
+import { StickyNote, Palette, Calculator, Image, Trash2, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useBoard } from '../context/BoardContext';
 import { ELEMENT_TYPE_LABELS } from '../domain/types';
+import { FavoritesSelector } from './FavoritesSelector';
 
 export function BoardToolPanel() {
   const {
@@ -75,15 +76,8 @@ export function BoardToolPanel() {
         <h2 className="font-medium mb-4">Ajouter</h2>
 
         <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            disabled
-            title="Bientôt disponible"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Tissu depuis favoris
-          </Button>
+          {/* Nouveau : FavoritesSelector au lieu du bouton disabled */}
+          <FavoritesSelector />
 
           <Button
             variant="outline"
@@ -276,18 +270,19 @@ function ElementIcon({ type }: { type: string }) {
 }
 
 // Helper pour afficher le label d'un élément
-function getElementLabel(element: { elementType: string; elementData: any }): string {
+function getElementLabel(element: { elementType: string; elementData: unknown }): string {
+  const data = element.elementData as Record<string, unknown>;
   switch (element.elementType) {
     case 'note':
-      return element.elementData?.content?.slice(0, 30) || 'Note vide';
+      return (data?.content as string)?.slice(0, 30) || 'Note vide';
     case 'palette':
-      return element.elementData?.name || 'Palette';
+      return (data?.name as string) || 'Palette';
     case 'calculation':
-      return element.elementData?.summary || 'Calcul';
+      return (data?.summary as string) || 'Calcul';
     case 'textile':
-      return element.elementData?.snapshot?.name || 'Tissu';
+      return (data?.snapshot as { name?: string })?.name || 'Tissu';
     case 'inspiration':
-      return element.elementData?.caption || 'Inspiration';
+      return (data?.caption as string) || 'Inspiration';
     default:
       return ELEMENT_TYPE_LABELS[element.elementType as keyof typeof ELEMENT_TYPE_LABELS] || 'Élément';
   }

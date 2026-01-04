@@ -1,289 +1,200 @@
 
-# Deadstock Search Engine - État Actuel
+# État Actuel du Projet - Deadstock Search Engine
 
-**Dernière mise à jour:** 04/01/2026 - Session 11
-
----
-
-## 🎯 Vision Produit
-
-Moteur de recherche multi-sources pour tissus deadstock, destiné aux créateurs textiles indépendants. Seul agrégateur du marché avec **Board créatif** comme pivot central de l'expérience utilisateur.
+**Dernière mise à jour:** 04/01/2026 - Fin Session 12
+**Version:** MVP Phase 1 - Module Boards Complet
 
 ---
 
-## 🔄 Pivot UX (Session 11)
+## 🎯 Statut Global
 
-**Changement majeur d'architecture :**
-
-| Avant                        | Après                                |
-| ---------------------------- | ------------------------------------- |
-| Parcours linéaire 9 étapes | Board comme espace de travail central |
-| `/journey`rigide           | `/boards`flexible                   |
-| Création projet obligatoire | Exploration libre → cristallisation  |
-
-```
-NOUVELLE ARCHITECTURE
-─────────────────────────────────────────────────
-
-  Recherche    Inspirations    Calcul    Favoris
-       │            │           │          │
-       └────────────┴─────┬─────┴──────────┘
-                          │
-                     ┌────▼────┐
-                     │  BOARD  │  ← Pivot central
-                     └────┬────┘
-                          │
-                    Cristallisation
-                          │
-                     ┌────▼────┐
-                     │ PROJET  │
-                     └─────────┘
-```
+| Composant               | Statut        | Progression          |
+| ----------------------- | ------------- | -------------------- |
+| Infrastructure DB       | ✅ Complet    | 100%                 |
+| Module Admin            | ✅ Complet    | 100%                 |
+| Module Scraping         | ✅ Complet    | 100%                 |
+| Module Recherche        | ✅ Complet    | 100%                 |
+| Module Favoris          | ✅ Complet    | 100%                 |
+| **Module Boards** | ✅ Complet    | 100%                 |
+| Module Normalisation    | 🔄 En cours   | 60%                  |
+| Module Journey (legacy) | ⏸️ Suspendu | Remplacé par Boards |
 
 ---
 
-## 📊 Progression Globale
+## 📊 Base de Données
 
-| Module                  | Progression | Status                         |
-| ----------------------- | ----------- | ------------------------------ |
-| **Recherche**     | 90%         | ✅ Fonctionnel                 |
-| **Favoris**       | 100%        | ✅ Complet                     |
-| **Admin**         | 100%        | ✅ Complet                     |
-| **Scraping**      | 100%        | ✅ Pipeline complet            |
-| **Normalisation** | 80%         | ✅ Dictionnaires FR→EN        |
-| **Journey**       | 45%         | ⏸️ Suspendu (sera remplacé) |
-| **Board**         | 0%          | 🆕 À implémenter             |
+### Tables Actives (Schema `deadstock`)
 
----
+| Table              | Lignes | Description                    |
+| ------------------ | ------ | ------------------------------ |
+| `sites`          | 3      | Sources de scraping            |
+| `site_profiles`  | 3      | Profils découverte            |
+| `textiles`       | ~160   | Produits scrapés              |
+| `favorites`      | ~4     | Favoris utilisateur            |
+| `scraping_jobs`  | ~15    | Historique jobs                |
+| `discovery_jobs` | ~5     | Jobs découverte               |
+| `boards`         | 1+     | Boards utilisateur             |
+| `board_elements` | 7+     | Éléments sur boards          |
+| `board_zones`    | 2+     | Zones de regroupement          |
+| `projects`       | 0      | Projets (pour cristallisation) |
 
-## 🗄️ Base de données
-
-### Tables actives (schema `deadstock`)
-
-| Table                | Rows     | Description            |
-| -------------------- | -------- | ---------------------- |
-| `textiles`         | ~160     | Produits normalisés   |
-| `favorites`        | Variable | Favoris par session    |
-| `projects`         | Variable | Projets designer       |
-| `scraping_sources` | 4        | Sources configurées   |
-| `scraping_jobs`    | ~10      | Historique jobs        |
-| `dictionary_*`     | ~200     | Mappings normalisation |
-| `unknown_terms`    | Variable | Termes à valider      |
-
-### Tables à créer (Migration 015)
-
-| Table              | Description                  |
-| ------------------ | ---------------------------- |
-| `boards`         | Espaces de travail créatifs |
-| `board_zones`    | Zones de regroupement        |
-| `board_elements` | Éléments polymorphes       |
-
-### Dernière migration
-
-**014_create_projects_table.sql** - Table projets avec :
-
-* 30 colonnes (toutes étapes du parcours)
-* JSONB : mood_board, garments, fabric_modifiers, yardage_details
-* RLS policies permissives
-* Indexes optimisés
-
----
-
-## 🏗️ Architecture
-
-### Structure actuelle
+### Migrations Appliquées
 
 ```
-src/
-├── app/
-│   ├── page.tsx              # Landing
-│   ├── search/               # Recherche textile
-│   ├── favorites/            # Gestion favoris
-│   ├── admin/                # Module admin complet
-│   └── journey/              # ⏸️ Sera remplacé par /boards
-│
-├── features/
-│   ├── search/               # Recherche & filtres
-│   ├── favorites/            # Favoris (complet)
-│   ├── admin/                # Admin (complet)
-│   ├── scraping/             # Pipeline scraping
-│   ├── normalization/        # Normalisation FR→EN
-│   ├── tuning/               # Supervision mappings
-│   └── journey/              # ⏸️ Partiellement réutilisé
-│       ├── config/garments.ts       # ✅ À conserver
-│       ├── services/yardageCalculator.ts  # ✅ À conserver
-│       └── ... (reste à migrer/supprimer)
-│
-└── lib/supabase/             # Clients (anon, server, admin)
-```
-
-### Structure à créer
-
-```
-src/
-├── app/boards/               # 🆕 NOUVELLE SECTION
-│   ├── page.tsx              # Liste des boards
-│   └── [boardId]/
-│       └── page.tsx          # Canvas du board
-│
-└── features/
-    ├── boards/               # 🆕 NOUVEAU MODULE
-    │   ├── domain/types.ts
-    │   ├── infrastructure/boardsRepository.ts
-    │   ├── actions/boardActions.ts
-    │   ├── context/BoardContext.tsx
-    │   └── components/
-    │       ├── BoardCanvas/
-    │       ├── BoardElement/
-    │       └── Cristallisation/
-    │
-    ├── calculator/           # 🆕 Extrait de journey
-    └── inspirations/         # 🆕 Nouveau module
+001 → 015_create_boards_tables.sql
 ```
 
 ---
 
-## ✅ Fonctionnalités Complètes
+## 🏗️ Architecture Technique
 
-### Recherche
+### Stack
 
-* Recherche full-text avec normalisation
-* Filtres : matière, couleur, prix, source
-* Grille responsive avec pagination
-* Intégration favoris
+* **Frontend:** Next.js 16.1.1 (App Router, Turbopack)
+* **Backend:** Server Actions + Supabase
+* **Database:** PostgreSQL (Supabase)
+* **Styling:** Tailwind CSS + shadcn/ui
+* **State:** React Context (FavoritesContext, BoardContext)
+* **Icons:** Lucide React (outline style)
 
-### Favoris
+### Structure des Features
 
-* Ajout/retrait instantané (optimistic updates)
-* Persistance session (cookie httpOnly 90j)
-* Page dédiée avec navigation
-* Badge compteur temps réel
+```
+src/features/
+├── admin/           # Gestion sites, scraping, discovery
+├── boards/          # ⭐ NOUVEAU - Module Boards complet
+│   ├── domain/types.ts
+│   ├── infrastructure/
+│   │   ├── boardsRepository.ts
+│   │   ├── elementsRepository.ts
+│   │   └── zonesRepository.ts
+│   ├── actions/
+│   │   ├── boardActions.ts
+│   │   ├── elementActions.ts
+│   │   └── zoneActions.ts
+│   ├── context/BoardContext.tsx
+│   └── components/
+│       ├── BoardCanvas.tsx
+│       ├── BoardHeader.tsx
+│       ├── BoardToolPanel.tsx
+│       ├── NoteEditor.tsx
+│       └── AddToBoardButton.tsx
+├── favorites/       # Système favoris avec session
+├── journey/         # Legacy - parcours 9 étapes
+├── search/          # Recherche unifiée textiles
+└── scraping/        # Services extraction données
+```
 
-### Admin
+---
+
+## ✅ Fonctionnalités Opérationnelles
+
+### Module Boards (Session 12)
+
+* **Liste boards** (`/boards`) : Affichage, création, navigation
+* **Canvas board** (`/boards/[id]`) :
+  * Drag & drop éléments
+  * Zones draggables avec couleurs
+  * Édition titre board (clic)
+  * Sélection simple/multiple
+  * Suppression éléments/zones
+* **Éléments supportés** :
+  * Notes (création + édition double-clic)
+  * Palettes de couleurs
+  * Tissus (snapshot depuis favoris/recherche)
+* **Intégrations** :
+  * Bouton "+" sur cartes favoris
+  * Bouton "+" sur cartes recherche
+  * Toast de confirmation avec lien vers board
+  * Lien "Boards" dans sidebar parcours
+
+### Module Admin
 
 * Dashboard avec statistiques
-* Gestion sources scraping (CRUD)
-* Discovery automatique structure sites
-* Configuration scraping par source
-* Monitoring jobs avec logs
+* Gestion sites sources
+* Discovery automatique (collections, qualité)
+* Configuration scraping (collections, filtres)
+* Preview scraping (10 produits)
+* Jobs monitoring avec logs
 
-### Scraping
+### Module Recherche
 
-* Pipeline complet (discover → scrape → normalize → save)
-* Adapters par plateforme (Shopify, custom)
-* Normalisation intégrée (material, color)
-* CLI avec options (--test, --limit, --collection)
-* Gestion erreurs et retry
+* Recherche full-text
+* Filtres dynamiques (matière, couleur, prix, source)
+* Grille responsive avec images
+* Boutons favoris + board sur chaque carte
 
----
+### Module Favoris
 
-## 🔄 En cours / À faire
-
-### Module Board (Priorité haute)
-
-* [ ] Migration SQL 015 (tables boards)
-* [ ] Types TypeScript
-* [ ] Repository + Actions
-* [ ] BoardContext
-* [ ] Page /boards (liste)
-* [ ] Page /boards/[id] (canvas)
-* [ ] Composants éléments
-* [ ] Drag & drop
-
-### Cristallisation
-
-* [ ] Wizard 4 étapes
-* [ ] Mapping board → projet
-* [ ] Archivage board
-
-### Migration journey → boards
-
-* [ ] Extraire calculateur
-* [ ] Créer module inspirations
-* [ ] Supprimer ancien code
+* Ajout/retrait instantané (optimistic updates)
+* Session-based (cookie 90 jours)
+* Grille avec détails
+* Page détail avec navigation prev/next
+* Bouton "Ajouter au board"
 
 ---
 
-## 📚 Documentation clé
+## 🔧 Configuration Requise
 
-| Document                                 | Description                      |
-| ---------------------------------------- | -------------------------------- |
-| `GLOSSAIRE.md`                         | Nomenclature des concepts        |
-| `ARCHITECTURE_UX_BOARD_REALISATION.md` | Vision UX complète              |
-| `SPEC_BOARD_MODULE.md`                 | Spécifications techniques Board |
-| `SPEC_CRISTALLISATION.md`              | Flux de cristallisation          |
-| `MIGRATION_JOURNEY_TO_BOARD.md`        | Plan de migration                |
+### Variables d'Environnement
 
----
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...  # Admin only
+ANTHROPIC_API_KEY=sk-ant-...           # Pour LLM extraction
+```
 
-## 📈 Métriques Techniques
+### Commandes Utiles
 
-| Métrique        | Valeur                     |
-| ---------------- | -------------------------- |
-| Lignes de code   | ~15,000                    |
-| Composants React | ~50                        |
-| Server Actions   | ~40                        |
-| Types TypeScript | ~100                       |
-| Tables Supabase  | 8 (→ 11 après migration) |
-| Sources scraping | 4                          |
+```bash
+npm run dev              # Serveur développement
+npm run build            # Build production
+npm run generate:types   # Régénérer types Supabase
+```
 
 ---
 
-## 🛠️ Stack Technique
+## 📈 Métriques Actuelles
 
-* **Frontend:** Next.js 16.1, React 19, TypeScript
-* **Styling:** Tailwind CSS, shadcn/ui
-* **Backend:** Supabase (PostgreSQL, Auth, RLS)
-* **Scraping:** Cheerio, node-fetch
-* **State:** React Context, Server Actions
-* **i18n:** next-intl (préparé)
-
----
-
-## 🔗 URLs Principales
-
-| Route              | Status | Description        |
-| ------------------ | ------ | ------------------ |
-| `/`              | ✅     | Landing page       |
-| `/search`        | ✅     | Recherche textiles |
-| `/favorites`     | ✅     | Mes favoris        |
-| `/admin`         | ✅     | Dashboard admin    |
-| `/admin/sources` | ✅     | Gestion sources    |
-| `/journey`       | ⏸️   | Sera remplacé     |
-| `/boards`        | 🆕     | À créer          |
-| `/boards/[id]`   | 🆕     | À créer          |
-| `/calculator`    | 🆕     | À créer          |
+* **Textiles indexés:** ~160
+* **Sources actives:** 2 (MyLittleCoupon, TheFabricSales)
+* **Précision matière:** ~80%
+* **Précision couleur:** ~40%
+* **Temps scraping:** ~30s pour 50 produits
 
 ---
 
-## ⚠️ Points d'attention
+## 🚧 Travaux en Cours
 
-1. **Ne pas supprimer `/journey`** tant que `/boards` n'est pas complet
-2. Erreurs TypeScript préexistantes dans scripts/ (non bloquantes)
-3. Dark mode incomplet sur certains formulaires
-4. i18n préparé mais non branché (labels hardcodés)
+### Priorité Haute
 
----
+1. Bouton "Tissu depuis favoris" fonctionnel dans board
+2. Cristallisation board → projet
 
-## 📅 Historique Sessions
+### Priorité Moyenne
 
-| Session      | Date                 | Focus                                 |
-| ------------ | -------------------- | ------------------------------------- |
-| 1-6          | Nov-Dec 2025         | Fondations, recherche, admin          |
-| 7            | Dec 2025             | Système favoris                      |
-| 8            | Dec 2025             | Module admin complet                  |
-| 9            | Jan 2026             | Pipeline scraping                     |
-| 10           | 03/01/2026           | Module Journey (45%)                  |
-| **11** | **04/01/2026** | **Pivot UX : Journey → Board** |
+3. Redimensionnement zones
+4. Amélioration normalisation (nouveaux patterns)
+
+### Priorité Basse
+
+5. Nettoyage code journey legacy
+6. Tests automatisés
 
 ---
 
-## 🎯 Estimation prochaines sessions
+## 🐛 Problèmes Connus
 
-| Phase           | Sessions      | Objectif                         |
-| --------------- | ------------- | -------------------------------- |
-| Phase 1         | 2-3           | Module Board fonctionnel         |
-| Phase 2         | 1-2           | Outils modulaires                |
-| Phase 3         | 1-2           | Cristallisation                  |
-| Phase 4-5       | 1-2           | Migration & nettoyage            |
-| **Total** | **5-9** | **Architecture complète** |
+1. **Anti-bot TheFabricSales** : Certaines pages bloquées
+2. **Images manquantes** : Quelques textiles sans image
+3. **Normalisation incomplète** : ~20% matières non détectées
+
+---
+
+## 📚 Documentation Associée
+
+* `CONTEXT_SUMMARY.md` - Résumé pour IA
+* `NEXT_STEPS.md` - Prochaines étapes détaillées
+* `SESSION_12_BOARD_MODULE.md` - Note de session
+* `docs/specs/board/` - Spécifications module boards
