@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Layout, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   Popover,
   PopoverContent,
@@ -58,44 +59,68 @@ export function AddToBoardButton({
   };
 
   const handleAddToBoard = async (boardId: string) => {
-    setIsAdding(boardId);
+  setIsAdding(boardId);
+
+  const result = await addTextileToBoard(boardId, textile);
+
+  if (result.success) {
+    setAddedTo(prev => [...prev, boardId]);
     
-    const result = await addTextileToBoard(boardId, textile);
-    
-    if (result.success) {
-      setAddedTo(prev => [...prev, boardId]);
-      // Fermer après un court délai pour montrer le feedback
-      setTimeout(() => {
-        setIsOpen(false);
-        // Reset après fermeture
-        setTimeout(() => setAddedTo([]), 300);
-      }, 500);
-    }
-    
-    setIsAdding(null);
-  };
+    // Toast de confirmation avec lien vers le board
+    const boardName = boards.find(b => b.id === boardId)?.name || 'Sans titre';
+    toast.success('Tissu ajouté au board', {
+      description: boardName,
+      action: {
+        label: 'Voir le board',
+        onClick: () => window.location.href = `/boards/${boardId}`,
+      },
+    });
+
+    // Fermer après un court délai pour montrer le feedback
+    setTimeout(() => {
+      setIsOpen(false);
+      // Reset après fermeture
+      setTimeout(() => setAddedTo([]), 300);
+    }, 500);
+  } else {
+    toast.error('Erreur lors de l\'ajout');
+  }
+
+  setIsAdding(null);
+};
 
   const handleCreateAndAdd = async () => {
-    setIsLoading(true);
-    
-    // Créer un nouveau board
-    const createResult = await createBoardAction({ 
-      name: `Board - ${textile.name.slice(0, 30)}` 
+  setIsLoading(true);
+
+  // Créer un nouveau board
+  const createResult = await createBoardAction({
+    name: `Board - ${textile.name.slice(0, 30)}`
+  });
+
+  if (createResult.success && createResult.data) {
+    // Ajouter le textile au nouveau board
+    await addTextileToBoard(createResult.data.id, textile);
+    setAddedTo([createResult.data.id]);
+
+    // Toast de confirmation
+    toast.success('Board créé et tissu ajouté', {
+      description: createResult.data.name || 'Nouveau board',
+      action: {
+        label: 'Voir le board',
+        onClick: () => window.location.href = `/boards/${createResult.data!.id}`,
+      },
     });
-    
-    if (createResult.success && createResult.data) {
-      // Ajouter le textile au nouveau board
-      await addTextileToBoard(createResult.data.id, textile);
-      setAddedTo([createResult.data.id]);
-      
-      setTimeout(() => {
-        setIsOpen(false);
-        setTimeout(() => setAddedTo([]), 300);
-      }, 500);
-    }
-    
-    setIsLoading(false);
-  };
+
+    setTimeout(() => {
+      setIsOpen(false);
+      setTimeout(() => setAddedTo([]), 300);
+    }, 500);
+  } else {
+    toast.error('Erreur lors de la création');
+  }
+
+  setIsLoading(false);
+};
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
