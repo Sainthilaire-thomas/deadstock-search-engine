@@ -3,32 +3,46 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Layout, MousePointer, GripVertical } from 'lucide-react';
+import { Layout, MousePointer, GripVertical, Move } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ELEMENT_TYPE_LABELS } from '../domain/types';
 import { NoteEditor } from './NoteEditor';
-import type { BoardElement } from '../domain/types';
+import type { BoardElement, BoardZone } from '../domain/types';
 
 export function BoardCanvas() {
-  const { 
-    elements, 
-    zones, 
-    selectedElementIds, 
+  const {
+    elements,
+    zones,
+    selectedElementIds,
+    selectedZoneId,
     toggleElementSelection,
     clearSelection,
     moveElement,
     updateElement,
+    selectZone,
+    moveZone,
     setDragging,
   } = useBoard();
-  
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
-  const dragRef = useRef<{
+
+  // Drag state for elements
+  const elementDragRef = useRef<{
     elementId: string;
     startX: number;
     startY: number;
     elementStartX: number;
     elementStartY: number;
+  } | null>(null);
+
+  // Drag state for zones
+  const zoneDragRef = useRef<{
+    zoneId: string;
+    startX: number;
+    startY: number;
+    zoneStartX: number;
+    zoneStartY: number;
   } | null>(null);
 
   // Handle canvas click to clear selection
@@ -60,21 +74,18 @@ export function BoardCanvas() {
     setEditingElementId(null);
   };
 
-  // Drag handlers
-  const handleMouseDown = (e: React.MouseEvent, element: BoardElement) => {
-    // Don't start drag if editing
+  // Element drag handlers
+  const handleElementMouseDown = (e: React.MouseEvent, element: BoardElement) => {
     if (editingElementId === element.id) return;
-    
+
     e.stopPropagation();
-    
-    // Toggle selection on click
+
     if (!e.shiftKey && !selectedElementIds.includes(element.id)) {
       clearSelection();
     }
     toggleElementSelection(element.id);
-    
-    // Start drag
-    dragRef.current = {
+
+    elementDragRef.current = {
       elementId: element.id,
       startX: e.clientX,
       startY: e.clientY,
@@ -82,32 +93,68 @@ export function BoardCanvas() {
       elementStartY: element.positionY,
     };
     setDragging(true);
-    
-    // Add global listeners
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+
+    document.addEventListener('mousemove', handleElementMouseMove);
+    document.addEventListener('mouseup', handleElementMouseUp);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!dragRef.current) return;
-    
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    
-    const newX = Math.max(0, dragRef.current.elementStartX + dx);
-    const newY = Math.max(0, dragRef.current.elementStartY + dy);
-    
-    moveElement(dragRef.current.elementId, newX, newY);
+  const handleElementMouseMove = (e: MouseEvent) => {
+    if (!elementDragRef.current) return;
+
+    const dx = e.clientX - elementDragRef.current.startX;
+    const dy = e.clientY - elementDragRef.current.startY;
+
+    const newX = Math.max(0, elementDragRef.current.elementStartX + dx);
+    const newY = Math.max(0, elementDragRef.current.elementStartY + dy);
+
+    moveElement(elementDragRef.current.elementId, newX, newY);
   };
 
-  const handleMouseUp = () => {
-    dragRef.current = null;
+  const handleElementMouseUp = () => {
+    elementDragRef.current = null;
     setDragging(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener('mousemove', handleElementMouseMove);
+    document.removeEventListener('mouseup', handleElementMouseUp);
   };
 
-  if (elements.length === 0) {
+  // Zone drag handlers
+  const handleZoneMouseDown = (e: React.MouseEvent, zone: BoardZone) => {
+    e.stopPropagation();
+    selectZone(zone.id);
+
+    zoneDragRef.current = {
+      zoneId: zone.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      zoneStartX: zone.positionX,
+      zoneStartY: zone.positionY,
+    };
+    setDragging(true);
+
+    document.addEventListener('mousemove', handleZoneMouseMove);
+    document.addEventListener('mouseup', handleZoneMouseUp);
+  };
+
+  const handleZoneMouseMove = (e: MouseEvent) => {
+    if (!zoneDragRef.current) return;
+
+    const dx = e.clientX - zoneDragRef.current.startX;
+    const dy = e.clientY - zoneDragRef.current.startY;
+
+    const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
+    const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
+
+    moveZone(zoneDragRef.current.zoneId, newX, newY);
+  };
+
+  const handleZoneMouseUp = () => {
+    zoneDragRef.current = null;
+    setDragging(false);
+    document.removeEventListener('mousemove', handleZoneMouseMove);
+    document.removeEventListener('mouseup', handleZoneMouseUp);
+  };
+
+  if (elements.length === 0 && zones.length === 0) {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
@@ -115,64 +162,55 @@ export function BoardCanvas() {
         </div>
         <h2 className="text-lg font-medium mb-2">Board vide</h2>
         <p className="text-muted-foreground text-center max-w-md px-4">
-          Ajoutez des notes ou des palettes de couleurs depuis le panneau de droite
+          Ajoutez des notes, palettes ou zones depuis le panneau de droite
           pour commencer à organiser vos idées.
         </p>
       </div>
     );
   }
 
-  // Calculate canvas size based on elements
-  const canvasWidth = Math.max(1200, ...elements.map(e => e.positionX + (e.width || 200) + 100));
-  const canvasHeight = Math.max(800, ...elements.map(e => e.positionY + (e.height || 150) + 100));
+  // Calculate canvas size based on elements and zones
+  const allPositions = [
+    ...elements.map(e => ({ x: e.positionX + (e.width || 200), y: e.positionY + (e.height || 150) })),
+    ...zones.map(z => ({ x: z.positionX + z.width, y: z.positionY + z.height })),
+  ];
+  const canvasWidth = Math.max(1200, ...allPositions.map(p => p.x + 100));
+  const canvasHeight = Math.max(800, ...allPositions.map(p => p.y + 100));
 
   return (
-    <div 
+    <div
       ref={canvasRef}
       className="absolute inset-0 overflow-auto"
       onClick={handleCanvasClick}
     >
-      {/* Canvas avec positionnement absolu des éléments */}
-      <div 
+      {/* Canvas avec positionnement absolu */}
+      <div
         className="relative"
-        style={{ 
+        style={{
           width: canvasWidth,
           height: canvasHeight,
           minWidth: '100%',
           minHeight: '100%',
         }}
       >
-        {/* Zones en arrière-plan */}
+        {/* Zones en arrière-plan (draggables) */}
         {zones.map((zone) => (
-          <div
+          <ZoneCard
             key={zone.id}
-            className="absolute border-2 border-dashed rounded-lg pointer-events-none"
-            style={{
-              left: zone.positionX,
-              top: zone.positionY,
-              width: zone.width,
-              height: zone.height,
-              borderColor: zone.color,
-              backgroundColor: `${zone.color}10`,
-            }}
-          >
-            <span 
-              className="absolute -top-3 left-3 px-2 text-xs font-medium bg-background"
-              style={{ color: zone.color }}
-            >
-              {zone.name}
-            </span>
-          </div>
+            zone={zone}
+            isSelected={selectedZoneId === zone.id}
+            onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+          />
         ))}
 
         {/* Éléments */}
         {elements.map((element) => (
-          <ElementCard 
-            key={element.id} 
+          <ElementCard
+            key={element.id}
             element={element}
             isSelected={selectedElementIds.includes(element.id)}
             isEditing={editingElementId === element.id}
-            onMouseDown={(e) => handleMouseDown(e, element)}
+            onMouseDown={(e) => handleElementMouseDown(e, element)}
             onDoubleClick={() => handleDoubleClick(element)}
             onSaveNote={(content) => handleSaveNote(element.id, content)}
             onCancelEdit={() => setEditingElementId(null)}
@@ -189,7 +227,51 @@ export function BoardCanvas() {
   );
 }
 
-// Composant carte élément
+// ============================================
+// ZONE CARD
+// ============================================
+
+interface ZoneCardProps {
+  zone: BoardZone;
+  isSelected: boolean;
+  onMouseDown: (e: React.MouseEvent) => void;
+}
+
+function ZoneCard({ zone, isSelected, onMouseDown }: ZoneCardProps) {
+  return (
+    <div
+      className={`absolute border-2 border-dashed rounded-lg transition-shadow ${isSelected ? 'shadow-lg ring-2 ring-primary' : 'hover:shadow-md'
+        }`}
+      style={{
+        left: zone.positionX,
+        top: zone.positionY,
+        width: zone.width,
+        height: zone.height,
+        borderColor: zone.color,
+        backgroundColor: `${zone.color}15`,
+        cursor: 'move',
+        zIndex: isSelected ? 5 : 1,
+      }}
+      onMouseDown={onMouseDown}
+    >
+      {/* Zone header */}
+      <div
+        className="absolute -top-0 left-0 right-0 px-3 py-1 flex items-center gap-2"
+        style={{ backgroundColor: zone.color }}
+      >
+        <Move className="w-3 h-3 text-white/70" />
+        <span className="text-xs font-medium text-white truncate">
+          {zone.name}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// ELEMENT CARD
+// ============================================
+
 interface ElementCardProps {
   element: BoardElement;
   isSelected: boolean;
@@ -200,11 +282,11 @@ interface ElementCardProps {
   onCancelEdit: () => void;
 }
 
-function ElementCard({ 
-  element, 
-  isSelected, 
+function ElementCard({
+  element,
+  isSelected,
   isEditing,
-  onMouseDown, 
+  onMouseDown,
   onDoubleClick,
   onSaveNote,
   onCancelEdit,
@@ -214,17 +296,16 @@ function ElementCard({
 
   return (
     <div
-      className={`absolute bg-background border rounded-lg shadow-sm overflow-hidden transition-shadow select-none ${
-        isSelected 
-          ? 'ring-2 ring-primary shadow-lg' 
+      className={`absolute bg-background border rounded-lg shadow-sm overflow-hidden transition-shadow select-none ${isSelected
+          ? 'ring-2 ring-primary shadow-lg'
           : 'hover:shadow-md'
-      }`}
+        }`}
       style={{
         left: element.positionX,
         top: element.positionY,
         width,
         height,
-        zIndex: isEditing ? 2000 : isSelected ? 1000 : element.zIndex,
+        zIndex: isEditing ? 2000 : isSelected ? 1000 : element.zIndex + 10,
         cursor: isEditing ? 'default' : 'move',
       }}
       onMouseDown={onMouseDown}
@@ -244,7 +325,7 @@ function ElementCard({
           <div className="absolute top-1 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-60 transition-opacity">
             <GripVertical className="w-4 h-4" />
           </div>
-          
+
           <div className="p-3 h-full flex flex-col pt-5">
             {/* Header avec type */}
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
@@ -276,7 +357,10 @@ function ElementCard({
   );
 }
 
-// Previews par type
+// ============================================
+// PREVIEWS
+// ============================================
+
 function TextilePreview({ data }: { data: any }) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -286,14 +370,14 @@ function TextilePreview({ data }: { data: any }) {
   };
 
   return (
-    <div 
+    <div
       className="flex gap-2 h-full cursor-pointer hover:opacity-80 transition-opacity"
       onDoubleClick={handleClick}
       title="Double-clic pour voir le détail"
     >
       {data.snapshot?.imageUrl && (
-        <img 
-          src={data.snapshot.imageUrl} 
+        <img
+          src={data.snapshot.imageUrl}
           alt={data.snapshot?.name || 'Tissu'}
           className="w-12 h-12 object-cover rounded"
           draggable={false}
@@ -310,7 +394,7 @@ function TextilePreview({ data }: { data: any }) {
 function NotePreview({ data }: { data: any }) {
   const bgColor = data.color || '#FEF3C7';
   return (
-    <div 
+    <div
       className="h-full rounded p-2 -m-1"
       style={{ backgroundColor: bgColor }}
     >
@@ -330,7 +414,7 @@ function PalettePreview({ data }: { data: any }) {
       )}
       <div className="flex gap-1 flex-wrap">
         {colors.map((color: string, i: number) => (
-          <div 
+          <div
             key={i}
             className="w-8 h-8 rounded border border-gray-200"
             style={{ backgroundColor: color }}
@@ -359,8 +443,8 @@ function InspirationPreview({ data }: { data: any }) {
   return (
     <div className="h-full">
       {data.imageUrl ? (
-        <img 
-          src={data.imageUrl} 
+        <img
+          src={data.imageUrl}
           alt={data.caption || 'Inspiration'}
           className="w-full h-full object-cover rounded"
           draggable={false}

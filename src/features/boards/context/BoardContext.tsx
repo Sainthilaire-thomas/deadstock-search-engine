@@ -10,12 +10,14 @@ import React, {
   ReactNode,
 } from 'react';
 import type {
-  Board,
   BoardWithDetails,
   BoardElement,
   BoardZone,
   CreateElementInput,
   UpdateElementInput,
+  CreateZoneInput,
+  UpdateZoneInput,
+  ActionResult,
 } from '../domain/types';
 import {
   addElementAction,
@@ -28,6 +30,13 @@ import {
 import {
   updateBoardAction,
 } from '../actions/boardActions';
+import {
+  createZoneAction,
+  updateZoneAction,
+  moveZoneAction,
+  deleteZoneAction,
+  addZoneToBoard,
+} from '../actions/zoneActions';
 
 // ============================================
 // STATE TYPE
@@ -38,6 +47,7 @@ interface BoardState {
   elements: BoardElement[];
   zones: BoardZone[];
   selectedElementIds: string[];
+  selectedZoneId: string | null;
   isDragging: boolean;
   isLoading: boolean;
   error: string | null;
@@ -57,8 +67,10 @@ type BoardAction =
   | { type: 'REMOVE_ELEMENT'; payload: string }
   | { type: 'ADD_ZONE'; payload: BoardZone }
   | { type: 'UPDATE_ZONE'; payload: BoardZone }
+  | { type: 'MOVE_ZONE'; payload: { id: string; x: number; y: number } }
   | { type: 'REMOVE_ZONE'; payload: string }
   | { type: 'SELECT_ELEMENTS'; payload: string[] }
+  | { type: 'SELECT_ZONE'; payload: string | null }
   | { type: 'SET_DRAGGING'; payload: boolean }
   | { type: 'UPDATE_BOARD_NAME'; payload: string };
 
@@ -88,6 +100,7 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
       return {
         ...state,
         elements: [...state.elements, action.payload],
+        isLoading: false,
       };
 
     case 'UPDATE_ELEMENT':
@@ -121,6 +134,7 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
       return {
         ...state,
         zones: [...state.zones, action.payload],
+        isLoading: false,
       };
 
     case 'UPDATE_ZONE':
@@ -131,16 +145,35 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
         ),
       };
 
+    case 'MOVE_ZONE':
+      return {
+        ...state,
+        zones: state.zones.map((z) =>
+          z.id === action.payload.id
+            ? { ...z, positionX: action.payload.x, positionY: action.payload.y }
+            : z
+        ),
+      };
+
     case 'REMOVE_ZONE':
       return {
         ...state,
         zones: state.zones.filter((z) => z.id !== action.payload),
+        selectedZoneId: state.selectedZoneId === action.payload ? null : state.selectedZoneId,
       };
 
     case 'SELECT_ELEMENTS':
       return {
         ...state,
         selectedElementIds: action.payload,
+        selectedZoneId: null, // Deselect zone when selecting elements
+      };
+
+    case 'SELECT_ZONE':
+      return {
+        ...state,
+        selectedZoneId: action.payload,
+        selectedElementIds: [], // Deselect elements when selecting zone
       };
 
     case 'SET_DRAGGING':
@@ -166,22 +199,29 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
 interface BoardContextValue extends BoardState {
   // Board actions
   updateBoardName: (name: string) => Promise<void>;
-  
+
   // Element actions
   addElement: (input: Omit<CreateElementInput, 'boardId'>) => Promise<void>;
   updateElement: (id: string, input: UpdateElementInput) => Promise<void>;
   moveElement: (id: string, x: number, y: number) => Promise<void>;
   removeElement: (id: string) => Promise<void>;
-  
+
   // Quick add helpers
   addNote: (position?: { x: number; y: number }) => Promise<void>;
   addPalette: (colors: string[], position?: { x: number; y: number }) => Promise<void>;
-  
+
+  // Zone actions
+  addZone: (name?: string, position?: { x: number; y: number }) => Promise<void>;
+  updateZone: (id: string, input: UpdateZoneInput) => Promise<void>;
+  moveZone: (id: string, x: number, y: number) => Promise<void>;
+  removeZone: (id: string) => Promise<void>;
+
   // Selection
   selectElements: (ids: string[]) => void;
   clearSelection: () => void;
   toggleElementSelection: (id: string) => void;
-  
+  selectZone: (id: string | null) => void;
+
   // Drag state
   setDragging: (isDragging: boolean) => void;
 }
@@ -207,6 +247,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     elements: initialBoard.elements,
     zones: initialBoard.zones,
     selectedElementIds: [],
+    selectedZoneId: null,
     isDragging: false,
     isLoading: false,
     error: null,
@@ -221,7 +262,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
   const updateBoardName = useCallback(async (name: string) => {
     // Optimistic update
     dispatch({ type: 'UPDATE_BOARD_NAME', payload: name });
-    
+
     const result = await updateBoardAction(boardId, { name });
     if (!result.success) {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
@@ -234,9 +275,9 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addElement = useCallback(async (input: Omit<CreateElementInput, 'boardId'>) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
+
     const result = await addElementAction({ ...input, boardId });
-    
+
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
@@ -246,7 +287,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const updateElement = useCallback(async (id: string, input: UpdateElementInput) => {
     const result = await updateElementAction(id, input);
-    
+
     if (result.success && result.data) {
       dispatch({ type: 'UPDATE_ELEMENT', payload: result.data });
     }
@@ -255,7 +296,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
   const moveElement = useCallback(async (id: string, x: number, y: number) => {
     // Optimistic update for smooth dragging
     dispatch({ type: 'MOVE_ELEMENT', payload: { id, x, y } });
-    
+
     // Persist to database (fire and forget for performance)
     moveElementAction(id, { positionX: x, positionY: y });
   }, []);
@@ -263,7 +304,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
   const removeElement = useCallback(async (id: string) => {
     // Optimistic update
     dispatch({ type: 'REMOVE_ELEMENT', payload: id });
-    
+
     await removeElementAction(id);
   }, []);
 
@@ -273,9 +314,9 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addNote = useCallback(async (position?: { x: number; y: number }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
+
     const result = await addNoteToBoard(boardId, '', position);
-    
+
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
@@ -285,15 +326,54 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addPalette = useCallback(async (colors: string[], position?: { x: number; y: number }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
+
     const result = await addPaletteToBoard(boardId, colors, undefined, position);
-    
+
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
     }
   }, [boardId]);
+
+  // ============================================
+  // ZONE ACTIONS
+  // ============================================
+
+  const addZone = useCallback(async (name?: string, position?: { x: number; y: number }) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+
+    const result = await addZoneToBoard(boardId, name || 'Nouvelle zone', position);
+
+    if (result.success && result.data) {
+      dispatch({ type: 'ADD_ZONE', payload: result.data });
+    } else {
+      dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
+    }
+  }, [boardId]);
+
+  const updateZoneHandler = useCallback(async (id: string, input: UpdateZoneInput) => {
+    const result = await updateZoneAction(id, input);
+
+    if (result.success && result.data) {
+      dispatch({ type: 'UPDATE_ZONE', payload: result.data });
+    }
+  }, []);
+
+  const moveZone = useCallback(async (id: string, x: number, y: number) => {
+    // Optimistic update for smooth dragging
+    dispatch({ type: 'MOVE_ZONE', payload: { id, x, y } });
+
+    // Persist to database (fire and forget for performance)
+    moveZoneAction(id, x, y);
+  }, []);
+
+  const removeZone = useCallback(async (id: string) => {
+    // Optimistic update
+    dispatch({ type: 'REMOVE_ZONE', payload: id });
+
+    await deleteZoneAction(id);
+  }, []);
 
   // ============================================
   // SELECTION
@@ -305,6 +385,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const clearSelection = useCallback(() => {
     dispatch({ type: 'SELECT_ELEMENTS', payload: [] });
+    dispatch({ type: 'SELECT_ZONE', payload: null });
   }, []);
 
   const toggleElementSelection = useCallback((id: string) => {
@@ -315,6 +396,10 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
         : [...state.selectedElementIds, id],
     });
   }, [state.selectedElementIds]);
+
+  const selectZone = useCallback((id: string | null) => {
+    dispatch({ type: 'SELECT_ZONE', payload: id });
+  }, []);
 
   // ============================================
   // DRAG STATE
@@ -337,9 +422,14 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     removeElement,
     addNote,
     addPalette,
+    addZone,
+    updateZone: updateZoneHandler,
+    moveZone,
+    removeZone,
     selectElements,
     clearSelection,
     toggleElementSelection,
+    selectZone,
     setDragging,
   };
 

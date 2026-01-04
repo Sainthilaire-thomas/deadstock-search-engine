@@ -2,21 +2,30 @@
 
 'use client';
 
-import { Plus, StickyNote, Palette, Calculator, Image, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, StickyNote, Palette, Calculator, Image, Trash2, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useBoard } from '../context/BoardContext';
 import { ELEMENT_TYPE_LABELS } from '../domain/types';
 
 export function BoardToolPanel() {
-  const { 
-    elements, 
-    zones, 
-    selectedElementIds, 
-    addNote, 
+  const {
+    elements,
+    zones,
+    selectedElementIds,
+    selectedZoneId,
+    addNote,
     addPalette,
+    addZone,
     removeElement,
-    isLoading 
+    removeZone,
+    selectZone,
+    isLoading
   } = useBoard();
+
+  const [showZoneInput, setShowZoneInput] = useState(false);
+  const [zoneName, setZoneName] = useState('');
 
   const handleAddNote = async () => {
     // Position aléatoire pour éviter l'empilement
@@ -37,9 +46,25 @@ export function BoardToolPanel() {
     await addPalette(defaultColors, position);
   };
 
+  const handleAddZone = async () => {
+    const position = {
+      x: 50 + Math.random() * 100,
+      y: 50 + Math.random() * 100,
+    };
+    await addZone(zoneName || 'Nouvelle zone', position);
+    setZoneName('');
+    setShowZoneInput(false);
+  };
+
   const handleDeleteSelected = async () => {
     for (const id of selectedElementIds) {
       await removeElement(id);
+    }
+  };
+
+  const handleDeleteSelectedZone = async () => {
+    if (selectedZoneId) {
+      await removeZone(selectedZoneId);
     }
   };
 
@@ -50,9 +75,9 @@ export function BoardToolPanel() {
         <h2 className="font-medium mb-4">Ajouter</h2>
 
         <div className="space-y-2">
-          <Button 
-            variant="outline" 
-            className="w-full justify-start" 
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             disabled
             title="Bientôt disponible"
           >
@@ -80,9 +105,9 @@ export function BoardToolPanel() {
             Palette
           </Button>
 
-          <Button 
-            variant="outline" 
-            className="w-full justify-start" 
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             disabled
             title="Bientôt disponible"
           >
@@ -90,19 +115,57 @@ export function BoardToolPanel() {
             Calcul métrage
           </Button>
 
-          <Button 
-            variant="outline" 
-            className="w-full justify-start" 
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             disabled
             title="Bientôt disponible"
           >
             <Image className="w-4 h-4 mr-2" />
             Inspiration
           </Button>
+
+          {/* Zone button with input */}
+          {showZoneInput ? (
+            <div className="space-y-2 p-2 border rounded-lg bg-muted/50">
+              <Input
+                placeholder="Nom de la zone"
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddZone();
+                  if (e.key === 'Escape') setShowZoneInput(false);
+                }}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleAddZone} disabled={isLoading}>
+                  Créer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowZoneInput(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => setShowZoneInput(true)}
+              disabled={isLoading}
+            >
+              <Square className="w-4 h-4 mr-2" />
+              Zone
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Section Sélection */}
+      {/* Section Sélection Éléments */}
       {selectedElementIds.length > 0 && (
         <div className="mt-6 pt-6 border-t">
           <h2 className="font-medium mb-4">
@@ -115,6 +178,24 @@ export function BoardToolPanel() {
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Supprimer
+          </Button>
+        </div>
+      )}
+
+      {/* Section Sélection Zone */}
+      {selectedZoneId && (
+        <div className="mt-6 pt-6 border-t">
+          <h2 className="font-medium mb-4">Zone sélectionnée</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            {zones.find((z) => z.id === selectedZoneId)?.name || 'Zone'}
+          </p>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={handleDeleteSelectedZone}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Supprimer la zone
           </Button>
         </div>
       )}
@@ -133,11 +214,10 @@ export function BoardToolPanel() {
             {elements.map((element) => (
               <li
                 key={element.id}
-                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-                  selectedElementIds.includes(element.id)
+                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${selectedElementIds.includes(element.id)
                     ? 'bg-accent text-accent-foreground'
                     : 'hover:bg-muted'
-                }`}
+                  }`}
               >
                 <ElementIcon type={element.elementType} />
                 <span className="truncate flex-1">
@@ -155,7 +235,14 @@ export function BoardToolPanel() {
           <h2 className="font-medium mb-4">Zones ({zones.length})</h2>
           <ul className="space-y-2 text-sm">
             {zones.map((zone) => (
-              <li key={zone.id} className="flex items-center gap-2">
+              <li
+                key={zone.id}
+                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${selectedZoneId === zone.id
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-muted'
+                  }`}
+                onClick={() => selectZone(zone.id)}
+              >
                 <span
                   className="w-3 h-3 rounded border"
                   style={{ backgroundColor: zone.color }}
