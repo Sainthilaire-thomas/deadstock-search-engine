@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
-import { getFavoritesBySessionServer } from '@/features/favorites/infrastructure/favoritesRepositoryServer';
+import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
 import { FavoriteDetailView } from '@/features/favorites/components/FavoriteDetailView';
 
 interface FavoriteDetailPageProps {
@@ -10,7 +10,7 @@ interface FavoriteDetailPageProps {
 export default async function FavoriteDetailPage({ params }: FavoriteDetailPageProps) {
   const { id } = await params;
   const sessionId = await getOrCreateSessionId();
-  const favorites = await getFavoritesBySessionServer(sessionId);
+  const favorites = await getFavoritesBySession(sessionId);
   
   // Trouver le favori actuel
   const currentIndex = favorites.findIndex(f => f.textile.id === id);

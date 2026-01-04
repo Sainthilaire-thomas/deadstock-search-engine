@@ -1,12 +1,12 @@
 ﻿import Link from 'next/link';
 import { ArrowLeft, Lightbulb } from 'lucide-react';
 import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
-import { getFavoritesBySessionServer } from '@/features/favorites/infrastructure/favoritesRepositoryServer';
+import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
 import { FavoritesGrid } from '@/features/favorites/components/FavoritesGrid';
 
 export default async function FavoritesPage() {
   const sessionId = await getOrCreateSessionId();
-  const favorites = await getFavoritesBySessionServer(sessionId);
+  const favorites = await getFavoritesBySession(sessionId);
 
   return (
     <div className='container mx-auto py-8'>

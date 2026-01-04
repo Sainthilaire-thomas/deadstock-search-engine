@@ -7,7 +7,7 @@ import { MobileJourneyNav } from '@/features/journey/components/MobileJourneyNav
 import { FavoritesCountBadge } from '@/features/favorites/components/FavoritesCountBadge';
 import { FavoritesProvider } from '@/features/favorites/context/FavoritesContext';
 import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
-import { getFavoritesBySessionServer } from '@/features/favorites/infrastructure/favoritesRepositoryServer';
+import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 
@@ -25,7 +25,7 @@ export default async function RootLayout({
   let initialFavoriteIds: string[] = [];
   try {
     const sessionId = await getOrCreateSessionId();
-    const favorites = await getFavoritesBySessionServer(sessionId);
+    const favorites = await getFavoritesBySession(sessionId);
     initialFavoriteIds = favorites.map(f => f.textile_id);
   } catch (error) {
     console.error('Error loading initial favorites:', error);

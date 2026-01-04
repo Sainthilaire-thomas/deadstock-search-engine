@@ -1,36 +1,69 @@
 ﻿/**
  * Favorites Repository
- * 
+ *
  * Gère les interactions avec la table favorites en base de données
+ * Repository unifié pour client et serveur
  */
 
 import { createClient } from '@/lib/supabase/client';
-import type { 
-  Favorite, 
-  FavoriteWithTextile, 
-  AddFavoriteParams, 
+import type {
+  Favorite,
+  FavoriteWithTextile,
+  AddFavoriteParams,
   RemoveFavoriteParams,
-  IsFavoriteResult 
+  IsFavoriteResult
 } from '../domain/types';
+
+// Colonnes textiles alignées avec le schéma DB
+const TEXTILE_COLUMNS = `
+  id,
+  name,
+  description,
+  material_type,
+  color,
+  pattern,
+  quantity_value,
+  quantity_unit,
+  price_value,
+  price_currency,
+  source_platform,
+  source_url,
+  image_url,
+  additional_images,
+  width_value,
+  width_unit,
+  weight_value,
+  weight_unit,
+  composition
+`;
 
 /**
  * Récupère tous les favoris d'une session avec les données des textiles
  */
 export async function getFavoritesBySession(sessionId: string): Promise<FavoriteWithTextile[]> {
-  const supabase = createClient();
+  try {
+    const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from('favorites')
-    .select('id, session_id, textile_id, created_at, textile:textiles(id, name, slug, price, currency, quantity_available, unit, image_url, source_platform, source_url, material_en, color_en, pattern_en, weave_en, composition, width_cm, weight_gsm)')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('favorites')
+      .select(`id, session_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching favorites:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching favorites:', error);
+      return [];
+    }
+
+    // Transformer les données : textile peut être un tableau ou un objet
+    return (data || []).map((item) => ({
+      ...item,
+      textile: Array.isArray(item.textile) ? item.textile[0] : item.textile,
+    })) as FavoriteWithTextile[];
+  } catch (err) {
+    console.error('Exception fetching favorites:', err);
+    return [];
   }
-
-  return data as FavoriteWithTextile[];
 }
 
 /**
@@ -125,7 +158,7 @@ export async function getFavoriteById(favoriteId: string, sessionId: string): Pr
 
   const { data, error } = await supabase
     .from('favorites')
-    .select('id, session_id, textile_id, created_at, textile:textiles(id, name, slug, price, currency, quantity_available, unit, image_url, source_platform, source_url, material_en, color_en, pattern_en, weave_en, composition, width_cm, weight_gsm)')
+    .select(`id, session_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
     .eq('id', favoriteId)
     .eq('session_id', sessionId)
     .maybeSingle();
@@ -135,5 +168,11 @@ export async function getFavoriteById(favoriteId: string, sessionId: string): Pr
     return null;
   }
 
-  return data as FavoriteWithTextile | null;
+  if (!data) return null;
+
+  // Transformer : textile peut être un tableau ou un objet
+  return {
+    ...data,
+    textile: Array.isArray(data.textile) ? data.textile[0] : data.textile,
+  } as FavoriteWithTextile;
 }

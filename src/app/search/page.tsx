@@ -1,7 +1,7 @@
 ﻿import { searchTextiles } from '@/features/search/application/searchTextiles';
 import { SearchInterface } from '@/components/search/SearchInterface';
 import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
-import { getFavoritesBySessionServer } from '@/features/favorites/infrastructure/favoritesRepositoryServer';
+import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
 
 export default async function SearchPage() {
   // Initial load: fetch all textiles and available filters
@@ -11,7 +11,7 @@ export default async function SearchPage() {
   let favoriteIds = new Set<string>();
   try {
     const sessionId = await getOrCreateSessionId();
-    const favorites = await getFavoritesBySessionServer(sessionId);
+    const favorites = await getFavoritesBySession(sessionId);
     favoriteIds = new Set(favorites.map(f => f.textile_id));
   } catch (error) {
     console.error('Could not load favorites, continuing without them:', error);
