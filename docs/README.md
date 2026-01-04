@@ -82,6 +82,10 @@ deadstock-search-engine/
 ### Démarrer une session
 
 ```
+
+
+on y va étape par étape, tu peux vérifier le code existant avec des commandes powershell, et créer les nouveaux fichiers avec des commandes powershell, on peut utiliser l'interface supabase pour lancer des requetes sql, 
+
 Bonjour Claude,
 Je continue le projet Deadstock Textile Search Engine.
 Peux-tu lire CONTEXT_SUMMARY.md et CURRENT_STATE.md et NEXT_STEPS me résumer où on en est ?

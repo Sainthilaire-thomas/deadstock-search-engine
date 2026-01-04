@@ -79,6 +79,143 @@ export type Database = {
           },
         ]
       }
+      board_elements: {
+        Row: {
+          board_id: string
+          created_at: string
+          element_data: Json
+          element_type: string
+          height: number | null
+          id: string
+          position_x: number
+          position_y: number
+          updated_at: string
+          width: number | null
+          z_index: number
+          zone_id: string | null
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          element_data?: Json
+          element_type: string
+          height?: number | null
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          width?: number | null
+          z_index?: number
+          zone_id?: string | null
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          element_data?: Json
+          element_type?: string
+          height?: number | null
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          width?: number | null
+          z_index?: number
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_elements_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_elements_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "board_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_zones: {
+        Row: {
+          board_id: string
+          color: string | null
+          created_at: string
+          height: number
+          id: string
+          name: string
+          position_x: number
+          position_y: number
+          width: number
+        }
+        Insert: {
+          board_id: string
+          color?: string | null
+          created_at?: string
+          height?: number
+          id?: string
+          name?: string
+          position_x?: number
+          position_y?: number
+          width?: number
+        }
+        Update: {
+          board_id?: string
+          color?: string | null
+          created_at?: string
+          height?: number
+          id?: string
+          name?: string
+          position_x?: number
+          position_y?: number
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_zones_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string | null
+          session_id: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       dictionary_mappings: {
         Row: {
           category_id: string
@@ -303,6 +440,105 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          client_email: string | null
+          client_name: string | null
+          color_palette: Json | null
+          constraints: Json | null
+          created_at: string | null
+          currency: string | null
+          current_step: string
+          deadline: string | null
+          description: string | null
+          description_i18n: Json | null
+          fabric_modifiers: Json | null
+          fabric_width: number | null
+          garments: Json | null
+          id: string
+          margin_percent: number | null
+          mood_board: Json | null
+          name: string
+          name_i18n: Json | null
+          project_type: string
+          reference_images: Json | null
+          selected_textiles: Json | null
+          session_id: string | null
+          status: string
+          style_keywords: string[] | null
+          total_yardage: number | null
+          updated_at: string | null
+          user_id: string | null
+          yardage_details: Json | null
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          client_email?: string | null
+          client_name?: string | null
+          color_palette?: Json | null
+          constraints?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          current_step?: string
+          deadline?: string | null
+          description?: string | null
+          description_i18n?: Json | null
+          fabric_modifiers?: Json | null
+          fabric_width?: number | null
+          garments?: Json | null
+          id?: string
+          margin_percent?: number | null
+          mood_board?: Json | null
+          name: string
+          name_i18n?: Json | null
+          project_type?: string
+          reference_images?: Json | null
+          selected_textiles?: Json | null
+          session_id?: string | null
+          status?: string
+          style_keywords?: string[] | null
+          total_yardage?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          yardage_details?: Json | null
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          client_email?: string | null
+          client_name?: string | null
+          color_palette?: Json | null
+          constraints?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          current_step?: string
+          deadline?: string | null
+          description?: string | null
+          description_i18n?: Json | null
+          fabric_modifiers?: Json | null
+          fabric_width?: number | null
+          garments?: Json | null
+          id?: string
+          margin_percent?: number | null
+          mood_board?: Json | null
+          name?: string
+          name_i18n?: Json | null
+          project_type?: string
+          reference_images?: Json | null
+          selected_textiles?: Json | null
+          session_id?: string | null
+          status?: string
+          style_keywords?: string[] | null
+          total_yardage?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          yardage_details?: Json | null
+        }
+        Relationships: []
+      }
       scraping_jobs: {
         Row: {
           config: Json | null
@@ -429,7 +665,9 @@ export type Database = {
           created_at: string | null
           data_structure: Json | null
           discovered_at: string | null
+          estimated_available: number | null
           estimated_products: number | null
+          global_analysis: Json | null
           id: string
           is_shopify: boolean | null
           needs_rediscovery: boolean | null
@@ -448,7 +686,9 @@ export type Database = {
           created_at?: string | null
           data_structure?: Json | null
           discovered_at?: string | null
+          estimated_available?: number | null
           estimated_products?: number | null
+          global_analysis?: Json | null
           id?: string
           is_shopify?: boolean | null
           needs_rediscovery?: boolean | null
@@ -467,7 +707,9 @@ export type Database = {
           created_at?: string | null
           data_structure?: Json | null
           discovered_at?: string | null
+          estimated_available?: number | null
           estimated_products?: number | null
+          global_analysis?: Json | null
           id?: string
           is_shopify?: boolean | null
           needs_rediscovery?: boolean | null

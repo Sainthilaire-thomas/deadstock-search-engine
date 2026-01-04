@@ -19,7 +19,7 @@ import type { Site } from '../domain/types';
 function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile {
   return {
     siteUrl: siteUrl,
-    platform: dbProfile.is_shopify ? 'shopify' : 'unknown', // ← AJOUTER CETTE LIGNE
+    platform: dbProfile.is_shopify ? 'shopify' : 'unknown',
     isShopify: dbProfile.is_shopify ?? true,
     discoveredAt: new Date(dbProfile.discovered_at),
     validUntil: new Date(dbProfile.valid_until),
@@ -31,6 +31,18 @@ function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile
     totalCollections: dbProfile.total_collections || 0,
     relevantCollections: dbProfile.relevant_collections || 0,
     estimatedProducts: dbProfile.estimated_products || 0,
+    // NOUVEAU - Ajouter ces lignes
+    estimatedAvailable: dbProfile.estimated_available || 0,
+    globalAnalysis: dbProfile.global_analysis || {
+      allProductTypes: [],
+      allTags: [],
+      allVendors: [],
+      priceDistribution: { under10: 0, from10to30: 0, from30to50: 0, from50to100: 0, over100: 0 },
+      priceStats: null,
+      weightStats: null,
+      availabilityRate: 0,
+      deadstockScore: { score: 0, grade: 'F', factors: {}, recommendations: [] },
+    },
   };
 }
 
@@ -97,23 +109,26 @@ async function performDiscovery(siteId: string, siteUrl: string, supabase: any) 
   }
 
   // 3. Save new profile to database
-  const profileData = {
-    site_id: siteId,
-    discovered_at: profile.discoveredAt.toISOString(),
-    valid_until: profile.validUntil.toISOString(),
-    profile_version: 1,
-    collections: profile.collections,
-    sample_products: profile.sampleProducts.slice(0, 10), // Limit to 10
-    data_structure: profile.dataStructure,
-    quality_metrics: profile.qualityMetrics,
-    recommendations: profile.recommendations,
-    is_shopify: profile.isShopify,
-    total_collections: profile.totalCollections,
-    relevant_collections: profile.relevantCollections,
-    estimated_products: profile.estimatedProducts,
-    needs_rediscovery: false,
-    rediscovery_reason: null,
-  };
+ const profileData = {
+  site_id: siteId,
+  discovered_at: profile.discoveredAt.toISOString(),
+  valid_until: profile.validUntil.toISOString(),
+  profile_version: 1,
+  collections: profile.collections,
+  sample_products: profile.sampleProducts.slice(0, 10),
+  data_structure: profile.dataStructure,
+  quality_metrics: profile.qualityMetrics,
+  recommendations: profile.recommendations,
+  is_shopify: profile.isShopify,
+  total_collections: profile.totalCollections,
+  relevant_collections: profile.relevantCollections,
+  estimated_products: profile.estimatedProducts,
+  // NOUVEAU - Ajouter ces lignes
+  estimated_available: profile.estimatedAvailable,
+  global_analysis: profile.globalAnalysis,
+  needs_rediscovery: false,
+  rediscovery_reason: null,
+};
 
   console.log('[Action] Saving profile:', {
     site_id: profileData.site_id,

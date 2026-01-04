@@ -23,6 +23,7 @@ import {
 const STATUS_STYLES: Record<StepStatus, string> = {
   completed: "bg-primary text-primary-foreground hover:bg-primary/90",
   current: "bg-accent text-accent-foreground border-2 border-primary",
+  available: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
   upcoming: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
   locked: "bg-muted text-muted-foreground cursor-not-allowed opacity-50",
 };
@@ -48,6 +49,7 @@ export function SidebarStep({ step, status, isCollapsed, onClick }: SidebarStepP
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
           status === "completed" && "bg-primary-foreground text-primary",
           status === "current" && "bg-primary text-primary-foreground",
+          status === "available" && "bg-muted text-muted-foreground",
           status === "upcoming" && "bg-muted text-muted-foreground",
           status === "locked" && "bg-background text-muted-foreground"
         )}

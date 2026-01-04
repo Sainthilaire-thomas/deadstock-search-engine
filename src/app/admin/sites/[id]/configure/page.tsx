@@ -7,12 +7,52 @@ import { Button } from '@/components/ui/button';
 import { getSiteByIdServer } from '@/features/admin/application/queries';
 import { ArrowLeft, Calendar, TrendingUp, AlertCircle } from 'lucide-react';
 import { ScrapingConfigForm } from '@/features/admin/components/ScrapingConfigForm';
-import { ScrapingConfig } from '@/features/admin/domain/types';
 
 interface ConfigurePageProps {
   params: Promise<{
     id: string;
   }>;
+}
+
+/**
+ * Map database profile (snake_case) to component format (camelCase)
+ */
+function mapDbProfileToComponentProfile(dbProfile: any) {
+  return {
+    collections: dbProfile.collections || [],
+    qualityMetrics: dbProfile.quality_metrics || {
+      hasImages: 0,
+      hasPrice: 0,
+      hasTags: 0,
+      hasDescription: 0,
+      hasWeight: 0,
+      hasProductType: 0,
+      overallScore: 0,
+    },
+    globalAnalysis: dbProfile.global_analysis || null,
+    totalCollections: dbProfile.total_collections || 0,
+    relevantCollections: dbProfile.relevant_collections || 0,
+    estimatedProducts: dbProfile.estimated_products || 0,
+    estimatedAvailable: dbProfile.estimated_available || 0,
+  };
+}
+
+/**
+ * Map database scraping config to component format
+ */
+function mapDbConfigToComponentConfig(dbConfig: any) {
+  if (!dbConfig) return undefined;
+  
+  return {
+    selectedCollections: dbConfig.selectedCollections || dbConfig.selected_collections || [],
+    maxProductsPerCollection: dbConfig.maxProductsPerCollection || dbConfig.max_products_per_collection || 100,
+    filters: {
+      minPrice: dbConfig.filters?.minPrice || dbConfig.filters?.min_price,
+      maxPrice: dbConfig.filters?.maxPrice || dbConfig.filters?.max_price,
+      requireImages: dbConfig.filters?.requireImages ?? dbConfig.filters?.require_images ?? true,
+      onlyAvailable: dbConfig.filters?.onlyAvailable ?? dbConfig.filters?.only_available ?? true,
+    },
+  };
 }
 
 export default async function ConfigurePage({ params }: ConfigurePageProps) {
@@ -51,6 +91,17 @@ export default async function ConfigurePage({ params }: ConfigurePageProps) {
     );
   }
 
+  // Map DB data to component format
+  const mappedProfile = mapDbProfileToComponentProfile(site.profile);
+  const mappedConfig = mapDbConfigToComponentConfig(site.scraping_config);
+
+  // Extract quality score for display
+  const qualityScore = mappedProfile.qualityMetrics?.overallScore 
+    ? Math.round(mappedProfile.qualityMetrics.overallScore * 100)
+    : (mappedProfile.qualityMetrics?.hasImages 
+        ? Math.round(mappedProfile.qualityMetrics.hasImages * 100)
+        : 0);
+
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-4xl">
       {/* Header */}
@@ -84,30 +135,24 @@ export default async function ConfigurePage({ params }: ConfigurePageProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="text-sm text-muted-foreground">Total Collections</div>
-              <div className="text-2xl font-bold">{site.profile.total_collections}</div>
+              <div className="text-2xl font-bold">{mappedProfile.totalCollections}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Relevant</div>
               <div className="text-2xl font-bold text-green-600">
-                {site.profile.relevant_collections}
+                {mappedProfile.relevantCollections}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Estimated Products</div>
-              <div className="text-2xl font-bold">{site.profile.estimated_products}</div>
+              <div className="text-2xl font-bold">{mappedProfile.estimatedProducts.toLocaleString()}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 Quality
               </div>
-              <div className="text-2xl font-bold">
-                {site.profile.quality_metrics 
-  ? `${Math.round(((site.profile.quality_metrics as any).hasImages || 0) * 100)}%`
-  : 'N/A'
-}
-
-              </div>
+              <div className="text-2xl font-bold">{qualityScore}%</div>
             </div>
           </div>
 
@@ -129,8 +174,10 @@ export default async function ConfigurePage({ params }: ConfigurePageProps) {
       {/* Configuration Form */}
       <ScrapingConfigForm 
         siteId={site.id}
-        profile={site.profile}
-        currentConfig={site.scraping_config as ScrapingConfig | null}
+        siteName={site.name || 'Unknown Site'}
+        siteUrl={site.url}
+        profile={mappedProfile}
+        currentConfig={mappedConfig}
       />
     </div>
   );

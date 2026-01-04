@@ -23,12 +23,13 @@ export function SiteActions({ siteId, siteUrl, hasProfile }: SiteActionsProps) {
     setIsDiscovering(true);
     try {
       const result = await triggerDiscovery(siteUrl);
-      
       if (result.success) {
-        toast.success(result.message || 'Discovery completed!');
+        const message = 'message' in result ? result.message : 'Discovery completed!';
+        toast.success(message);
         router.refresh();
       } else {
-        toast.error(result.error || 'Discovery failed');
+        const error = 'error' in result ? result.error : 'Discovery failed';
+        toast.error(error);
       }
     } catch (error: any) {
       toast.error(error.message || 'An error occurred');
@@ -42,16 +43,17 @@ export function SiteActions({ siteId, siteUrl, hasProfile }: SiteActionsProps) {
       toast.error('Please run discovery first');
       return;
     }
-
+    
     setIsScraping(true);
     try {
       const result = await triggerFullScraping(siteId);
-      
       if (result.success) {
-        toast.success(result.message || 'Scraping completed!');
+        const message = 'message' in result ? result.message : 'Scraping completed!';
+        toast.success(message);
         router.refresh();
       } else {
-        toast.error(result.error || 'Scraping failed');
+        const error = 'error' in result ? result.error : 'Scraping failed';
+        toast.error(error);
       }
     } catch (error: any) {
       toast.error(error.message || 'An error occurred');
@@ -62,7 +64,7 @@ export function SiteActions({ siteId, siteUrl, hasProfile }: SiteActionsProps) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button 
+      <Button
         onClick={handleDiscovery}
         disabled={isDiscovering}
       >
@@ -73,8 +75,8 @@ export function SiteActions({ siteId, siteUrl, hasProfile }: SiteActionsProps) {
         )}
         {isDiscovering ? 'Discovering...' : 'Run Discovery'}
       </Button>
-      
-      <Button 
+
+      <Button
         variant="secondary"
         onClick={handleScraping}
         disabled={isScraping || !hasProfile}
@@ -86,7 +88,7 @@ export function SiteActions({ siteId, siteUrl, hasProfile }: SiteActionsProps) {
         )}
         {isScraping ? 'Scraping...' : 'Run Scraping'}
       </Button>
-      
+
       <Button variant="outline" disabled>
         Edit Configuration
       </Button>

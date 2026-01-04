@@ -1,561 +1,715 @@
-// src/features/admin/components/ScrapingConfigForm.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { updateSite, triggerPreviewScraping, triggerFullScraping } from '@/features/admin/application/actions';
-import { toast } from 'sonner';
-import { Loader2, Save, Play, Eye, Sparkles, Package, Filter } from 'lucide-react';
-import type { SiteProfile, ScrapingConfig } from '@/features/admin/domain/types';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  Play, 
+  Save, 
+  Eye, 
+  Search,
+  Filter,
+  ArrowUpDown,
+  Sparkles,
+  Package,
+  CheckCircle2,
+  BarChart3
+} from 'lucide-react';
+import { triggerPreviewScraping, triggerFullScraping, saveScrapingConfig } from '../application/actions';
+import { SiteAnalysisCard } from './SiteAnalysisCard';
+import { PreviewModal } from './PreviewModal';
 
-// Type pour les collections du nouveau discoveryService
-type CollectionData = {
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface SampledStats {
+  total: number;
+  available: number;
+  availablePercent: number;
+  withImages: number;
+  withPrice: number;
+  withWeight: number;
+}
+
+interface CollectionDataAnalysis {
+  productTypes: { type: string; count: number; percent: number }[];
+  topTags: { tag: string; count: number; percent: number }[];
+  vendors: { vendor: string; count: number }[];
+  priceStats: { min: number; max: number; avg: number; median: number; currency: string } | null;
+  weightStats: { hasWeight: number; hasWeightPercent: number; minGrams: number; maxGrams: number; avgGrams: number } | null;
+}
+
+interface CollectionData {
   handle: string;
   title: string;
   productsCount: number;
-  suggestedRelevant: boolean;
-  suggestedPriority: 'high' | 'medium' | 'low';
+  suggestedRelevant?: boolean;
+  suggestedPriority?: 'high' | 'medium' | 'low';
   relevanceReason?: string;
-  wasSampled: boolean;
-  sampleProductsCount?: number;
-};
+  wasSampled?: boolean;
+  sampledStats?: SampledStats;
+  dataAnalysis?: CollectionDataAnalysis;
+}
+
+interface QualityMetrics {
+  hasImages: number;
+  hasPrice: number;
+  hasTags: number;
+  hasDescription: number;
+  hasWeight: number;
+  hasProductType: number;
+  overallScore: number;
+}
+
+interface GlobalAnalysis {
+  allProductTypes: { type: string; count: number; percent: number }[];
+  allTags: { tag: string; count: number; percent: number }[];
+  allVendors: { vendor: string; count: number; percent: number }[];
+  priceDistribution: {
+    under10: number;
+    from10to30: number;
+    from30to50: number;
+    from50to100: number;
+    over100: number;
+  };
+  priceStats: { min: number; max: number; avg: number; median: number; currency: string } | null;
+  weightStats: { hasWeight: number; hasWeightPercent: number; minGrams: number; maxGrams: number; avgGrams: number } | null;
+  availabilityRate: number;
+  deadstockScore: {
+    score: number;
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    factors: {
+      hasDeadstockKeywords: boolean;
+      hasFabricTypes: boolean;
+      priceRangeOk: boolean;
+      availabilityGood: boolean;
+      dataQualityGood: boolean;
+      hasWeightData: boolean;
+    };
+    recommendations: string[];
+  };
+}
+
+interface SiteProfile {
+  collections: CollectionData[];
+  qualityMetrics: QualityMetrics;
+  globalAnalysis?: GlobalAnalysis;
+  totalCollections: number;
+  relevantCollections: number;
+  estimatedProducts: number;
+  estimatedAvailable?: number;
+}
 
 interface ScrapingConfigFormProps {
   siteId: string;
+  siteName: string;
+  siteUrl?: string;
   profile: SiteProfile;
-  currentConfig: ScrapingConfig | null;
+  currentConfig?: {
+    selectedCollections: string[];
+    maxProductsPerCollection: number;
+    filters: {
+      minPrice?: number;
+      maxPrice?: number;
+      requireImages?: boolean;
+      onlyAvailable?: boolean;
+    };
+  };
 }
 
-type SortOption = 'suggested' | 'products' | 'alpha';
-type FilterOption = 'all' | 'suggested' | 'not-suggested';
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
 
-export function ScrapingConfigForm({ siteId, profile, currentConfig }: ScrapingConfigFormProps) {
-  const router = useRouter();
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  const [isScraping, setIsScraping] = useState(false);
+function PriorityBadge({ priority }: { priority: 'high' | 'medium' | 'low' }) {
+  const colors = {
+    high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  };
 
-  // Collections disponibles depuis le profile
-  const rawCollections = (profile.collections as CollectionData[]) || [];
+  return (
+    <span className={`px-1.5 py-0.5 text-xs rounded ${colors[priority]}`}>
+      {priority}
+    </span>
+  );
+}
 
-  // Tri et filtrage
-  const [sortBy, setSortBy] = useState<SortOption>('suggested');
-  const [filterBy, setFilterBy] = useState<FilterOption>('all');
+function AvailabilityIndicator({ stats }: { stats?: SampledStats }) {
+  if (!stats) return null;
+
+  const percent = stats.availablePercent;
+  const color = percent >= 80 ? 'text-green-600' : percent >= 50 ? 'text-yellow-600' : 'text-red-600';
+
+  return (
+    <span className={`text-xs ${color} flex items-center gap-1`}>
+      <CheckCircle2 className="w-3 h-3" />
+      {stats.available}/{stats.total} sampled ({percent}%)
+    </span>
+  );
+}
+
+function CollectionStatsTooltip({ analysis }: { analysis?: CollectionDataAnalysis }) {
+  if (!analysis) return null;
+
+  return (
+    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+      {analysis.priceStats && (
+        <div>💰 {analysis.priceStats.min}€ - {analysis.priceStats.max}€ (avg: {analysis.priceStats.avg}€)</div>
+      )}
+      {analysis.weightStats && analysis.weightStats.hasWeightPercent > 0 && (
+        <div>⚖️ {analysis.weightStats.avgGrams}g avg ({analysis.weightStats.hasWeightPercent}% have weight)</div>
+      )}
+      {analysis.topTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {analysis.topTags.slice(0, 3).map((tag, i) => (
+            <span key={i} className="px-1 py-0.5 bg-muted rounded text-xs">{tag.tag}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ScrapingConfigForm({ 
+  siteId, 
+  siteName,
+  siteUrl,
+  profile,
+  currentConfig 
+}: ScrapingConfigFormProps) {
+  // State
+  const [selectedCollections, setSelectedCollections] = useState<string[]>(
+    currentConfig?.selectedCollections || []
+  );
+  const [maxProducts, setMaxProducts] = useState(
+    currentConfig?.maxProductsPerCollection || 100
+  );
+  const [filters, setFilters] = useState({
+    minPrice: currentConfig?.filters?.minPrice,
+    maxPrice: currentConfig?.filters?.maxPrice,
+    requireImages: currentConfig?.filters?.requireImages ?? true,
+    onlyAvailable: currentConfig?.filters?.onlyAvailable ?? true,
+  });
+
+  // UI State
+  const [isLoading, setIsLoading] = useState(false);
+  const [previewCollection, setPreviewCollection] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Preview Modal State
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewModalData, setPreviewModalData] = useState<any>(null);
+  const [previewModalCollection, setPreviewModalCollection] = useState<{ handle: string; title: string } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Search, Filter, Sort State
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | 'suggested' | 'not-suggested' | 'sampled'>('all');
+  const [sortMode, setSortMode] = useState<'suggested' | 'products' | 'available' | 'alpha'>('suggested');
+  const [showAnalysis, setShowAnalysis] = useState(true);
 
-  // Collections filtrées et triées
-  const availableCollections = useMemo(() => {
-    let filtered = [...rawCollections];
+  // Collections data
+  const collections = profile.collections || [];
 
-    // Filtre par recherche
+  // Filter and sort collections
+  const filteredCollections = useMemo(() => {
+    let result = [...collections];
+
+    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(c => 
+      result = result.filter(c => 
         c.title.toLowerCase().includes(query) || 
         c.handle.toLowerCase().includes(query)
       );
     }
 
-    // Filtre par suggestion
-    if (filterBy === 'suggested') {
-      filtered = filtered.filter(c => c.suggestedRelevant);
-    } else if (filterBy === 'not-suggested') {
-      filtered = filtered.filter(c => !c.suggestedRelevant);
+    // Category filter
+    switch (filterMode) {
+      case 'suggested':
+        result = result.filter(c => c.suggestedRelevant);
+        break;
+      case 'not-suggested':
+        result = result.filter(c => !c.suggestedRelevant);
+        break;
+      case 'sampled':
+        result = result.filter(c => c.wasSampled);
+        break;
     }
 
-    // Tri
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'suggested':
-          // Suggested first, then by priority, then by products count
-          if (a.suggestedRelevant !== b.suggestedRelevant) {
-            return a.suggestedRelevant ? -1 : 1;
-          }
+    // Sort
+    switch (sortMode) {
+      case 'suggested':
+        result.sort((a, b) => {
+          if (a.suggestedRelevant && !b.suggestedRelevant) return -1;
+          if (!a.suggestedRelevant && b.suggestedRelevant) return 1;
           const priorityOrder = { high: 0, medium: 1, low: 2 };
-          if (a.suggestedPriority !== b.suggestedPriority) {
-            return priorityOrder[a.suggestedPriority] - priorityOrder[b.suggestedPriority];
-          }
+          const aPriority = priorityOrder[a.suggestedPriority || 'low'];
+          const bPriority = priorityOrder[b.suggestedPriority || 'low'];
+          if (aPriority !== bPriority) return aPriority - bPriority;
           return b.productsCount - a.productsCount;
-        case 'products':
-          return b.productsCount - a.productsCount;
-        case 'alpha':
-          return a.title.localeCompare(b.title);
-        default:
-          return 0;
-      }
-    });
+        });
+        break;
+      case 'products':
+        result.sort((a, b) => b.productsCount - a.productsCount);
+        break;
+      case 'available':
+        result.sort((a, b) => {
+          const aAvail = a.sampledStats?.availablePercent || 0;
+          const bAvail = b.sampledStats?.availablePercent || 0;
+          return bAvail - aAvail;
+        });
+        break;
+      case 'alpha':
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
 
-    return filtered;
-  }, [rawCollections, sortBy, filterBy, searchQuery]);
+    return result;
+  }, [collections, searchQuery, filterMode, sortMode]);
 
-  // État du formulaire
-  const [selectedCollections, setSelectedCollections] = useState<string[]>(
-    currentConfig?.collections || []
-  );
-  const [config, setConfig] = useState<ScrapingConfig>({
-    collections: currentConfig?.collections || [],
-    maxProductsPerCollection: currentConfig?.maxProductsPerCollection || 100,
-    filters: {
-      onlyAvailable: currentConfig?.filters?.onlyAvailable ?? true,
-      requireImages: currentConfig?.filters?.requireImages ?? true,
-      requirePrice: currentConfig?.filters?.requirePrice ?? true,
-      priceRange: currentConfig?.filters?.priceRange || { min: 5, max: 100 },
-    },
-  });
+  // Stats
+  const suggestedCount = collections.filter(c => c.suggestedRelevant).length;
+  const sampledCount = collections.filter(c => c.wasSampled).length;
+  const selectedCount = selectedCollections.length;
+  const estimatedSelectedProducts = collections
+    .filter(c => selectedCollections.includes(c.handle))
+    .reduce((sum, c) => sum + c.productsCount, 0);
 
-  // Calcul du total estimé
-  const estimatedTotal = useMemo(() => {
-    return selectedCollections.reduce((sum, handle) => {
-      const collection = rawCollections.find(c => c.handle === handle);
-      return sum + (collection?.productsCount || 0);
-    }, 0);
-  }, [selectedCollections, rawCollections]);
-
-  const handleCollectionToggle = (collectionHandle: string) => {
-    setSelectedCollections(prev => {
-      if (prev.includes(collectionHandle)) {
-        return prev.filter(h => h !== collectionHandle);
-      } else {
-        return [...prev, collectionHandle];
-      }
-    });
+  // Handlers
+  const toggleCollection = (handle: string) => {
+    setSelectedCollections(prev =>
+      prev.includes(handle)
+        ? prev.filter(h => h !== handle)
+        : [...prev, handle]
+    );
   };
 
-  const handleSelectAllSuggested = () => {
-    const suggestedHandles = rawCollections
+  const selectAllSuggested = () => {
+    const suggestedHandles = collections
       .filter(c => c.suggestedRelevant)
       .map(c => c.handle);
     setSelectedCollections(suggestedHandles);
   };
 
-  const handleClearSelection = () => {
+  const selectAll = () => {
+    setSelectedCollections(filteredCollections.map(c => c.handle));
+  };
+
+  const deselectAll = () => {
     setSelectedCollections([]);
   };
 
-  const handleSaveConfig = async () => {
-    if (selectedCollections.length === 0) {
-      toast.error('Please select at least one collection');
-      return;
-    }
+  const handlePreview = async (handle: string) => {
+    // Find collection title
+    const collection = collections.find(c => c.handle === handle);
+    if (!collection) return;
 
-    setIsSaving(true);
+    // Open modal and start loading
+    setPreviewModalCollection({ handle, title: collection.title });
+    setPreviewModalOpen(true);
+    setPreviewLoading(true);
+    setPreviewModalData(null);
+
     try {
-      const updatedConfig = {
-        ...config,
-        collections: selectedCollections,
-      };
-
-      const result = await updateSite(siteId, {
-        scraping_config: updatedConfig,
-      });
-
-      if (result.success) {
-        toast.success('Configuration saved successfully');
-        router.refresh();
+      const result = await triggerPreviewScraping(siteId, handle);
+      if (result.success && result.results) {
+        setPreviewModalData(result.results);
       } else {
-        toast.error(result.error || 'Failed to save configuration');
+        setMessage({ type: 'error', text: result.error || 'Preview failed' });
+        setPreviewModalOpen(false);
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred');
+      setMessage({ type: 'error', text: error.message });
+      setPreviewModalOpen(false);
     } finally {
-      setIsSaving(false);
+      setPreviewLoading(false);
     }
   };
 
-  const handlePreview = async () => {
-    if (selectedCollections.length === 0) {
-      toast.error('Please select at least one collection');
-      return;
+  const handlePreviewStartScraping = async (handle: string) => {
+    setPreviewModalOpen(false);
+    
+    // Add collection to selection if not already selected
+    if (!selectedCollections.includes(handle)) {
+      setSelectedCollections(prev => [...prev, handle]);
     }
 
-    setIsPreviewing(true);
-    try {
-      const result = await triggerPreviewScraping(siteId, selectedCollections[0]);
+    // Start scraping for this single collection
+    setIsLoading(true);
+    setMessage(null);
 
+    try {
+      const result = await triggerFullScraping(siteId, {
+        collections: [handle],
+        maxProductsPerCollection: maxProducts,
+      });
       if (result.success) {
-        toast.success(result.message || 'Preview completed!');
+        setMessage({ type: 'success', text: result.message || 'Scraping completed!' });
       } else {
-        toast.error(result.error || 'Preview failed');
+        setMessage({ type: 'error', text: result.error || 'Scraping failed' });
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred');
+      setMessage({ type: 'error', text: error.message });
     } finally {
-      setIsPreviewing(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const result = await saveScrapingConfig(siteId, {
+        selectedCollections,
+        maxProductsPerCollection: maxProducts,
+        filters,
+      });
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Configuration saved!' });
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Save failed' });
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleStartScraping = async () => {
     if (selectedCollections.length === 0) {
-      toast.error('Please select at least one collection');
+      setMessage({ type: 'error', text: 'Please select at least one collection' });
       return;
     }
 
-    setIsScraping(true);
+    setIsLoading(true);
+    setMessage(null);
+
     try {
-      const scrapingConfig = {
+      const result = await triggerFullScraping(siteId, {
         collections: selectedCollections,
-        maxProductsPerCollection: config.maxProductsPerCollection,
-      };
-
-      const result = await triggerFullScraping(siteId, scrapingConfig);
-
+        maxProductsPerCollection: maxProducts,
+      });
       if (result.success) {
-        toast.success(result.message || 'Scraping started!');
-        router.push(`/admin/sites/${siteId}`);
-        router.refresh();
+        setMessage({ type: 'success', text: result.message || 'Scraping completed!' });
       } else {
-        toast.error(result.error || 'Scraping failed');
+        setMessage({ type: 'error', text: result.error || 'Scraping failed' });
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred');
+      setMessage({ type: 'error', text: error.message });
     } finally {
-      setIsScraping(false);
-    }
-  };
-
-  // Priority badge color
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'low': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
-      default: return 'bg-gray-100 text-gray-800';
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Collections Selection */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Select Collections to Scrape</CardTitle>
-              <CardDescription>
-                {rawCollections.length} collections available • {rawCollections.filter(c => c.suggestedRelevant).length} suggested as relevant
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleSelectAllSuggested}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Select Suggested
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleClearSelection}
-              >
-                Clear
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
+      {/* Site Analysis Card */}
+      {showAnalysis && (
+        <SiteAnalysisCard
+          siteName={siteName}
+          totalCollections={profile.totalCollections}
+          relevantCollections={profile.relevantCollections}
+          estimatedProducts={profile.estimatedProducts}
+          estimatedAvailable={profile.estimatedAvailable || 0}
+          qualityMetrics={profile.qualityMetrics}
+          globalAnalysis={profile.globalAnalysis || null}
+        />
+      )}
+
+      {/* Toggle Analysis Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowAnalysis(!showAnalysis)}
+        className="text-muted-foreground"
+      >
+        <BarChart3 className="w-4 h-4 mr-2" />
+        {showAnalysis ? 'Hide' : 'Show'} Site Analysis
+      </Button>
+
+      {/* Message */}
+      {message && (
+        <div className={`p-4 rounded-lg ${
+          message.type === 'success' 
+            ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+            : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Collections Section */}
+      <div className="rounded-lg border bg-card">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Collections
+            <span className="text-sm font-normal text-muted-foreground">
+              ({collections.length} total, {suggestedCount} suggested, {sampledCount} sampled)
+            </span>
+          </h3>
+        </div>
+
+        {/* Toolbar */}
+        <div className="p-4 border-b space-y-3">
+          <div className="flex flex-wrap gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search collections..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
+                className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
-              <select
-                value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-                className="px-3 py-2 border rounded-md text-sm bg-background"
-              >
-                <option value="all">All ({rawCollections.length})</option>
-                <option value="suggested">Suggested ({rawCollections.filter(c => c.suggestedRelevant).length})</option>
-                <option value="not-suggested">Not Suggested ({rawCollections.filter(c => !c.suggestedRelevant).length})</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="px-3 py-2 border rounded-md text-sm bg-background"
-              >
-                <option value="suggested">Sort: Suggested First</option>
-                <option value="products">Sort: Most Products</option>
-                <option value="alpha">Sort: A-Z</option>
-              </select>
-            </div>
+
+            {/* Filter */}
+            <Select value={filterMode} onValueChange={(v: any) => setFilterMode(v)}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ({collections.length})</SelectItem>
+                <SelectItem value="suggested">Suggested ({suggestedCount})</SelectItem>
+                <SelectItem value="not-suggested">Not Suggested ({collections.length - suggestedCount})</SelectItem>
+                <SelectItem value="sampled">Sampled ({sampledCount})</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select value={sortMode} onValueChange={(v: any) => setSortMode(v)}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="suggested">Suggested First</SelectItem>
+                <SelectItem value="products">Most Products</SelectItem>
+                <SelectItem value="available">Best Availability</SelectItem>
+                <SelectItem value="alpha">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Collections List */}
-          <div className="space-y-2 max-h-125 overflow-y-auto">
-            {availableCollections.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                {searchQuery ? 'No collections match your search' : 'No collections found in profile'}
-              </p>
-            ) : (
-              availableCollections.map((collection) => (
-                <div
-                  key={collection.handle}
-                  className={`flex items-start space-x-3 border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
-                    selectedCollections.includes(collection.handle) 
-                      ? 'border-primary bg-primary/5' 
-                      : ''
-                  }`}
-                  onClick={() => handleCollectionToggle(collection.handle)}
-                >
-                  <Checkbox
-                    id={collection.handle}
-                    checked={selectedCollections.includes(collection.handle)}
-                    onCheckedChange={() => handleCollectionToggle(collection.handle)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Label
-                        htmlFor={collection.handle}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {collection.title}
-                      </Label>
-                      {collection.suggestedRelevant && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                          <Sparkles className="mr-1 h-3 w-3" />
-                          Suggested
-                        </Badge>
-                      )}
-                      <Badge className={`text-xs ${getPriorityColor(collection.suggestedPriority)}`}>
-                        {collection.suggestedPriority}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Package className="h-3 w-3" />
-                        {collection.productsCount.toLocaleString()} products
-                      </span>
-                      <span className="text-xs">
-                        {collection.handle}
-                      </span>
-                    </div>
-                    {collection.relevanceReason && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">
-                        {collection.relevanceReason}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={selectAllSuggested}>
+              <Sparkles className="w-4 h-4 mr-1" />
+              Select Suggested ({suggestedCount})
+            </Button>
+            <Button variant="outline" size="sm" onClick={selectAll}>
+              Select All Visible ({filteredCollections.length})
+            </Button>
+            <Button variant="outline" size="sm" onClick={deselectAll}>
+              Deselect All
+            </Button>
           </div>
 
           {/* Selection Summary */}
-          {selectedCollections.length > 0 && (
-            <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">
-                    {selectedCollections.length} collection(s) selected
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    ~{estimatedTotal.toLocaleString()} estimated products
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-lg px-3 py-1">
-                  {estimatedTotal.toLocaleString()}
-                </Badge>
-              </div>
+          <div className="text-sm text-muted-foreground">
+            <strong>{selectedCount}</strong> collections selected
+            {selectedCount > 0 && (
+              <span> • ~<strong>{estimatedSelectedProducts.toLocaleString()}</strong> estimated products</span>
+            )}
+          </div>
+        </div>
+
+        {/* Collections List */}
+        <div className="max-h-[500px] overflow-y-auto">
+          {filteredCollections.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No collections match your filters
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredCollections.map((collection) => {
+                const isSelected = selectedCollections.includes(collection.handle);
+                const isPreviewing = previewCollection === collection.handle;
+
+                return (
+                  <div
+                    key={collection.handle}
+                    className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
+                    }`}
+                    onClick={() => toggleCollection(collection.handle)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleCollection(collection.handle)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium truncate">{collection.title}</span>
+                          
+                          {collection.suggestedRelevant && (
+                            <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              Suggested
+                            </span>
+                          )}
+                          
+                          {collection.suggestedPriority && collection.suggestedRelevant && (
+                            <PriorityBadge priority={collection.suggestedPriority} />
+                          )}
+
+                          {collection.wasSampled && (
+                            <span className="px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              Sampled
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          <span>{collection.productsCount.toLocaleString()} products</span>
+                          
+                          {collection.sampledStats && (
+                            <AvailabilityIndicator stats={collection.sampledStats} />
+                          )}
+                        </div>
+
+                        {collection.relevanceReason && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {collection.relevanceReason}
+                          </p>
+                        )}
+
+                        {/* Show detailed stats for sampled collections */}
+                        {collection.wasSampled && collection.dataAnalysis && (
+                          <CollectionStatsTooltip analysis={collection.dataAnalysis} />
+                        )}
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(collection.handle);
+                        }}
+                        disabled={isLoading}
+                      >
+                        {isPreviewing ? (
+                          <span className="animate-spin">⏳</span>
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Scraping Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Scraping Parameters
-          </CardTitle>
-          <CardDescription>
-            Configure limits and filters
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Max Products */}
+      {/* Scraping Options */}
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <h3 className="font-semibold">Scraping Options</h3>
+
+        <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="maxProducts">Max Products per Collection</Label>
+            <Label htmlFor="maxProducts">Max products per collection</Label>
             <Input
               id="maxProducts"
               type="number"
-              min="1"
-              max="1000"
-              value={config.maxProductsPerCollection}
-              onChange={(e) => setConfig({
-                ...config,
-                maxProductsPerCollection: parseInt(e.target.value) || 100,
-              })}
+              value={maxProducts}
+              onChange={(e) => setMaxProducts(parseInt(e.target.value) || 100)}
+              min={1}
+              max={10000}
             />
-            <p className="text-xs text-muted-foreground">
-              Limit the number of products scraped per collection
-            </p>
           </div>
 
-          {/* Price Range */}
           <div className="space-y-2">
             <Label>Price Range (€)</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={config.filters?.priceRange?.min || 0}
-                  onChange={(e) => setConfig({
-                    ...config,
-                    filters: {
-                      ...config.filters,
-                      priceRange: {
-                        ...config.filters?.priceRange,
-                        min: parseInt(e.target.value) || 0,
-                        max: config.filters?.priceRange?.max || 100,
-                      },
-                    },
-                  })}
-                />
-              </div>
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={config.filters?.priceRange?.max || 100}
-                  onChange={(e) => setConfig({
-                    ...config,
-                    filters: {
-                      ...config.filters,
-                      priceRange: {
-                        min: config.filters?.priceRange?.min || 0,
-                        max: parseInt(e.target.value) || 100,
-                      },
-                    },
-                  })}
-                />
-              </div>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="Min"
+                value={filters.minPrice || ''}
+                onChange={(e) => setFilters(f => ({ ...f, minPrice: parseFloat(e.target.value) || undefined }))}
+              />
+              <Input
+                type="number"
+                placeholder="Max"
+                value={filters.maxPrice || ''}
+                onChange={(e) => setFilters(f => ({ ...f, maxPrice: parseFloat(e.target.value) || undefined }))}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Filters Checkboxes */}
-          <div className="space-y-3">
-            <Label>Filters</Label>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={filters.requireImages}
+              onCheckedChange={(checked) => setFilters(f => ({ ...f, requireImages: !!checked }))}
+            />
+            <span className="text-sm">Require images</span>
+          </label>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="onlyAvailable"
-                checked={config.filters?.onlyAvailable ?? true}
-                onCheckedChange={(checked) => setConfig({
-                  ...config,
-                  filters: {
-                    ...config.filters,
-                    onlyAvailable: checked === true,
-                  },
-                })}
-              />
-              <Label htmlFor="onlyAvailable" className="text-sm font-normal cursor-pointer">
-                Only available products (in stock)
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="requireImages"
-                checked={config.filters?.requireImages ?? true}
-                onCheckedChange={(checked) => setConfig({
-                  ...config,
-                  filters: {
-                    ...config.filters,
-                    requireImages: checked === true,
-                  },
-                })}
-              />
-              <Label htmlFor="requireImages" className="text-sm font-normal cursor-pointer">
-                Require product images
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="requirePrice"
-                checked={config.filters?.requirePrice ?? true}
-                onCheckedChange={(checked) => setConfig({
-                  ...config,
-                  filters: {
-                    ...config.filters,
-                    requirePrice: checked === true,
-                  },
-                })}
-              />
-              <Label htmlFor="requirePrice" className="text-sm font-normal cursor-pointer">
-                Require price information
-              </Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={filters.onlyAvailable}
+              onCheckedChange={(checked) => setFilters(f => ({ ...f, onlyAvailable: !!checked }))}
+            />
+            <span className="text-sm">Only available (in stock)</span>
+          </label>
+        </div>
+      </div>
 
       {/* Actions */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={handleSaveConfig}
-              disabled={isSaving || selectedCollections.length === 0}
-            >
-              {isSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              Save Configuration
-            </Button>
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={handleSaveConfig} disabled={isLoading}>
+          <Save className="w-4 h-4 mr-2" />
+          Save Config
+        </Button>
 
-            <Button
-              variant="secondary"
-              onClick={handlePreview}
-              disabled={isPreviewing || selectedCollections.length === 0}
-            >
-              {isPreviewing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="mr-2 h-4 w-4" />
-              )}
-              Preview (10 products)
-            </Button>
+        <Button 
+          onClick={handleStartScraping} 
+          disabled={isLoading || selectedCollections.length === 0}
+          className="flex-1"
+        >
+          <Play className="w-4 h-4 mr-2" />
+          Start Scraping ({selectedCount} collections)
+        </Button>
+      </div>
 
-            <Button
-              variant="default"
-              onClick={handleStartScraping}
-              disabled={isScraping || selectedCollections.length === 0}
-            >
-              {isScraping ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="mr-2 h-4 w-4" />
-              )}
-              Start Full Scraping
-            </Button>
-          </div>
-
-          {selectedCollections.length === 0 && (
-            <p className="text-sm text-muted-foreground mt-3">
-              Please select at least one collection to continue
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        collectionTitle={previewModalCollection?.title || ''}
+        collectionHandle={previewModalCollection?.handle || ''}
+        previewData={previewModalData}
+        isLoading={previewLoading}
+        onStartScraping={handlePreviewStartScraping}
+        siteUrl={siteUrl}
+      />
     </div>
   );
 }
