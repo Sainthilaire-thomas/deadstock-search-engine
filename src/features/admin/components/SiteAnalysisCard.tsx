@@ -146,9 +146,9 @@ function FactorCheck({ checked, label }: { checked: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-sm">
       {checked ? (
-        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
       ) : (
-        <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+        <XCircle className="w-4 h-4 text-red-400 shrink-0" />
       )}
       <span className={checked ? 'text-foreground' : 'text-muted-foreground'}>{label}</span>
     </div>
@@ -316,7 +316,7 @@ export function SiteAnalysisCard({
                 <div className="space-y-1">
                   {allProductTypes.slice(0, 5).map((pt, idx) => (
                     <div key={idx} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground truncate max-w-[180px]" title={pt.type}>
+                      <span className="text-muted-foreground truncate max-w-45" title={pt.type}>
                         {pt.type || '(empty)'}
                       </span>
                       <span className="font-medium">{pt.percent}%</span>

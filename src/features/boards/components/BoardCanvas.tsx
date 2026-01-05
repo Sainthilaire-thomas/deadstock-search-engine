@@ -28,11 +28,13 @@ export function BoardCanvas() {
     selectZone,
     moveZone,
     resizeZone,
+    updateZone,
     setDragging,
   } = useBoard();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
 
   // Drag state for elements
   const elementDragRef = useRef<{
@@ -69,14 +71,28 @@ export function BoardCanvas() {
     if (e.target === canvasRef.current) {
       clearSelection();
       setEditingElementId(null);
+      setEditingZoneId(null);
     }
   };
 
-  // Double click to edit
+  // Double click to edit element
   const handleDoubleClick = (element: BoardElement) => {
     if (element.elementType === 'note') {
       setEditingElementId(element.id);
     }
+  };
+
+  // Double click to edit zone name
+  const handleZoneDoubleClick = (zone: BoardZone) => {
+    setEditingZoneId(zone.id);
+  };
+
+  // Save zone name
+  const handleSaveZoneName = async (zoneId: string, name: string) => {
+    if (name.trim()) {
+      await updateZone(zoneId, { name: name.trim() });
+    }
+    setEditingZoneId(null);
   };
 
   // Save note content
@@ -138,6 +154,9 @@ export function BoardCanvas() {
 
   // Zone drag handlers
   const handleZoneMouseDown = (e: React.MouseEvent, zone: BoardZone) => {
+    // Ne pas démarrer le drag si on est en mode édition
+    if (editingZoneId === zone.id) return;
+    
     e.stopPropagation();
     selectZone(zone.id);
 
@@ -284,8 +303,12 @@ export function BoardCanvas() {
             key={zone.id}
             zone={zone}
             isSelected={selectedZoneId === zone.id}
+            isEditing={editingZoneId === zone.id}
             onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+            onDoubleClick={() => handleZoneDoubleClick(zone)}
             onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle)}
+            onSaveName={(name) => handleSaveZoneName(zone.id, name)}
+            onCancelEdit={() => setEditingZoneId(null)}
           />
         ))}
 
@@ -314,17 +337,56 @@ export function BoardCanvas() {
 }
 
 // ============================================
-// ZONE CARD (avec poignées de resize)
+// ZONE CARD (avec poignées de resize + édition nom)
 // ============================================
 
 interface ZoneCardProps {
   zone: BoardZone;
   isSelected: boolean;
+  isEditing: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
+  onDoubleClick: () => void;
   onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
+  onSaveName: (name: string) => void;
+  onCancelEdit: () => void;
 }
 
-function ZoneCard({ zone, isSelected, onMouseDown, onResizeStart }: ZoneCardProps) {
+function ZoneCard({ 
+  zone, 
+  isSelected, 
+  isEditing,
+  onMouseDown, 
+  onDoubleClick,
+  onResizeStart,
+  onSaveName,
+  onCancelEdit,
+}: ZoneCardProps) {
+  const [editName, setEditName] = useState(zone.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when entering edit mode
+  useState(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  });
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSaveName(editName);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditName(zone.name);
+      onCancelEdit();
+    }
+  };
+
+  const handleBlur = () => {
+    onSaveName(editName);
+  };
+
   return (
     <div
       className={`absolute border-2 border-dashed rounded-lg transition-shadow ${
@@ -340,20 +402,43 @@ function ZoneCard({ zone, isSelected, onMouseDown, onResizeStart }: ZoneCardProp
         zIndex: isSelected ? 5 : 1,
       }}
     >
-      {/* Zone header - draggable */}
+      {/* Zone header - draggable + double-click to edit */}
       <div
-        className="absolute -top-0 left-0 right-0 px-3 py-1 flex items-center gap-2 cursor-move rounded-t-md"
-        style={{ backgroundColor: zone.color }}
-        onMouseDown={onMouseDown}
+        className="absolute top-0 left-0 right-0 px-3 py-1 flex items-center gap-2 rounded-t-md"
+        style={{ 
+          backgroundColor: zone.color,
+          cursor: isEditing ? 'text' : 'move',
+        }}
+        onMouseDown={isEditing ? undefined : onMouseDown}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick();
+        }}
       >
-        <Move className="w-3 h-3 text-white/70" />
-        <span className="text-xs font-medium text-white truncate">
-          {zone.name}
-        </span>
+        <Move className="w-3 h-3 text-white/70 shrink-0" />
+        
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            className="flex-1 bg-white/20 text-white text-xs font-medium px-1 py-0.5 rounded outline-none focus:bg-white/30 placeholder:text-white/50"
+            placeholder="Nom de la zone"
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className="text-xs font-medium text-white truncate">
+            {zone.name}
+          </span>
+        )}
       </div>
 
-      {/* Resize handles - uniquement si sélectionné */}
-      {isSelected && (
+      {/* Resize handles - uniquement si sélectionné et pas en édition */}
+      {isSelected && !isEditing && (
         <>
           {/* Coins */}
           <ResizeHandleComponent position="nw" onMouseDown={(e) => onResizeStart(e, 'nw')} />

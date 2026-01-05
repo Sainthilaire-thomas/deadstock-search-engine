@@ -66,7 +66,7 @@ export default function CalculatePage() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -291,7 +291,7 @@ export default function CalculatePage() {
 
             {/* Disclaimer */}
             <div className="mt-4 p-3 rounded-lg bg-muted/50 flex gap-2">
-              <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
                 Ces calculs sont des estimations basées sur des patrons standards. 
                 Les besoins réels peuvent varier selon le patron utilisé.

@@ -212,7 +212,7 @@ function ProductCard({ product, siteUrl }: { product: ShopifyProduct; siteUrl?: 
             {tags.map((tag, idx) => (
               <span
                 key={idx}
-                className="px-1.5 py-0.5 text-xs rounded bg-muted text-muted-foreground truncate max-w-[80px]"
+                className="px-1.5 py-0.5 text-xs rounded bg-muted text-muted-foreground truncate max-w-20"
                 title={tag}
               >
                 {tag}

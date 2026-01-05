@@ -282,7 +282,7 @@ function ElementIcon({ type }: { type: string }) {
     case 'calculation':
       return <Calculator className="w-4 h-4 text-blue-500" />;
     case 'textile':
-      return <div className="w-4 h-4 rounded bg-gradient-to-br from-pink-400 to-rose-500" />;
+      return <div className="w-4 h-4 rounded bg-linear-to-br from-pink-400 to-rose-500" />;
     case 'inspiration':
       return <Image className="w-4 h-4 text-green-500" />;
     default:

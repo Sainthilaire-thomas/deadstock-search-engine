@@ -472,7 +472,7 @@ export function ScrapingConfigForm({
         <div className="p-4 border-b space-y-3">
           <div className="flex flex-wrap gap-3">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-50">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search collections..."
@@ -484,7 +484,7 @@ export function ScrapingConfigForm({
 
             {/* Filter */}
             <Select value={filterMode} onValueChange={(v: any) => setFilterMode(v)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-45">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -498,7 +498,7 @@ export function ScrapingConfigForm({
 
             {/* Sort */}
             <Select value={sortMode} onValueChange={(v: any) => setSortMode(v)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-45">
                 <ArrowUpDown className="w-4 h-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -535,7 +535,7 @@ export function ScrapingConfigForm({
         </div>
 
         {/* Collections List */}
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="max-h-125 overflow-y-auto">
           {filteredCollections.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               No collections match your filters

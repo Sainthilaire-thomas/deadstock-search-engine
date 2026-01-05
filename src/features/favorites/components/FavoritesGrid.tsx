@@ -58,7 +58,7 @@ export function FavoritesGrid({ favorites }: FavoritesGridProps) {
                 </div>
 
                 <CardContent className='p-4 space-y-3'>
-                  <h3 className='font-medium line-clamp-2 min-h-[3rem]'>
+                  <h3 className='font-medium line-clamp-2 min-h-12'>
                     {textile.name}
                   </h3>
 

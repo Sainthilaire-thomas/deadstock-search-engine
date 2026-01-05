@@ -43,7 +43,7 @@ export default function IdeaPage() {
 
   if (isLoading || !project) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
