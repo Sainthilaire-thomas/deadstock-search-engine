@@ -1,8 +1,8 @@
 
 # État Actuel du Projet - Deadstock Search Engine
 
-**Dernière mise à jour:** 04/01/2026 - Fin Session 12
-**Version:** MVP Phase 1 - Module Boards Complet
+**Dernière mise à jour:** 04/01/2026 - Fin Session 13
+**Version:** MVP Phase 1 - FavoritesSelector + Refactoring
 
 ---
 
@@ -14,7 +14,7 @@
 | Module Admin            | ✅ Complet    | 100%                 |
 | Module Scraping         | ✅ Complet    | 100%                 |
 | Module Recherche        | ✅ Complet    | 100%                 |
-| Module Favoris          | ✅ Complet    | 100%                 |
+| Module Favoris          | ✅ Complet    | 100% (refactorisé)  |
 | **Module Boards** | ✅ Complet    | 100%                 |
 | Module Normalisation    | 🔄 En cours   | 60%                  |
 | Module Journey (legacy) | ⏸️ Suspendu | Remplacé par Boards |
@@ -34,7 +34,7 @@
 | `scraping_jobs`  | ~15    | Historique jobs                |
 | `discovery_jobs` | ~5     | Jobs découverte               |
 | `boards`         | 1+     | Boards utilisateur             |
-| `board_elements` | 7+     | Éléments sur boards          |
+| `board_elements` | 8+     | Éléments sur boards          |
 | `board_zones`    | 2+     | Zones de regroupement          |
 | `projects`       | 0      | Projets (pour cristallisation) |
 
@@ -62,7 +62,7 @@
 ```
 src/features/
 ├── admin/           # Gestion sites, scraping, discovery
-├── boards/          # ⭐ NOUVEAU - Module Boards complet
+├── boards/          # Module Boards complet
 │   ├── domain/types.ts
 │   ├── infrastructure/
 │   │   ├── boardsRepository.ts
@@ -78,8 +78,11 @@ src/features/
 │       ├── BoardHeader.tsx
 │       ├── BoardToolPanel.tsx
 │       ├── NoteEditor.tsx
-│       └── AddToBoardButton.tsx
-├── favorites/       # Système favoris avec session
+│       ├── AddToBoardButton.tsx
+│       └── FavoritesSelector.tsx    # ⭐ NOUVEAU Session 13
+├── favorites/       # Système favoris (refactorisé)
+│   └── infrastructure/
+│       └── favoritesRepository.ts   # ⭐ Unifié Session 13
 ├── journey/         # Legacy - parcours 9 étapes
 ├── search/          # Recherche unifiée textiles
 └── scraping/        # Services extraction données
@@ -89,7 +92,7 @@ src/features/
 
 ## ✅ Fonctionnalités Opérationnelles
 
-### Module Boards (Session 12)
+### Module Boards (Session 12-13)
 
 * **Liste boards** (`/boards`) : Affichage, création, navigation
 * **Canvas board** (`/boards/[id]`) :
@@ -98,6 +101,7 @@ src/features/
   * Édition titre board (clic)
   * Sélection simple/multiple
   * Suppression éléments/zones
+  * **⭐ Panel latéral scrollable avec liste sélection visible**
 * **Éléments supportés** :
   * Notes (création + édition double-clic)
   * Palettes de couleurs
@@ -105,6 +109,7 @@ src/features/
 * **Intégrations** :
   * Bouton "+" sur cartes favoris
   * Bouton "+" sur cartes recherche
+  * **⭐ Bouton "Tissu depuis favoris" dans BoardToolPanel**
   * Toast de confirmation avec lien vers board
   * Lien "Boards" dans sidebar parcours
 
@@ -131,6 +136,7 @@ src/features/
 * Grille avec détails
 * Page détail avec navigation prev/next
 * Bouton "Ajouter au board"
+* **⭐ Repository unifié (suppression doublon)**
 
 ---
 
@@ -169,7 +175,7 @@ npm run generate:types   # Régénérer types Supabase
 
 ### Priorité Haute
 
-1. Bouton "Tissu depuis favoris" fonctionnel dans board
+1. ~~Bouton "Tissu depuis favoris" fonctionnel dans board~~ ✅
 2. Cristallisation board → projet
 
 ### Priorité Moyenne
@@ -196,5 +202,5 @@ npm run generate:types   # Régénérer types Supabase
 
 * `CONTEXT_SUMMARY.md` - Résumé pour IA
 * `NEXT_STEPS.md` - Prochaines étapes détaillées
-* `SESSION_12_BOARD_MODULE.md` - Note de session
+* `SESSION_13_FAVORITES_SELECTOR.md` - Note de session
 * `docs/specs/board/` - Spécifications module boards

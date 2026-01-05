@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Heart, Plus, Check, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -14,11 +15,11 @@ import {
 } from '@/components/ui/sheet';
 import { useBoard } from '../context/BoardContext';
 import { getFavoritesAction } from '@/features/favorites/actions/favoriteActions';
-import { addTextileToBoard } from '../actions/elementActions';
 import type { FavoriteWithTextile } from '@/features/favorites/domain/types';
+import type { TextileElementData } from '../domain/types';
 
 export function FavoritesSelector() {
-  const { board, elements, isLoading: boardLoading } = useBoard();
+  const { board, elements, addElement, isLoading: boardLoading } = useBoard();
   const [isOpen, setIsOpen] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteWithTextile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +29,7 @@ export function FavoritesSelector() {
   const textileIdsOnBoard = new Set(
     elements
       .filter((el) => el.elementType === 'textile')
-      .map((el) => (el.elementData as { textileId?: string })?.textileId)
+      .map((el) => (el.elementData as TextileElementData)?.textileId)
       .filter(Boolean)
   );
 
@@ -66,27 +67,40 @@ export function FavoritesSelector() {
         y: 100 + Math.random() * 200,
       };
 
-      const result = await addTextileToBoard(
-        board.id,
-        {
-          id: textile.id,
+      // Construire les données de l'élément textile
+      const elementData: TextileElementData = {
+        textileId: textile.id,
+        snapshot: {
           name: textile.name,
-          source: textile.source_platform,
-          price: textile.price_value,
-          imageUrl: textile.image_url,
-          availableQuantity: textile.quantity_value,
-          material: textile.material_type,
-          color: textile.color,
+          source: textile.source_platform || '',
+          price: textile.price_value || 0,
+          currency: textile.price_currency || 'EUR',
+          imageUrl: textile.image_url || null,
+          availableQuantity: textile.quantity_value || null,
+          material: textile.material_type || null,
+          color: textile.color || null,
         },
-        position
-      );
+      };
 
-      if (result.success) {
-        // Rafraîchir la page pour voir le nouvel élément
-        window.location.reload();
-      }
+      // Utiliser addElement du context (qui appelle la Server Action)
+      await addElement({
+        elementType: 'textile',
+        elementData,
+        positionX: position.x,
+        positionY: position.y,
+      });
+
+      // Toast de confirmation
+      toast.success(`"${textile.name}" ajouté au board`);
+
+      // Fermer le Sheet après un court délai pour voir le feedback
+      setTimeout(() => {
+        setIsOpen(false);
+      }, 300);
+
     } catch (error) {
       console.error('Erreur ajout textile:', error);
+      toast.error("Erreur lors de l'ajout du tissu");
     } finally {
       setAddingId(null);
     }

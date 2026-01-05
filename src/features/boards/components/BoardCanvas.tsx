@@ -9,6 +9,12 @@ import { ELEMENT_TYPE_LABELS } from '../domain/types';
 import { NoteEditor } from './NoteEditor';
 import type { BoardElement, BoardZone } from '../domain/types';
 
+// Constantes pour le resize
+const MIN_ZONE_WIDTH = 150;
+const MIN_ZONE_HEIGHT = 100;
+
+type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
 export function BoardCanvas() {
   const {
     elements,
@@ -21,6 +27,7 @@ export function BoardCanvas() {
     updateElement,
     selectZone,
     moveZone,
+    resizeZone,
     setDragging,
   } = useBoard();
 
@@ -43,6 +50,18 @@ export function BoardCanvas() {
     startY: number;
     zoneStartX: number;
     zoneStartY: number;
+  } | null>(null);
+
+  // Resize state for zones
+  const zoneResizeRef = useRef<{
+    zoneId: string;
+    handle: ResizeHandle;
+    startX: number;
+    startY: number;
+    zoneStartX: number;
+    zoneStartY: number;
+    zoneStartWidth: number;
+    zoneStartHeight: number;
   } | null>(null);
 
   // Handle canvas click to clear selection
@@ -154,6 +173,72 @@ export function BoardCanvas() {
     document.removeEventListener('mouseup', handleZoneMouseUp);
   };
 
+  // Zone resize handlers
+  const handleZoneResizeStart = (e: React.MouseEvent, zone: BoardZone, handle: ResizeHandle) => {
+    e.stopPropagation();
+    e.preventDefault();
+    selectZone(zone.id);
+
+    zoneResizeRef.current = {
+      zoneId: zone.id,
+      handle,
+      startX: e.clientX,
+      startY: e.clientY,
+      zoneStartX: zone.positionX,
+      zoneStartY: zone.positionY,
+      zoneStartWidth: zone.width,
+      zoneStartHeight: zone.height,
+    };
+    setDragging(true);
+
+    document.addEventListener('mousemove', handleZoneResizeMove);
+    document.addEventListener('mouseup', handleZoneResizeEnd);
+  };
+
+  const handleZoneResizeMove = (e: MouseEvent) => {
+    if (!zoneResizeRef.current) return;
+
+    const ref = zoneResizeRef.current;
+    const dx = e.clientX - ref.startX;
+    const dy = e.clientY - ref.startY;
+
+    let newX = ref.zoneStartX;
+    let newY = ref.zoneStartY;
+    let newWidth = ref.zoneStartWidth;
+    let newHeight = ref.zoneStartHeight;
+
+    // Calculer les nouvelles dimensions selon la poignée
+    if (ref.handle.includes('e')) {
+      newWidth = Math.max(MIN_ZONE_WIDTH, ref.zoneStartWidth + dx);
+    }
+    if (ref.handle.includes('w')) {
+      const widthChange = Math.min(dx, ref.zoneStartWidth - MIN_ZONE_WIDTH);
+      newWidth = ref.zoneStartWidth - widthChange;
+      newX = ref.zoneStartX + widthChange;
+    }
+    if (ref.handle.includes('s')) {
+      newHeight = Math.max(MIN_ZONE_HEIGHT, ref.zoneStartHeight + dy);
+    }
+    if (ref.handle.includes('n')) {
+      const heightChange = Math.min(dy, ref.zoneStartHeight - MIN_ZONE_HEIGHT);
+      newHeight = ref.zoneStartHeight - heightChange;
+      newY = ref.zoneStartY + heightChange;
+    }
+
+    // Appliquer les changements
+    if (newX !== ref.zoneStartX || newY !== ref.zoneStartY) {
+      moveZone(ref.zoneId, Math.max(0, newX), Math.max(0, newY));
+    }
+    resizeZone(ref.zoneId, newWidth, newHeight);
+  };
+
+  const handleZoneResizeEnd = () => {
+    zoneResizeRef.current = null;
+    setDragging(false);
+    document.removeEventListener('mousemove', handleZoneResizeMove);
+    document.removeEventListener('mouseup', handleZoneResizeEnd);
+  };
+
   if (elements.length === 0 && zones.length === 0) {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -193,13 +278,14 @@ export function BoardCanvas() {
           minHeight: '100%',
         }}
       >
-        {/* Zones en arrière-plan (draggables) */}
+        {/* Zones en arrière-plan (draggables + resizables) */}
         {zones.map((zone) => (
           <ZoneCard
             key={zone.id}
             zone={zone}
             isSelected={selectedZoneId === zone.id}
             onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+            onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle)}
           />
         ))}
 
@@ -228,20 +314,22 @@ export function BoardCanvas() {
 }
 
 // ============================================
-// ZONE CARD
+// ZONE CARD (avec poignées de resize)
 // ============================================
 
 interface ZoneCardProps {
   zone: BoardZone;
   isSelected: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
+  onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
 }
 
-function ZoneCard({ zone, isSelected, onMouseDown }: ZoneCardProps) {
+function ZoneCard({ zone, isSelected, onMouseDown, onResizeStart }: ZoneCardProps) {
   return (
     <div
-      className={`absolute border-2 border-dashed rounded-lg transition-shadow ${isSelected ? 'shadow-lg ring-2 ring-primary' : 'hover:shadow-md'
-        }`}
+      className={`absolute border-2 border-dashed rounded-lg transition-shadow ${
+        isSelected ? 'shadow-lg ring-2 ring-primary' : 'hover:shadow-md'
+      }`}
       style={{
         left: zone.positionX,
         top: zone.positionY,
@@ -249,22 +337,71 @@ function ZoneCard({ zone, isSelected, onMouseDown }: ZoneCardProps) {
         height: zone.height,
         borderColor: zone.color,
         backgroundColor: `${zone.color}15`,
-        cursor: 'move',
         zIndex: isSelected ? 5 : 1,
       }}
-      onMouseDown={onMouseDown}
     >
-      {/* Zone header */}
+      {/* Zone header - draggable */}
       <div
-        className="absolute -top-0 left-0 right-0 px-3 py-1 flex items-center gap-2"
+        className="absolute -top-0 left-0 right-0 px-3 py-1 flex items-center gap-2 cursor-move rounded-t-md"
         style={{ backgroundColor: zone.color }}
+        onMouseDown={onMouseDown}
       >
         <Move className="w-3 h-3 text-white/70" />
         <span className="text-xs font-medium text-white truncate">
           {zone.name}
         </span>
       </div>
+
+      {/* Resize handles - uniquement si sélectionné */}
+      {isSelected && (
+        <>
+          {/* Coins */}
+          <ResizeHandleComponent position="nw" onMouseDown={(e) => onResizeStart(e, 'nw')} />
+          <ResizeHandleComponent position="ne" onMouseDown={(e) => onResizeStart(e, 'ne')} />
+          <ResizeHandleComponent position="sw" onMouseDown={(e) => onResizeStart(e, 'sw')} />
+          <ResizeHandleComponent position="se" onMouseDown={(e) => onResizeStart(e, 'se')} />
+          
+          {/* Côtés */}
+          <ResizeHandleComponent position="n" onMouseDown={(e) => onResizeStart(e, 'n')} />
+          <ResizeHandleComponent position="s" onMouseDown={(e) => onResizeStart(e, 's')} />
+          <ResizeHandleComponent position="e" onMouseDown={(e) => onResizeStart(e, 'e')} />
+          <ResizeHandleComponent position="w" onMouseDown={(e) => onResizeStart(e, 'w')} />
+        </>
+      )}
     </div>
+  );
+}
+
+// ============================================
+// RESIZE HANDLE COMPONENT
+// ============================================
+
+interface ResizeHandleComponentProps {
+  position: ResizeHandle;
+  onMouseDown: (e: React.MouseEvent) => void;
+}
+
+function ResizeHandleComponent({ position, onMouseDown }: ResizeHandleComponentProps) {
+  const positionStyles: Record<ResizeHandle, string> = {
+    nw: 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+    ne: 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+    sw: 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+    se: 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+    n: 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize',
+    s: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize',
+    e: 'top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize',
+    w: 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize',
+  };
+
+  const isCorner = ['nw', 'ne', 'sw', 'se'].includes(position);
+
+  return (
+    <div
+      className={`absolute ${positionStyles[position]} ${
+        isCorner ? 'w-3 h-3' : 'w-2 h-2'
+      } bg-primary border-2 border-background rounded-full hover:scale-125 transition-transform z-10`}
+      onMouseDown={onMouseDown}
+    />
   );
 }
 
@@ -296,10 +433,11 @@ function ElementCard({
 
   return (
     <div
-      className={`absolute bg-background border rounded-lg shadow-sm overflow-hidden transition-shadow select-none ${isSelected
+      className={`absolute bg-background border rounded-lg shadow-sm overflow-hidden transition-shadow select-none ${
+        isSelected
           ? 'ring-2 ring-primary shadow-lg'
           : 'hover:shadow-md'
-        }`}
+      }`}
       style={{
         left: element.positionX,
         top: element.positionY,

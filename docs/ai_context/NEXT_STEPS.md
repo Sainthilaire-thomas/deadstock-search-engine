@@ -1,7 +1,22 @@
 
 # Prochaines Étapes - Deadstock Search Engine
 
-**Mis à jour:** 04/01/2026 - Fin Session 12
+**Mis à jour:** 04/01/2026 - Fin Session 13
+
+---
+
+## ✅ Complété (Session 13)
+
+### FavoritesSelector + Refactoring ✓
+
+* [X] Créer composant `FavoritesSelector.tsx`
+* [X] Sheet avec liste des favoris (images, prix, matière)
+* [X] Click pour ajouter au board actuel
+* [X] Indicateur "Ajouté" pour tissus déjà sur le board
+* [X] Intégration dans `BoardToolPanel.tsx`
+* [X] **Refactoring:** Unifier `favoritesRepository.ts` (suppression doublon Server)
+* [X] Correction colonnes SQL (alignement avec vrai schéma)
+* [X] Amélioration `BoardToolPanel` : scroll + affichage sélection visible
 
 ---
 
@@ -11,44 +26,21 @@
 
 * [X] Migration SQL 015 (boards, board_zones, board_elements)
 * [X] Types TypeScript complets avec mappers
-* [X] boardsRepository.ts
-* [X] elementsRepository.ts
-* [X] zonesRepository.ts
-* [X] boardActions.ts
-* [X] elementActions.ts
-* [X] zoneActions.ts
+* [X] Repositories (boards, elements, zones)
+* [X] Server Actions complètes
 * [X] BoardContext.tsx (state management)
-* [X] Page `/boards` (liste)
-* [X] Page `/boards/[id]` (canvas)
+* [X] Pages `/boards` et `/boards/[id]`
 * [X] BoardCanvas avec drag & drop
-* [X] BoardHeader avec édition titre
-* [X] BoardToolPanel avec boutons création
-* [X] NoteEditor (édition double-clic)
+* [X] BoardHeader, BoardToolPanel, NoteEditor
 * [X] AddToBoardButton (popover sélection board)
-* [X] Intégration FavoritesGrid
-* [X] Intégration TextileGrid (search)
-* [X] Toast confirmation avec lien
-* [X] Lien Boards dans sidebar
+* [X] Intégrations FavoritesGrid et TextileGrid
 * [X] Zones draggables avec couleurs
 
 ---
 
-## 🎯 Priorité Immédiate (Session 13)
+## 🎯 Priorité Immédiate (Session 14)
 
-### 1. Bouton "Tissu depuis favoris" fonctionnel
-
-**Objectif:** Permettre d'ajouter des tissus au board depuis le panel
-
-**Tâches:**
-
-* [ ] Créer composant `FavoritesSelector.tsx`
-* [ ] Modal/Sheet avec liste des favoris
-* [ ] Click pour ajouter au board actuel
-* [ ] Feedback visuel (tissu ajouté)
-
-**Estimation:** 1-2 heures
-
-### 2. Amélioration UX Canvas
+### 1. Amélioration UX Canvas
 
 **Tâches:**
 
@@ -59,9 +51,19 @@
 
 **Estimation:** 2-3 heures
 
+### 2. Amélioration FavoritesSelector
+
+**Tâches:**
+
+* [ ] Ne pas recharger la page après ajout (utiliser context)
+* [ ] Fermer automatiquement le Sheet après ajout
+* [ ] Toast de confirmation
+
+**Estimation:** 1 heure
+
 ---
 
-## 📋 Court terme (Sessions 13-15)
+## 📋 Court terme (Sessions 14-16)
 
 ### Phase 2 : Outils modulaires
 
@@ -83,7 +85,7 @@
 
 ---
 
-## 🔄 Moyen terme (Sessions 16-18)
+## 🔄 Moyen terme (Sessions 17-19)
 
 ### Nettoyage & Optimisation
 
@@ -149,14 +151,14 @@
 | `SPEC_BOARD_MODULE.md`                 | Spécifications techniques Board |
 | `SPEC_CRISTALLISATION.md`              | Flux de cristallisation          |
 | `MIGRATION_JOURNEY_TO_BOARD.md`        | Plan de migration                |
-| `SESSION_12_BOARD_MODULE.md`           | Détails session 12              |
+| `SESSION_13_FAVORITES_SELECTOR.md`     | Détails session 13              |
 
 ---
 
-## ✅ Critères de succès Session 13
+## ✅ Critères de succès Session 14
 
-1. Bouton "Tissu depuis favoris" fonctionnel
-2. Au moins une amélioration UX canvas
+1. Redimensionnement zones fonctionnel
+2. Amélioration UX ajout depuis favoris (sans reload)
 3. Tests manuels complets du flow
 4. Documentation mise à jour
 
@@ -164,26 +166,30 @@
 
 ## 💡 Notes techniques
 
-### Pour le sélecteur de favoris
-
-```tsx
-// Utiliser Sheet de shadcn/ui
-<Sheet>
-  <SheetTrigger asChild>
-    <Button>Tissu depuis favoris</Button>
-  </SheetTrigger>
-  <SheetContent>
-    <FavoritesList onSelect={handleAddToBoard} />
-  </SheetContent>
-</Sheet>
-```
-
 ### Pour le redimensionnement zones
 
 * Utiliser `react-resizable` ou custom avec CSS resize handles
 * Sauvegarder dimensions en base après resize
 * Contraintes min/max pour éviter zones trop petites
+* Débouncer les appels API pendant le resize
+
+### Pour améliorer FavoritesSelector
+
+```tsx
+// Au lieu de window.location.reload()
+const handleAddTextile = async (favorite) => {
+  const result = await addTextileToBoard(...);
+  if (result.success && result.data) {
+    // Ajouter directement dans le context
+    addElement(result.data);
+    // Fermer le sheet
+    setIsOpen(false);
+    // Toast
+    toast.success('Tissu ajouté au board');
+  }
+};
+```
 
 ---
 
-**Estimation migration complète Journey → Boards:** 3-5 sessions restantes
+**Estimation migration complète Journey → Boards:** 2-4 sessions restantes

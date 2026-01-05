@@ -34,6 +34,7 @@ import {
   createZoneAction,
   updateZoneAction,
   moveZoneAction,
+  resizeZoneAction,
   deleteZoneAction,
   addZoneToBoard,
 } from '../actions/zoneActions';
@@ -72,7 +73,9 @@ type BoardAction =
   | { type: 'SELECT_ELEMENTS'; payload: string[] }
   | { type: 'SELECT_ZONE'; payload: string | null }
   | { type: 'SET_DRAGGING'; payload: boolean }
-  | { type: 'UPDATE_BOARD_NAME'; payload: string };
+  | { type: 'UPDATE_BOARD_NAME'; payload: string }
+  | { type: 'RESIZE_ZONE'; payload: { id: string; width: number; height: number } };
+  
 
 // ============================================
 // REDUCER
@@ -154,7 +157,15 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
             : z
         ),
       };
-
+  case 'RESIZE_ZONE':
+      return {
+        ...state,
+        zones: state.zones.map((z) =>
+          z.id === action.payload.id
+            ? { ...z, width: action.payload.width, height: action.payload.height }
+            : z
+        ),
+      };
     case 'REMOVE_ZONE':
       return {
         ...state,
@@ -205,6 +216,7 @@ interface BoardContextValue extends BoardState {
   updateElement: (id: string, input: UpdateElementInput) => Promise<void>;
   moveElement: (id: string, x: number, y: number) => Promise<void>;
   removeElement: (id: string) => Promise<void>;
+  
 
   // Quick add helpers
   addNote: (position?: { x: number; y: number }) => Promise<void>;
@@ -215,6 +227,7 @@ interface BoardContextValue extends BoardState {
   updateZone: (id: string, input: UpdateZoneInput) => Promise<void>;
   moveZone: (id: string, x: number, y: number) => Promise<void>;
   removeZone: (id: string) => Promise<void>;
+   resizeZone: (id: string, width: number, height: number) => Promise<void>;
 
   // Selection
   selectElements: (ids: string[]) => void;
@@ -368,6 +381,14 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     moveZoneAction(id, x, y);
   }, []);
 
+  const resizeZone = useCallback(async (id: string, width: number, height: number) => {
+    // Optimistic update for smooth resizing
+    dispatch({ type: 'RESIZE_ZONE', payload: { id, width, height } });
+
+    // Persist to database (fire and forget for performance)
+    resizeZoneAction(id, width, height);
+  }, []);
+
   const removeZone = useCallback(async (id: string) => {
     // Optimistic update
     dispatch({ type: 'REMOVE_ZONE', payload: id });
@@ -426,6 +447,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     updateZone: updateZoneHandler,
     moveZone,
     removeZone,
+    resizeZone,
     selectElements,
     clearSelection,
     toggleElementSelection,
