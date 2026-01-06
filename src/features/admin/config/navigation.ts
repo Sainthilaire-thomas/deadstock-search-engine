@@ -67,31 +67,19 @@ export const adminNavStructure: NavSection[] = [
     label: '1. Discovery',
     icon: Search,
     staticChildren: [
-      { label: 'Vue d\'ensemble', href: '/admin/sites', icon: List },
+      { label: 'Vue d\'ensemble', href: '/admin/discovery', icon: List },
+      { label: 'Sites (legacy)', href: '/admin/sites', icon: Globe },
       { label: 'Ajouter un site', href: '/admin/sites/new', icon: Globe },
     ],
-    // Sous-pages par site pour Discovery (TODO: activer quand pages créées)
-    // siteSubpages: [
-    //   { key: 'analysis', label: 'Analyse', icon: BarChart },
-    //   { key: 'tags', label: 'Classification Tags', icon: Tags },
-    //   { key: 'patterns', label: 'Patterns', icon: Regex },
-    // ],
   },
   {
     key: 'scraping',
     label: '2. Scraping',
     icon: Download,
     staticChildren: [
+      { label: 'Vue d\'ensemble', href: '/admin/scraping', icon: Calendar },
       { label: 'Jobs', href: '/admin/jobs', icon: Loader },
-      // { label: 'Planning', href: '/admin/scraping', icon: Calendar },
-      // { label: 'Historique', href: '/admin/scraping/history', icon: History },
     ],
-    // Sous-pages par site pour Scraping (TODO: activer quand pages créées)
-    // siteSubpages: [
-    //   { key: 'schedule', label: 'Planification', icon: Clock },
-    //   { key: 'manual', label: 'À la demande', icon: Play },
-    //   { key: 'metrics', label: 'Métriques', icon: BarChart },
-    // ],
   },
   {
     key: 'tuning',
@@ -99,10 +87,8 @@ export const adminNavStructure: NavSection[] = [
     icon: Wrench,
     staticChildren: [
       { label: 'Unknowns', href: '/admin/tuning', icon: HelpCircle },
-      // { label: 'Qualité', href: '/admin/tuning/quality', icon: BarChart },
-      // { label: 'Tests', href: '/admin/tuning/tests', icon: TestTube },
+      { label: 'Qualité', href: '/admin/tuning/quality', icon: BarChart },
     ],
-    // Pas de sous-pages par site pour Tuning (c'est global)
   },
   {
     key: 'separator',
