@@ -48,6 +48,22 @@ export default async function ScrapingPage() {
     getRecentJobsWithSites(10),
   ]);
 
+  // Récupérer le count de textiles par site
+// Récupérer le count de textiles par site
+  const supabase = (await import('@/lib/supabase/admin')).createAdminClient();
+  const { data: textileCounts } = await supabase
+    .from('textiles')
+    .select('site_id');
+
+  const countBySite: Record<string, number> = {};
+  if (textileCounts) {
+    for (const t of textileCounts as { site_id: string | null }[]) {
+      if (t.site_id) {
+        countBySite[t.site_id] = (countBySite[t.site_id] || 0) + 1;
+      }
+    }
+  }
+
   const activeSites = sites.filter(s => s.status === 'active' || s.status === 'discovered');
   const runningJobs = recentJobs.filter((j: any) => j.status === 'running');
 
@@ -98,7 +114,7 @@ export default async function ScrapingPage() {
                   <div>
                     <span className="font-medium">{job.site?.name || 'Site inconnu'}</span>
                     <span className="text-sm text-muted-foreground ml-2">
-                      {job.products_found || 0} produits trouvés
+                      {job.products_fetched || 0} produits trouvés
                     </span>
                   </div>
                   <JobStatusBadge status={job.status} />
@@ -133,18 +149,22 @@ export default async function ScrapingPage() {
             <div className="space-y-4">
               {activeSites.map(site => {
                 const lastJob = recentJobs.find((j: any) => j.site_id === site.id);
+                const textilesCount = countBySite[site.id] || 0;
                 return (
                   <div key={site.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <div className="font-medium">{site.name || 'Sans nom'}</div>
                       <div className="text-sm text-muted-foreground">
+                        {textilesCount > 0 && (
+                          <span className="text-green-600 font-medium">{textilesCount} textiles</span>
+                        )}
+                        {textilesCount > 0 && lastJob && ' • '}
                         {lastJob ? (
                           <>
                             Dernier scraping: {lastJob.created_at ? new Date(lastJob.created_at).toLocaleDateString('fr-FR') : '-'}
-                            {' • '}{lastJob.products_saved || 0} produits
                           </>
                         ) : (
-                          'Jamais scrapé'
+                          textilesCount === 0 && 'Jamais scrapé'
                         )}
                       </div>
                     </div>
@@ -197,11 +217,11 @@ export default async function ScrapingPage() {
                     <tr key={job.id}>
                       <td className="py-2 font-medium">{job.site?.name || 'Inconnu'}</td>
                       <td className="py-2 text-muted-foreground">
-                        {new Date(job.created_at).toLocaleDateString('fr-FR')}
+                        {job.created_at ? new Date(job.created_at).toLocaleDateString('fr-FR') : '-'}
                       </td>
                       <td className="py-2">{job.products_saved || 0}</td>
                       <td className="py-2">
-                        <JobStatusBadge status={job.status} />
+                        {job.status && <JobStatusBadge status={job.status} />}
                       </td>
                     </tr>
                   ))}

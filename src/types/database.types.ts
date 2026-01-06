@@ -992,6 +992,7 @@ export type Database = {
           reviewed_by: string | null
           scraped_at: string
           search_vector: unknown
+          site_id: string | null
           source_platform: string
           source_product_id: string | null
           source_url: string
@@ -1046,6 +1047,7 @@ export type Database = {
           reviewed_by?: string | null
           scraped_at?: string
           search_vector?: unknown
+          site_id?: string | null
           source_platform: string
           source_product_id?: string | null
           source_url: string
@@ -1100,6 +1102,7 @@ export type Database = {
           reviewed_by?: string | null
           scraped_at?: string
           search_vector?: unknown
+          site_id?: string | null
           source_platform?: string
           source_product_id?: string | null
           source_url?: string
@@ -1114,7 +1117,15 @@ export type Database = {
           width_unit?: string | null
           width_value?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "textiles_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unknown_terms: {
         Row: {
