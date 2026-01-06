@@ -12,6 +12,8 @@
 import type { SiteProfile } from './discoveryService';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database.types';
+import { scrapingRepo } from '../infrastructure/scrapingRepo';
+import type { Locale } from '@/features/tuning/domain/types';
 
 // Type for textiles insert
 type TextileInsert = Database['deadstock']['Tables']['textiles']['Insert'];
@@ -21,10 +23,11 @@ type TextileInsert = Database['deadstock']['Tables']['textiles']['Insert'];
 // ============================================================================
 
 export interface ScrapingConfig {
-  collections?: string[];          // Collection handles to scrape (empty = all relevant)
-  maxProductsPerCollection?: number; // Max products per collection
-  delayBetweenRequests?: number;   // Delay in ms (default: 2000)
-  previewMode?: boolean;           // Preview mode (10 products only)
+  collections?: string[];
+  maxProductsPerCollection?: number;
+  delayBetweenRequests?: number;
+  previewMode?: boolean;
+  sourceLocale?: Locale;  // ← NOUVEAU
   filters?: {
     minPrice?: number;
     maxPrice?: number;
@@ -104,6 +107,7 @@ const DEFAULT_CONFIG: Required<ScrapingConfig> = {
   maxProductsPerCollection: 1000,
   delayBetweenRequests: 2000,
   previewMode: false,
+  sourceLocale: 'fr',  // ← NOUVEAU - Default to French
   filters: {
     requiresImage: true,
     requiresTags: false,
@@ -228,16 +232,19 @@ class ScrapingService {
       }
     }
 
-    // =========================================================================
-    // SAVE PRODUCTS TO DATABASE
-    // =========================================================================
-    console.log(`\n💾 Saving ${allProducts.length} products to database...`);
-    
-    const savedCount = await this.saveProductsToDatabase(
-      allProducts, 
-      profile.siteUrl,
-      this.extractPlatformName(profile.siteUrl)
-    );
+   // =========================================================================
+// SAVE PRODUCTS TO DATABASE WITH NORMALIZATION
+// =========================================================================
+console.log(`\n💾 Saving ${allProducts.length} products with normalization...`);
+
+const saveResult = await scrapingRepo.saveProducts(
+  allProducts,
+  profile.siteUrl,
+  'direct-scrape',  // jobId placeholder
+  finalConfig.sourceLocale
+);
+
+const savedCount = saveResult.saved + saveResult.updated;
     
     console.log(`   ✅ Saved: ${savedCount} products`);
 

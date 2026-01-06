@@ -74,7 +74,8 @@ type BoardAction =
   | { type: 'SELECT_ZONE'; payload: string | null }
   | { type: 'SET_DRAGGING'; payload: boolean }
   | { type: 'UPDATE_BOARD_NAME'; payload: string }
-  | { type: 'RESIZE_ZONE'; payload: { id: string; width: number; height: number } };
+  | { type: 'RESIZE_ZONE'; payload: { id: string; width: number; height: number } }
+  | { type: 'CRYSTALLIZE_ZONE'; payload: { id: string; projectId: string; crystallizedAt: Date } };
   
 
 // ============================================
@@ -166,6 +167,19 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
             : z
         ),
       };
+      case 'CRYSTALLIZE_ZONE':
+      return {
+        ...state,
+        zones: state.zones.map((z) =>
+          z.id === action.payload.id
+            ? { 
+                ...z, 
+                crystallizedAt: action.payload.crystallizedAt,
+                linkedProjectId: action.payload.projectId,
+              }
+            : z
+        ),
+      };
     case 'REMOVE_ZONE':
       return {
         ...state,
@@ -227,7 +241,8 @@ interface BoardContextValue extends BoardState {
   updateZone: (id: string, input: UpdateZoneInput) => Promise<void>;
   moveZone: (id: string, x: number, y: number) => Promise<void>;
   removeZone: (id: string) => Promise<void>;
-   resizeZone: (id: string, width: number, height: number) => Promise<void>;
+  resizeZone: (id: string, width: number, height: number) => Promise<void>;
+  crystallizeZone: (id: string, projectId: string) => void;
 
   // Selection
   selectElements: (ids: string[]) => void;
@@ -389,6 +404,13 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     resizeZoneAction(id, width, height);
   }, []);
 
+  const crystallizeZone = useCallback((id: string, projectId: string) => {
+    dispatch({ 
+      type: 'CRYSTALLIZE_ZONE', 
+      payload: { id, projectId, crystallizedAt: new Date() } 
+    });
+  }, []);
+
   const removeZone = useCallback(async (id: string) => {
     // Optimistic update
     dispatch({ type: 'REMOVE_ZONE', payload: id });
@@ -448,6 +470,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     moveZone,
     removeZone,
     resizeZone,
+    crystallizeZone,
     selectElements,
     clearSelection,
     toggleElementSelection,

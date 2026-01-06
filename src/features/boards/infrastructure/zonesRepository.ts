@@ -205,6 +205,81 @@ export async function deleteZone(zoneId: string): Promise<string | null> {
 }
 
 // ============================================
+// CRYSTALLIZE ZONE
+// ============================================
+
+export async function crystallizeZone(
+  zoneId: string,
+  projectId: string
+): Promise<BoardZone | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .update({
+      crystallized_at: new Date().toISOString(),
+      linked_project_id: projectId,
+    })
+    .eq('id', zoneId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    console.error('crystallizeZone error:', error);
+    throw error;
+  }
+
+  return mapZoneFromRow(data as unknown as BoardZoneRow);
+}
+
+// ============================================
+// GET CRYSTALLIZED ZONES BY BOARD
+// ============================================
+
+export async function getCrystallizedZonesByBoard(boardId: string): Promise<BoardZone[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .select('*')
+    .eq('board_id', boardId)
+    .not('crystallized_at', 'is', null)
+    .order('crystallized_at', { ascending: false });
+
+  if (error) {
+    console.error('getCrystallizedZonesByBoard error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
+}
+
+// ============================================
+// GET ACTIVE ZONES BY BOARD
+// ============================================
+
+export async function getActiveZonesByBoard(boardId: string): Promise<BoardZone[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .select('*')
+    .eq('board_id', boardId)
+    .is('crystallized_at', null)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('getActiveZonesByBoard error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
+}
+
+// ============================================
 // EXPORT AS OBJECT
 // ============================================
 
@@ -216,4 +291,8 @@ export const zonesRepository = {
   moveZone,
   resizeZone,
   deleteZone,
+  // Crystallization
+  crystallizeZone,
+  getCrystallizedZonesByBoard,
+  getActiveZonesByBoard,
 };

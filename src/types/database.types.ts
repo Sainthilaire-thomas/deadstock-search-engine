@@ -144,8 +144,10 @@ export type Database = {
           board_id: string
           color: string | null
           created_at: string
+          crystallized_at: string | null
           height: number
           id: string
+          linked_project_id: string | null
           name: string
           position_x: number
           position_y: number
@@ -155,8 +157,10 @@ export type Database = {
           board_id: string
           color?: string | null
           created_at?: string
+          crystallized_at?: string | null
           height?: number
           id?: string
+          linked_project_id?: string | null
           name?: string
           position_x?: number
           position_y?: number
@@ -166,8 +170,10 @@ export type Database = {
           board_id?: string
           color?: string | null
           created_at?: string
+          crystallized_at?: string | null
           height?: number
           id?: string
+          linked_project_id?: string | null
           name?: string
           position_x?: number
           position_y?: number
@@ -179,6 +185,13 @@ export type Database = {
             columns: ["board_id"]
             isOneToOne: false
             referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_zones_linked_project_id_fkey"
+            columns: ["linked_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -371,6 +384,60 @@ export type Database = {
           },
         ]
       }
+      imported_patterns: {
+        Row: {
+          analysis_result: Json | null
+          brand: string | null
+          confidence: number | null
+          created_at: string
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string | null
+          garment_type: string | null
+          id: string
+          name: string
+          page_count: number | null
+          precision_level: number | null
+          session_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          analysis_result?: Json | null
+          brand?: string | null
+          confidence?: number | null
+          created_at?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          garment_type?: string | null
+          id?: string
+          name: string
+          page_count?: number | null
+          precision_level?: number | null
+          session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          analysis_result?: Json | null
+          brand?: string | null
+          confidence?: number | null
+          created_at?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          garment_type?: string | null
+          id?: string
+          name?: string
+          page_count?: number | null
+          precision_level?: number | null
+          session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       llm_cost_tracking: {
         Row: {
           avg_confidence: number | null
@@ -466,6 +533,8 @@ export type Database = {
           reference_images: Json | null
           selected_textiles: Json | null
           session_id: string | null
+          source_board_id: string | null
+          source_zone_id: string | null
           status: string
           style_keywords: string[] | null
           total_yardage: number | null
@@ -498,6 +567,8 @@ export type Database = {
           reference_images?: Json | null
           selected_textiles?: Json | null
           session_id?: string | null
+          source_board_id?: string | null
+          source_zone_id?: string | null
           status?: string
           style_keywords?: string[] | null
           total_yardage?: number | null
@@ -530,6 +601,8 @@ export type Database = {
           reference_images?: Json | null
           selected_textiles?: Json | null
           session_id?: string | null
+          source_board_id?: string | null
+          source_zone_id?: string | null
           status?: string
           style_keywords?: string[] | null
           total_yardage?: number | null
@@ -537,7 +610,22 @@ export type Database = {
           user_id?: string | null
           yardage_details?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_source_board_id_fkey"
+            columns: ["source_board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_source_zone_id_fkey"
+            columns: ["source_zone_id"]
+            isOneToOne: false
+            referencedRelation: "board_zones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scraping_jobs: {
         Row: {
@@ -745,6 +833,7 @@ export type Database = {
           priority: string | null
           quality_score: number | null
           scraping_config: Json | null
+          source_locale: string
           status: string | null
           updated_at: string | null
           url: string
@@ -760,6 +849,7 @@ export type Database = {
           priority?: string | null
           quality_score?: number | null
           scraping_config?: Json | null
+          source_locale?: string
           status?: string | null
           updated_at?: string | null
           url: string
@@ -775,6 +865,7 @@ export type Database = {
           priority?: string | null
           quality_score?: number | null
           scraping_config?: Json | null
+          source_locale?: string
           status?: string | null
           updated_at?: string | null
           url?: string

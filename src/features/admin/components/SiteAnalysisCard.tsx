@@ -225,7 +225,26 @@ export function SiteAnalysisCard({
     );
   }
 
-  const { deadstockScore, priceStats, weightStats, priceDistribution, allProductTypes, allTags } = globalAnalysis;
+ const { 
+  deadstockScore = { 
+    score: 0, 
+    grade: 'F' as const, 
+    factors: {
+      hasDeadstockKeywords: false,
+      hasFabricTypes: false,
+      priceRangeOk: false,
+      availabilityGood: false,
+      dataQualityGood: false,
+      hasWeightData: false,
+    }, 
+    recommendations: [] 
+  }, 
+  priceStats, 
+  weightStats, 
+  priceDistribution, 
+  allProductTypes = [], 
+  allTags = [] 
+} = globalAnalysis || {};
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">

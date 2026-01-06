@@ -1,4 +1,5 @@
 ﻿// src/features/search/domain/types.ts
+import type { GarmentType } from '@/features/pattern/domain/types';
 
 export interface SearchFilters {
   keywords?: string;
@@ -9,6 +10,17 @@ export interface SearchFilters {
   maxQuantity?: number;
   minPrice?: number;
   maxPrice?: number;
+  // NEW: Yardage filter from pattern import
+  yardageFilter?: YardageSearchFilter | null;
+}
+
+// NEW: Yardage filter type
+export interface YardageSearchFilter {
+  active: boolean;
+  patternName: string;
+  garmentType: GarmentType;
+  size: string;
+  yardageByWidth: Record<number, number>;
 }
 
 export interface Textile {
@@ -28,6 +40,12 @@ export interface Textile {
   supplier_name: string | null;
   available: boolean;
   created_at: string;
+  // NEW: Computed field for yardage sufficiency
+  yardageSufficiency?: {
+    sufficient: boolean;
+    needed: number;
+    available: number;
+  };
 }
 
 export interface SearchResult {

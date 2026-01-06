@@ -1,206 +1,247 @@
+# CURRENT_STATE.md - État Actuel du Projet
 
-# État Actuel du Projet - Deadstock Search Engine
+**Dernière mise à jour** : 5 janvier 2026 (Session 16)
 
-**Dernière mise à jour:** 04/01/2026 - Fin Session 13
-**Version:** MVP Phase 1 - FavoritesSelector + Refactoring
-
----
-
-## 🎯 Statut Global
-
-| Composant               | Statut        | Progression          |
-| ----------------------- | ------------- | -------------------- |
-| Infrastructure DB       | ✅ Complet    | 100%                 |
-| Module Admin            | ✅ Complet    | 100%                 |
-| Module Scraping         | ✅ Complet    | 100%                 |
-| Module Recherche        | ✅ Complet    | 100%                 |
-| Module Favoris          | ✅ Complet    | 100% (refactorisé)  |
-| **Module Boards** | ✅ Complet    | 100%                 |
-| Module Normalisation    | 🔄 En cours   | 60%                  |
-| Module Journey (legacy) | ⏸️ Suspendu | Remplacé par Boards |
+**Version** : 0.9.0-alpha
 
 ---
 
-## 📊 Base de Données
+## Vue d'Ensemble
 
-### Tables Actives (Schema `deadstock`)
-
-| Table              | Lignes | Description                    |
-| ------------------ | ------ | ------------------------------ |
-| `sites`          | 3      | Sources de scraping            |
-| `site_profiles`  | 3      | Profils découverte            |
-| `textiles`       | ~160   | Produits scrapés              |
-| `favorites`      | ~4     | Favoris utilisateur            |
-| `scraping_jobs`  | ~15    | Historique jobs                |
-| `discovery_jobs` | ~5     | Jobs découverte               |
-| `boards`         | 1+     | Boards utilisateur             |
-| `board_elements` | 8+     | Éléments sur boards          |
-| `board_zones`    | 2+     | Zones de regroupement          |
-| `projects`       | 0      | Projets (pour cristallisation) |
-
-### Migrations Appliquées
+Le **Deadstock Textile Search Engine** est à  **~87% du MVP Phase 1** .
 
 ```
-001 → 015_create_boards_tables.sql
+┌─────────────────────────────────────────────────────────────┐
+│                    MVP PHASE 1 STATUS                       │
+├─────────────────────────────────────────────────────────────┤
+│  Search Module      ████████████████████  100%  ✅          │
+│  Favorites System   ████████████████████  100%  ✅          │
+│  Board Module       ███████████████████░   95%  ✅          │
+│  Admin Sites        ██████████████████░░   90%  ✅          │
+│  Admin Tuning       ██████████████░░░░░░   70%  ⚠️          │
+│  Cristallisation    █████████████████░░░   85%  ✅          │
+├─────────────────────────────────────────────────────────────┤
+│  OVERALL            █████████████████░░░   87%              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🏗️ Architecture Technique
+## Modules Complétés ✅
+
+### Search Module (100%)
+
+* Interface de recherche avec filtres (matière, couleur, pattern)
+* Intégration patterns importés
+* Résultats paginés avec images
+
+### Favorites System (100%)
+
+* Ajout/suppression instantané (optimistic updates)
+* Synchronisation via React Context
+* Persistance Supabase avec RLS
+
+### Board Module (95%)
+
+* Canvas drag-and-drop (react-dnd)
+* Items : textiles, notes, palettes couleur
+* Resize handles fonctionnels
+* Toolbar actions (add note, add palette)
+* Migration depuis Journey terminée
+
+### Admin Sites (90%)
+
+* Discovery : analyse collections, tags, qualité
+* Configuration : sélection collections à scraper
+* Scraping : pipeline complet avec upsert
+* Jobs : historique et monitoring
+
+### Cristallisation (85%)
+
+* Règles de cristallisation définies
+* Migration Journey → Board effectuée
+* Boards non-cristallisés protégés
+
+---
+
+## En Cours ⚠️
+
+### Admin Tuning (70%)
+
+**Ce qui fonctionne :**
+
+* UI review unknowns (1 par 1)
+* Contexte enrichi (image, URL, texte)
+* Approve → crée mapping dictionnaire
+* Reject → marque comme rejeté
+
+**Ce qui manque :**
+
+* ❌ Dictionnaire EN (0 entrées) - **ADR-020 créé**
+* ❌ sourceLocale sur sites - **ADR-020 créé**
+* ❌ Dashboard qualité globale
+* ❌ LLM suggestions pour unknowns
+* ❌ Batch processing
+* ❌ Filtres avancés (par source, catégorie)
+* ❌ Browser dictionnaire
+
+**Problème critique identifié :**
+
+* ~600 unknowns pour The Fabric Sales (source EN)
+* Cause : dictionnaire ne contient que des termes FR
+* Solution : ADR-020 (sourceLocale + seed dict EN)
+
+---
+
+## Architecture Technique
 
 ### Stack
 
-* **Frontend:** Next.js 16.1.1 (App Router, Turbopack)
-* **Backend:** Server Actions + Supabase
-* **Database:** PostgreSQL (Supabase)
-* **Styling:** Tailwind CSS + shadcn/ui
-* **State:** React Context (FavoritesContext, BoardContext)
-* **Icons:** Lucide React (outline style)
-
-### Structure des Features
-
 ```
-src/features/
-├── admin/           # Gestion sites, scraping, discovery
-├── boards/          # Module Boards complet
-│   ├── domain/types.ts
-│   ├── infrastructure/
-│   │   ├── boardsRepository.ts
-│   │   ├── elementsRepository.ts
-│   │   └── zonesRepository.ts
-│   ├── actions/
-│   │   ├── boardActions.ts
-│   │   ├── elementActions.ts
-│   │   └── zoneActions.ts
-│   ├── context/BoardContext.tsx
-│   └── components/
-│       ├── BoardCanvas.tsx
-│       ├── BoardHeader.tsx
-│       ├── BoardToolPanel.tsx
-│       ├── NoteEditor.tsx
-│       ├── AddToBoardButton.tsx
-│       └── FavoritesSelector.tsx    # ⭐ NOUVEAU Session 13
-├── favorites/       # Système favoris (refactorisé)
-│   └── infrastructure/
-│       └── favoritesRepository.ts   # ⭐ Unifié Session 13
-├── journey/         # Legacy - parcours 9 étapes
-├── search/          # Recherche unifiée textiles
-└── scraping/        # Services extraction données
+Frontend:  Next.js 15 + TypeScript + Tailwind CSS
+Backend:   Supabase (PostgreSQL + Auth + RLS)
+State:     React Context + Server Actions
+Styling:   Tailwind + Lucide Icons (outline)
+DnD:       react-dnd + react-dnd-html5-backend
 ```
 
----
+### Structure Projet
 
-## ✅ Fonctionnalités Opérationnelles
-
-### Module Boards (Session 12-13)
-
-* **Liste boards** (`/boards`) : Affichage, création, navigation
-* **Canvas board** (`/boards/[id]`) :
-  * Drag & drop éléments
-  * Zones draggables avec couleurs
-  * Édition titre board (clic)
-  * Sélection simple/multiple
-  * Suppression éléments/zones
-  * **⭐ Panel latéral scrollable avec liste sélection visible**
-* **Éléments supportés** :
-  * Notes (création + édition double-clic)
-  * Palettes de couleurs
-  * Tissus (snapshot depuis favoris/recherche)
-* **Intégrations** :
-  * Bouton "+" sur cartes favoris
-  * Bouton "+" sur cartes recherche
-  * **⭐ Bouton "Tissu depuis favoris" dans BoardToolPanel**
-  * Toast de confirmation avec lien vers board
-  * Lien "Boards" dans sidebar parcours
-
-### Module Admin
-
-* Dashboard avec statistiques
-* Gestion sites sources
-* Discovery automatique (collections, qualité)
-* Configuration scraping (collections, filtres)
-* Preview scraping (10 produits)
-* Jobs monitoring avec logs
-
-### Module Recherche
-
-* Recherche full-text
-* Filtres dynamiques (matière, couleur, prix, source)
-* Grille responsive avec images
-* Boutons favoris + board sur chaque carte
-
-### Module Favoris
-
-* Ajout/retrait instantané (optimistic updates)
-* Session-based (cookie 90 jours)
-* Grille avec détails
-* Page détail avec navigation prev/next
-* Bouton "Ajouter au board"
-* **⭐ Repository unifié (suppression doublon)**
-
----
-
-## 🔧 Configuration Requise
-
-### Variables d'Environnement
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...  # Admin only
-ANTHROPIC_API_KEY=sk-ant-...           # Pour LLM extraction
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── admin/              # Module admin
+│   │   ├── sites/          # Gestion sources
+│   │   ├── tuning/         # Review unknowns
+│   │   └── jobs/           # Monitoring jobs
+│   ├── search/             # Recherche textiles
+│   └── boards/             # Module boards
+├── features/               # Domain-Driven Design
+│   ├── admin/              # Services admin
+│   ├── favorites/          # Système favoris
+│   ├── normalization/      # Pipeline normalisation
+│   ├── textiles/           # Domaine textiles
+│   └── tuning/             # Dictionnaire + unknowns
+├── components/             # Composants réutilisables
+└── lib/                    # Utilitaires
 ```
 
-### Commandes Utiles
+### Base de Données (Schéma deadstock)
 
-```bash
-npm run dev              # Serveur développement
-npm run build            # Build production
-npm run generate:types   # Régénérer types Supabase
+```
+Tables principales:
+├── textiles              # Produits scrapés normalisés
+├── favorites             # Favoris utilisateur
+├── boards                # Tableaux de réalisation
+├── board_items           # Items sur les boards
+├── sites                 # Sources à scraper
+├── site_profiles         # Profils extraction
+├── dictionary_mappings   # Dictionnaire normalisation
+├── attribute_categories  # Catégories (fiber, color, etc.)
+├── unknown_terms         # Termes non reconnus
+├── discovery_jobs        # Jobs discovery
+└── scraping_jobs         # Jobs scraping
 ```
 
 ---
 
-## 📈 Métriques Actuelles
+## Données Actuelles
 
-* **Textiles indexés:** ~160
-* **Sources actives:** 2 (MyLittleCoupon, TheFabricSales)
-* **Précision matière:** ~80%
-* **Précision couleur:** ~40%
-* **Temps scraping:** ~30s pour 50 produits
+### Sites Configurés
 
----
+| Site             | Domain             | Locale | Status    |
+| ---------------- | ------------------ | ------ | --------- |
+| My Little Coupon | mylittlecoupon.fr  | FR     | ✅ Active |
+| The Fabric Sales | thefabricsales.com | EN     | ✅ Active |
 
-## 🚧 Travaux en Cours
+### Métriques Normalisation
 
-### Priorité Haute
+| Dimension         | Couverture | Notes           |
+| ----------------- | ---------- | --------------- |
+| Fiber (matière)  | ~80%       | Dict FR ok      |
+| Color (couleur)   | ~55%       | Dict FR partiel |
+| Pattern (motif)   | ~40%       | Dict FR partiel |
+| Weave (armure)    | ~20%       | Peu de mappings |
+| Length (longueur) | ~15%       | ❌ Hardcoded    |
+| Width (largeur)   | 0%         | ❌ Non extrait  |
 
-1. ~~Bouton "Tissu depuis favoris" fonctionnel dans board~~ ✅
-2. Cristallisation board → projet
+### Unknowns
 
-### Priorité Moyenne
-
-3. Redimensionnement zones
-4. Amélioration normalisation (nouveaux patterns)
-
-### Priorité Basse
-
-5. Nettoyage code journey legacy
-6. Tests automatisés
-
----
-
-## 🐛 Problèmes Connus
-
-1. **Anti-bot TheFabricSales** : Certaines pages bloquées
-2. **Images manquantes** : Quelques textiles sans image
-3. **Normalisation incomplète** : ~20% matières non détectées
+| Source             | Pending | Cause           |
+| ------------------ | ------- | --------------- |
+| thefabricsales.com | ~600    | Pas de dict EN  |
+| mylittlecoupon.fr  | ~20     | Nouveaux termes |
 
 ---
 
-## 📚 Documentation Associée
+## ADRs Actifs
 
-* `CONTEXT_SUMMARY.md` - Résumé pour IA
-* `NEXT_STEPS.md` - Prochaines étapes détaillées
-* `SESSION_13_FAVORITES_SELECTOR.md` - Note de session
-* `docs/specs/board/` - Spécifications module boards
+| ADR           | Titre                            | Status                     |
+| ------------- | -------------------------------- | -------------------------- |
+| 001           | Database Architecture            | ✅ Implémenté            |
+| 002           | Normalisation EN + i18n          | ✅ Implémenté            |
+| 004           | Normalization Tuning System      | ⚠️ Partiel (LLM pending) |
+| 007           | Adapter Pattern Scrapers         | ✅ Implémenté            |
+| 016           | Board Architecture               | ✅ Implémenté            |
+| 017           | Unified Repositories             | ✅ Implémenté            |
+| 018           | Crystallization Rules            | ✅ Implémenté            |
+| 019           | Fabric Dimensions Extraction     | 📋 Planifié               |
+| **020** | **Source Locale Scrapers** | **📋 Créé**        |
+
+---
+
+## Bloquants Actuels
+
+### 🔴 Critique
+
+1. **Dictionnaire EN vide** → ADR-020 résout
+   * Impact : 600+ faux unknowns
+   * Action : Seed ~150 termes EN
+
+### 🟡 Important
+
+2. **Extraction dimensions manquante** → ADR-019 planifié
+   * Impact : Longueur/largeur non exploitables
+   * Action : Détecter patterns dans tags/body
+3. **LLM fallback non implémenté**
+   * Impact : Unknowns restent manuels
+   * Action : Phase 5 du plan tuning
+
+---
+
+## Prochaines Priorités
+
+1. **Exécuter ADR-020** (Session 17)
+   * Migration sourceLocale
+   * Seed dictionnaire EN
+   * Cleanup unknowns
+2. **Implémenter extraction dimensions**
+   * Patterns longueur/largeur
+   * Modifier scrapingService
+3. **Dashboard qualité admin**
+   * Métriques par dimension
+   * Alertes sources problématiques
+
+---
+
+## Notes de Version
+
+### v0.9.0-alpha (5 jan 2026)
+
+* ✅ Board module complet
+* ✅ Cristallisation implémentée
+* ✅ ADR-020 créé (source locale)
+* ✅ Spec admin tuning complète
+* ⚠️ Dict EN à seeder
+
+### v0.8.0-alpha (4 jan 2026)
+
+* ✅ Migration Journey → Board
+* ✅ Favorites selector dans Board
+* ✅ Resize items fonctionnel
+
+### v0.7.0-alpha (3 jan 2026)
+
+* ✅ Admin scraping pipeline
+* ✅ Pattern import système
+* ✅ Search avec filtres

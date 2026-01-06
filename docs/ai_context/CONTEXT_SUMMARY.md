@@ -1,189 +1,197 @@
+# CONTEXT_SUMMARY.md - Résumé pour Prochaine Session
 
-# Contexte Projet - Deadstock Search Engine
+**Projet** : Deadstock Textile Search Engine
 
-**Pour:** Assistant IA (Claude)
-**Mise à jour:** 04/01/2026 - Session 13
+**Dernière session** : 16 (5 janvier 2026)
 
----
-
-## 🎯 Vision Produit
-
-Deadstock Search Engine est une plateforme SaaS B2B pour designers textiles indépendants. Elle agrège des tissus deadstock (fins de série, invendus) depuis plusieurs sources et offre des outils de conception créative.
-
-**Proposition de valeur unique:** Recherche unifiée multi-sources + outils de conception intégrés (boards, calcul métrage, palettes).
+**Prochaine session** : 17
 
 ---
 
-## 🏗️ Architecture Actuelle
+## Rappel Projet
 
-### Stack Technique
+**Vision** : Moteur de recherche SaaS pour aider les designers de mode indépendants à sourcer des tissus deadstock depuis plusieurs fournisseurs (My Little Coupon, The Fabric Sales, Recovo, etc.).
 
-* **Framework:** Next.js 16.1.1 (App Router)
-* **Database:** Supabase (PostgreSQL, schema `deadstock`)
-* **Auth:** Session-based (cookie 90 jours) - pas d'auth utilisateur MVP
-* **State:** React Context (BoardContext, FavoritesContext)
-* **UI:** Tailwind CSS + shadcn/ui + Lucide icons
+**Différenciation** : Seul agrégateur multi-sources avec outils de design intégrés (boards de réalisation, calcul métrages).
 
-### Modules Principaux
+---
+
+## Où On En Est
+
+### MVP Phase 1 : 87% Complete
+
+**Modules terminés :**
+
+* ✅ Search (filtres matière/couleur/pattern)
+* ✅ Favorites (sync instantanée)
+* ✅ Board (canvas drag-drop, notes, palettes)
+* ✅ Admin Sites (discovery + scraping)
+* ✅ Cristallisation (règles + migration)
+
+**Module en cours :**
+
+* ⚠️ Admin Tuning (70%) - Problème critique identifié
+
+---
+
+## Problème Critique Identifié (Session 16)
+
+### Le Constat
 
 ```
-/admin          → Gestion sources, scraping, monitoring
-/search         → Recherche textiles avec filtres
-/favorites      → Validation des tissus sélectionnés
-/boards         → ⭐ Pivot UX central (complet)
+~600 "unknown terms" pour The Fabric Sales
+Termes comme "blue", "cotton", "wool" marqués inconnus
+```
+
+### La Cause
+
+* The Fabric Sales = source ANGLAISE
+* Dictionnaire = entrées FRANÇAISES uniquement
+* Normalisation cherche "blue" → pas trouvé → unknown
+
+### La Solution (ADR-020 créé)
+
+```typescript
+// Chaque site a maintenant sourceLocale
+{ domain: 'mylittlecoupon.fr', sourceLocale: 'fr' }
+{ domain: 'thefabricsales.com', sourceLocale: 'en' }
+
+// Dictionnaire avec entrées par locale
+FR: "coton" → "cotton"
+EN: "cotton" → "cotton" (passthrough)
 ```
 
 ---
 
-## 🔄 Pivot UX Session 11-13
+## Documents Créés Session 16
 
-**Avant (Journey):** Parcours linéaire 9 étapes rigide
-**Après (Boards):** Board comme espace de travail flexible
-
-Le Board est maintenant le **pivot central** de l'expérience :
-
-* Espace visuel pour organiser idées
-* Agrège tissus, notes, palettes, calculs
-* Zones pour regroupement thématique
-* Ajout tissus depuis favoris via Sheet
-* Cristallisation future en "Projet" finalisé
+| Document                               | Contenu                                 |
+| -------------------------------------- | --------------------------------------- |
+| `SPEC_ADMIN_DATA_TUNING_COMPLETE.md` | Spec exhaustive workflow tuning admin   |
+| `ADR_020_SCRAPER_SOURCE_LOCALE.md`   | Architecture multi-locale dictionnaires |
+| `SESSION_16_ADMIN_TUNING_LOCALE.md`  | Note de session                         |
 
 ---
 
-## 📊 État des Modules
+## Ce Qui Reste à Faire
 
-| Module           | Statut      | Notes                                        |
-| ---------------- | ----------- | -------------------------------------------- |
-| Admin            | ✅ 100%     | Discovery, config, scraping, monitoring      |
-| Scraping         | ✅ 100%     | Pipeline complet avec LLM extraction         |
-| Search           | ✅ 100%     | Full-text, filtres, grille                   |
-| Favorites        | ✅ 100%     | Refactorisé Session 13                      |
-| **Boards** | ✅ 100%     | Canvas, éléments, zones, FavoritesSelector |
-| Normalisation    | 🔄 60%      | Matière 80%, couleur 40%                    |
-| Journey          | ⏸️ Legacy | Sera supprimé, remplacé par Boards         |
+### Immédiat (Session 17)
 
----
-
-## 🗃️ Structure Base de Données
-
-### Tables Clés
+**1. Exécuter ADR-020** (~30 min)
 
 ```sql
--- Boards
-boards (id, session_id, name, status, timestamps)
-board_elements (id, board_id, element_type, element_data JSONB, position, size)
-board_zones (id, board_id, name, color, position, size)
+-- Migration
+ALTER TABLE sites ADD COLUMN source_locale TEXT DEFAULT 'fr';
+UPDATE sites SET source_locale = 'en' WHERE domain = 'thefabricsales.com';
 
--- Textiles & Favoris
-textiles (id, name, source_platform, price_value, material_type, color, ...)
-favorites (id, session_id, textile_id, timestamps)
+-- Seed dict EN (~150 termes)
+INSERT INTO dictionary_mappings (source_term, source_locale, translations, category_id)
+VALUES ('cotton', 'en', '{"en": "cotton"}', fiber_category_id), ...
 
--- Admin
-sites, site_profiles, scraping_jobs, discovery_jobs
+-- Cleanup unknowns EN
+DELETE FROM unknown_terms WHERE source_platform = 'thefabricsales.com' 
+  AND term IN (SELECT source_term FROM dictionary_mappings WHERE source_locale = 'en');
 ```
 
-### Types d'Éléments Board
+**2. Extraction dimensions** (ADR-019, ~2h)
 
-```typescript
-type ElementType = 'textile' | 'note' | 'palette' | 'calculation' | 'inspiration';
-```
+* Détecter longueur dans tags ("3M", "5 mètres")
+* Détecter largeur dans body_html ("Laize 150cm", "Width: 140cm")
+
+**3. Dashboard qualité** (~1h)
+
+* Métriques par dimension (fiber 80%, color 55%, etc.)
+* Alertes sources problématiques
+
+### Court Terme
+
+* LLM suggestions pour unknowns
+* Batch processing unknowns
+* Browser dictionnaire
 
 ---
 
-## 🔑 Patterns de Code
+## Architecture Clé
 
-### Server Actions Pattern
+### Pipeline Normalisation
 
-```typescript
-'use server';
-export async function actionName(input): Promise<ActionResult<T>> {
-  const sessionId = await getOrCreateSessionId();
-  // ... logic
-  revalidatePath('/path');
-  return { success: true, data };
-}
+```
+Scraper(site.sourceLocale)
+    ↓
+Extract terms
+    ↓
+Lookup dictionary WHERE source_locale = site.sourceLocale
+    ↓
+Found → translations['en']
+Not found → Log unknown WITH sourceLocale
 ```
 
-### Repository Pattern (Unifié)
+### Tables Concernées
 
-```typescript
-// Un seul repository par entité (pas de doublon client/server)
-import { createClient } from '@/lib/supabase/client';
-
-const TEXTILE_COLUMNS = `id, name, material_type, color, price_value, ...`;
-
-export async function getFavoritesBySession(sessionId: string) {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from('favorites')
-    .select(`id, textile:textiles(${TEXTILE_COLUMNS})`)
-    .eq('session_id', sessionId);
-  
-  // Transformer si nécessaire (textile array → object)
-  return data.map(item => ({
-    ...item,
-    textile: Array.isArray(item.textile) ? item.textile[0] : item.textile,
-  }));
-}
-```
-
-### Context Pattern (Boards)
-
-```typescript
-const { elements, zones, addNote, moveElement, addZone } = useBoard();
-// Optimistic updates pour drag & drop fluide
+```sql
+sites (+ source_locale TEXT)
+dictionary_mappings (source_term, source_locale, translations JSONB)
+unknown_terms (term, source_locale, category, status)
+textiles (source_locale pour traçabilité)
 ```
 
 ---
 
-## 📁 Fichiers Importants
+## Fichiers à Modifier (Session 17)
 
-### Configuration
-
-* `src/features/journey/config/steps.ts` - Étapes sidebar (inclut Boards)
-* `src/types/database.types.ts` - Types générés Supabase
-
-### Boards
-
-* `src/features/boards/context/BoardContext.tsx` - State management
-* `src/features/boards/components/BoardCanvas.tsx` - Canvas interactif
-* `src/features/boards/components/BoardToolPanel.tsx` - Panel latéral scrollable
-* `src/features/boards/components/FavoritesSelector.tsx` - Sheet ajout tissus
-* `src/features/boards/components/AddToBoardButton.tsx` - Intégration favoris/search
-
-### Favoris (Refactorisé)
-
-* `src/features/favorites/infrastructure/favoritesRepository.ts` - Repository unifié
-* `src/features/favorites/actions/favoriteActions.ts` - Server actions
+| Fichier                                                               | Modification                         |
+| --------------------------------------------------------------------- | ------------------------------------ |
+| `database/migrations/XXX.sql`                                       | Migration sourceLocale + seed EN     |
+| `src/features/admin/services/scrapingService.ts`                    | Passer sourceLocale à normalisation |
+| `src/features/normalization/infrastructure/normalizationService.ts` | Filtrer par sourceLocale             |
+| `src/features/normalization/infrastructure/dictionaryCache.ts`      | Cache par locale                     |
 
 ---
 
-## ⚠️ Points d'Attention
+## Métriques Cibles
 
-1. **Session-based auth** : Pas d'utilisateur, juste `session_id` cookie
-2. **Schema `deadstock`** : Toutes les tables dans ce schema, pas `public`
-3. **Admin client** : Utiliser `createAdminClient()` qui bypass RLS
-4. **Types JSONB** : Cast via `as unknown as Type` ou transformer les arrays
-5. **Repository unique** : Ne pas dupliquer client/server (source d'erreur)
-6. **Colonnes textiles** : Utiliser `price_value`, `material_type`, `quantity_value` (pas les anciens noms)
-
----
-
-## 🚀 Prochaines Priorités
-
-1. ~~ **Tissu depuis favoris** ~~ ✅ Complété Session 13
-2. **Cristallisation** : Board → Projet (wizard 4 étapes)
-3. **Redimensionnement** : Zones et éléments
-4. **Nettoyage journey** : Supprimer code obsolète
+| Métrique              | Actuel | Cible Post-Session 17 |
+| ---------------------- | ------ | --------------------- |
+| Unknowns TFS           | ~600   | <50                   |
+| Couverture dict EN     | 0%     | 90%                   |
+| Textiles avec longueur | 15%    | 80%                   |
+| Textiles avec largeur  | 0%     | 40%                   |
 
 ---
 
-## 📚 Documents de Référence
+## Questions Ouvertes
 
-| Document                                 | Contenu                               |
-| ---------------------------------------- | ------------------------------------- |
-| `SPEC_BOARD_MODULE.md`                 | Spécifications techniques boards     |
-| `ARCHITECTURE_UX_BOARD_REALISATION.md` | Vision UX complète                   |
-| `GLOSSAIRE.md`                         | Terminologie (Board, Zone, Élément) |
-| `MIGRATION_JOURNEY_TO_BOARD.md`        | Plan de migration                     |
-| `SESSION_13_FAVORITES_SELECTOR.md`     | Détails session 13                   |
+1. **LLM fallback** : temps réel ou suggestions batch ?
+2. **Pattern storage** : JSONB dans SiteProfile ou table séparée ?
+3. **Re-scraping** : automatique après ajout mappings ou manuel ?
+
+---
+
+## Commandes Utiles
+
+```powershell
+# Lancer le dev server
+npm run dev
+
+# Voir les unknowns en base
+# (via Supabase Dashboard ou SQL)
+SELECT term, source_platform, occurrences 
+FROM deadstock.unknown_terms 
+WHERE status = 'pending' 
+ORDER BY occurrences DESC;
+
+# Compter par source
+SELECT source_platform, COUNT(*) 
+FROM deadstock.unknown_terms 
+WHERE status = 'pending' 
+GROUP BY source_platform;
+```
+
+---
+
+## Liens Rapides
+
+* [ADR-020 Source Locale](https://claude.ai/mnt/project/ADR_020_SCRAPER_SOURCE_LOCALE.md)
+* [SPEC Admin Tuning](https://claude.ai/mnt/project/SPEC_ADMIN_DATA_TUNING_COMPLETE.md)
+* [Database Architecture](https://claude.ai/mnt/project/DATABASE_ARCHITECTURE.md)
+* [Session 16 Notes](https://claude.ai/mnt/project/SESSION_16_ADMIN_TUNING_LOCALE.md)

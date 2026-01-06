@@ -11,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { ShopifyProduct, ScrapingConfig, ScrapingResult } from '../services/scrapingService';
 import { extractTermsFromShopify } from '../utils/extractTerms';
 import { normalizeTextile, type NormalizeTextileOutput } from '@/features/normalization/application/normalizeTextile';
-
+import type { Locale } from '@/features/tuning/domain/types';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -272,11 +272,12 @@ export const scrapingRepo = {
    * 
    * Session 3: Integrated intelligent normalization
    */
-  async saveProducts(
-    products: ShopifyProduct[],
-    siteUrl: string,
-    jobId: string
-  ): Promise<{ saved: number; updated: number; skipped: number }> {
+async saveProducts(
+  products: ShopifyProduct[],
+  siteUrl: string,
+  jobId: string,
+  sourceLocale?: Locale  // ← NOUVEAU
+): Promise<{ saved: number; updated: number; skipped: number }> {
     const supabase = createScraperClient();
     const normalizedUrl = normalizeUrl(siteUrl);
     
@@ -291,7 +292,7 @@ export const scrapingRepo = {
         // ========================================================================
         // STEP 1: Extract terms from Shopify tags
         // ========================================================================
-        const extractedTerms = extractTermsFromShopify(product);
+        const extractedTerms = extractTermsFromShopify(product, sourceLocale);
         
         console.log(`   📝 Product: ${product.title}`);
         console.log(`      Extracted: materials=${extractedTerms.materials.length}, colors=${extractedTerms.colors.length}, patterns=${extractedTerms.patterns.length}`);

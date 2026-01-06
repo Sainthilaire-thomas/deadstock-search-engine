@@ -8,6 +8,7 @@ import { scrapingService } from '@/features/admin/services/scrapingService';
 import { sitesRepo } from '../infrastructure/sitesRepo';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Site } from '../domain/types';
+import type { Locale } from '@/features/tuning/domain/types';
 
 // ============================================================================
 // HELPERS
@@ -276,7 +277,10 @@ export async function triggerFullScraping(
     // Map DB profile to SiteProfile format
     const profile = mapDbProfileToSiteProfile(dbProfile, site.url);
 
-    const result = await scrapingService.scrapeSite(profile, config);
+    const result = await scrapingService.scrapeSite(profile, {
+  ...config,
+  sourceLocale: site.source_locale as Locale,
+});
 
     revalidatePath('/admin');
     revalidatePath('/admin/sites');
@@ -312,16 +316,17 @@ export async function createSite(siteData: {
   notes?: string;
 }) {
   try {
-    const site = await sitesRepo.createSite({
-      ...siteData,
-      status: 'new',
-      priority: siteData.priority || 'medium',
-      discovery_completed_at: null,
-      last_scraped_at: null,
-      scraping_config: null,
-      quality_score: null,
-      notes: siteData.notes || null,
-    });
+   const site = await sitesRepo.createSite({
+  ...siteData,
+  status: 'new',
+  priority: siteData.priority || 'medium',
+  discovery_completed_at: null,
+  last_scraped_at: null,
+  scraping_config: null,
+  quality_score: null,
+  notes: siteData.notes || null,
+  source_locale: 'fr',  // ← NOUVEAU - Default to French
+});
 
     revalidatePath('/admin/sites');
 

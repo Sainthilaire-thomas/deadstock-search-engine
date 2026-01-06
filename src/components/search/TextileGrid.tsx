@@ -1,7 +1,10 @@
-﻿'use client';
+﻿// src/components/search/TextileGrid.tsx
+
+'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { Check, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,8 +65,33 @@ export function TextileGrid({ textiles, isLoading = false }: TextileGridProps) {
             <FavoriteButton textileId={textile.id} />
           </div>
 
+          {/* Yardage Sufficiency Badge */}
+          {textile.yardageSufficiency && (
+            <div className={`absolute top-2 left-2 z-20 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+              textile.yardageSufficiency.sufficient
+                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+            }`}>
+              {textile.yardageSufficiency.sufficient ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Suffisant
+                </>
+              ) : (
+                <>
+                  <X className="w-3 h-3" />
+                  Insuffisant
+                </>
+              )}
+            </div>
+          )}
+
           <Link href={'/textiles/' + textile.id}>
-            <Card className='overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full'>
+            <Card className={`overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full ${
+              textile.yardageSufficiency && !textile.yardageSufficiency.sufficient
+                ? 'opacity-60'
+                : ''
+            }`}>
               <div className='relative h-48 bg-muted'>
                 {textile.image_url ? (
                   <Image
@@ -112,6 +140,19 @@ export function TextileGrid({ textiles, isLoading = false }: TextileGridProps) {
                       <span className='font-medium text-foreground'>
                         {textile.price_value.toFixed(2)} {textile.price_currency}/
                         {textile.quantity_unit}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Yardage detail when filter active */}
+                  {textile.yardageSufficiency && (
+                    <div className={`flex justify-between ${
+                      textile.yardageSufficiency.sufficient ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      <span>Besoin</span>
+                      <span className='font-medium'>
+                        {textile.yardageSufficiency.needed.toFixed(2)}m 
+                        {textile.yardageSufficiency.sufficient ? ' ✓' : ' ✗'}
                       </span>
                     </div>
                   )}

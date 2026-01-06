@@ -56,6 +56,9 @@ export interface BoardZone {
   positionY: number;
   width: number;
   height: number;
+  // Crystallization fields
+  crystallizedAt: Date | null;
+  linkedProjectId: string | null;
   createdAt: Date;
 }
 
@@ -123,17 +126,36 @@ export interface InspirationElementData {
 }
 
 // Type: calculation
+// Type: calculation (supporte Journey ET Pattern Import)
 export interface CalculationElementData {
   calculationId?: string;
   summary: string;
   garmentType: string;
-  size: string;
+  
+  // Format Journey (legacy)
+  size?: string;
   variations?: Record<string, string>;
-  result: {
+  result?: {
     baseYardage: number;
     totalYardage: number;
     recommended: number;
   };
+  
+  // Format Pattern Import (nouveau)
+  source?: 'journey' | 'pattern_import' | 'manual';
+  patternId?: string;
+  patternName?: string;
+  patternBrand?: string;
+  selectedSize?: string;
+  quantity?: number;
+  modifiers?: {
+    directional: boolean;
+    patternMatching: boolean;
+    safetyMarginPercent: number;
+  };
+  precisionLevel?: 1 | 2 | 3;
+  yardageByWidth?: Record<number, number>;
+  linkedTextileId?: string;
 }
 
 // Type: note
@@ -160,7 +182,7 @@ export function isInspirationElement(data: ElementData): data is InspirationElem
 }
 
 export function isCalculationElement(data: ElementData): data is CalculationElementData {
-  return 'garmentType' in data && 'result' in data;
+  return 'garmentType' in data && ('result' in data || 'yardageByWidth' in data);
 }
 
 export function isNoteElement(data: ElementData): data is NoteElementData {
@@ -253,6 +275,9 @@ export interface BoardZoneRow {
   position_y: number;
   width: number;
   height: number;
+  // Crystallization columns
+  crystallized_at: string | null;
+  linked_project_id: string | null;
   created_at: string;
 }
 
@@ -298,6 +323,9 @@ export function mapZoneFromRow(row: BoardZoneRow): BoardZone {
     positionY: row.position_y,
     width: row.width,
     height: row.height,
+    // Crystallization mapping
+    crystallizedAt: row.crystallized_at ? new Date(row.crystallized_at) : null,
+    linkedProjectId: row.linked_project_id,
     createdAt: new Date(row.created_at),
   };
 }
@@ -327,4 +355,11 @@ export interface ActionResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+// ============================================
+// CRYSTALLIZATION HELPERS
+// ============================================
+
+export function isZoneCrystallized(zone: BoardZone): boolean {
+  return zone.crystallizedAt !== null;
 }

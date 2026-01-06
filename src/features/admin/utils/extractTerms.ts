@@ -208,13 +208,16 @@ function calculateConfidence(termsFound: number): number {
  * Extract textile terms from Shopify product
  * Compatible with ShopifyProduct from scrapingService.ts
  */
-export function extractTermsFromShopify(product: {
-  title: string;
-  body_html: string;
-  tags: string | string[];
-}): ExtractedTerms {
-  // Detect locale
-  const sourceLocale = detectLocale(product.title, product.body_html, product.tags);
+export function extractTermsFromShopify(
+  product: {
+    title: string;
+    body_html: string;
+    tags: string | string[];
+  },
+  forceLocale?: Locale  // ← NOUVEAU paramètre optionnel
+): ExtractedTerms {
+  // Use forced locale or detect from content
+  const sourceLocale = forceLocale || detectLocale(product.title, product.body_html, product.tags);
   
   const materials: string[] = [];
   const colors: string[] = [];
