@@ -1,7 +1,7 @@
 // src/app/admin/discovery/page.tsx
 
 import Link from 'next/link';
-import { Plus, RefreshCw, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, CheckCircle, AlertTriangle, Clock, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +50,7 @@ export default async function DiscoveryPage() {
         <div>
           <h1 className="text-2xl font-bold">Discovery & Préparation</h1>
           <p className="text-muted-foreground">
-            Découvrir la structure des sites et configurer les règles d'extraction.
+            Découvrir la structure des sites et configurer les règles d&apos;extraction.
           </p>
         </div>
         <Button asChild>
@@ -65,8 +65,8 @@ export default async function DiscoveryPage() {
       <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
         <CardContent className="pt-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Étape 1 du workflow admin.</strong> La discovery analyse la structure d'un site 
-            (collections, tags, formats) pour préparer les règles d'extraction. 
+            <strong>Étape 1 du workflow admin.</strong> La discovery analyse la structure d&apos;un site
+            (collections, tags, formats) pour préparer les règles d&apos;extraction.
             Une fois configuré, le site peut être scrapé régulièrement.
           </p>
         </CardContent>
@@ -105,10 +105,15 @@ export default async function DiscoveryPage() {
                 </thead>
                 <tbody className="divide-y">
                   {sites.map(site => (
-                    <tr key={site.id} className="text-sm">
+                    <tr key={site.id} className="text-sm hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="py-4">
-                        <div className="font-medium">{site.name || 'Sans nom'}</div>
-                        <div className="text-xs text-muted-foreground">{site.url}</div>
+                        <Link 
+                          href={`/admin/discovery/${site.id}`}
+                          className="hover:underline"
+                        >
+                          <div className="font-medium">{site.name || 'Sans nom'}</div>
+                          <div className="text-xs text-muted-foreground">{site.url}</div>
+                        </Link>
                       </td>
                       <td className="py-4">
                         <Badge variant="outline">{site.platform_type || 'Inconnu'}</Badge>
@@ -131,6 +136,12 @@ export default async function DiscoveryPage() {
                       </td>
                       <td className="py-4">
                         <div className="flex gap-2">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/admin/discovery/${site.id}`}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Détails
+                            </Link>
+                          </Button>
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/admin/sites/${site.id}`}>
                               Configurer

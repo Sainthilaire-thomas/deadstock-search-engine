@@ -59,3 +59,38 @@ export interface SiteWithProfile extends Site {
 export interface JobWithSite extends ScrapingJob {
   site?: Pick<Site, 'id' | 'name' | 'url' | 'platform_type'>;
 }
+
+
+// ============================================================================
+// EXTRACTION PATTERNS (Phase 1 - Dimensions)
+// ============================================================================
+
+export type ExtractionField = 'length' | 'width' | 'weight' | 'composition';
+export type ExtractionSource = 'tags' | 'title' | 'body_html' | 'variant';
+
+export interface ExtractedExample {
+  raw: string;           // Texte brut trouvé
+  extracted: number;     // Valeur extraite
+  productTitle?: string; // Titre du produit (pour contexte)
+}
+
+export interface ExtractionPattern {
+  id: string;                    // UUID généré
+  field: ExtractionField;        // Quel champ extraire
+  source: ExtractionSource;      // Où chercher
+  pattern: string;               // Regex string
+  captureGroup: number;          // Quel groupe capturer (default 1)
+  unit: string;                  // Unité par défaut (m, cm, gsm)
+  coverage: number;              // % de produits où ça matche (0-1)
+  matchCount: number;            // Nombre de produits matchés
+  totalTested: number;           // Nombre total de produits testés
+  examples: ExtractedExample[];  // Exemples trouvés (max 5)
+  enabled: boolean;              // Admin peut activer/désactiver
+  confidence: number;            // Score de confiance (0-1)
+}
+
+export interface ExtractionPatterns {
+  patterns: ExtractionPattern[];
+  analyzedAt: string;            // ISO date
+  productsAnalyzed: number;
+}

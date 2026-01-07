@@ -1,197 +1,205 @@
-# CONTEXT_SUMMARY.md - Résumé pour Prochaine Session
 
-**Projet** : Deadstock Textile Search Engine
+# CONTEXT_SUMMARY.md - Résumé du Contexte Projet
 
-**Dernière session** : 16 (5 janvier 2026)
-
-**Prochaine session** : 17
+**Dernière mise à jour** : 6 janvier 2026
 
 ---
 
-## Rappel Projet
+## Le Projet en Bref
 
-**Vision** : Moteur de recherche SaaS pour aider les designers de mode indépendants à sourcer des tissus deadstock depuis plusieurs fournisseurs (My Little Coupon, The Fabric Sales, Recovo, etc.).
+**Deadstock Textile Search Engine** est un moteur de recherche B2B permettant aux designers de mode de trouver des tissus deadstock (fins de série, surplus de production) auprès de multiples fournisseurs européens.
 
-**Différenciation** : Seul agrégateur multi-sources avec outils de design intégrés (boards de réalisation, calcul métrages).
+### Proposition de Valeur
 
----
+* **Agrégation** : Un seul point de recherche pour tous les fournisseurs
+* **Normalisation** : Données uniformisées (matières, couleurs, motifs)
+* **Outils Design** : Boards visuels, favoris, cristallisation en projets
 
-## Où On En Est
+### Marché Cible
 
-### MVP Phase 1 : 87% Complete
-
-**Modules terminés :**
-
-* ✅ Search (filtres matière/couleur/pattern)
-* ✅ Favorites (sync instantanée)
-* ✅ Board (canvas drag-drop, notes, palettes)
-* ✅ Admin Sites (discovery + scraping)
-* ✅ Cristallisation (règles + migration)
-
-**Module en cours :**
-
-* ⚠️ Admin Tuning (70%) - Problème critique identifié
+* Designers de mode indépendants
+* Petites marques éco-responsables
+* Studios de design textile
 
 ---
 
-## Problème Critique Identifié (Session 16)
-
-### Le Constat
+## Architecture Conceptuelle
 
 ```
-~600 "unknown terms" pour The Fabric Sales
-Termes comme "blue", "cotton", "wool" marqués inconnus
-```
-
-### La Cause
-
-* The Fabric Sales = source ANGLAISE
-* Dictionnaire = entrées FRANÇAISES uniquement
-* Normalisation cherche "blue" → pas trouvé → unknown
-
-### La Solution (ADR-020 créé)
-
-```typescript
-// Chaque site a maintenant sourceLocale
-{ domain: 'mylittlecoupon.fr', sourceLocale: 'fr' }
-{ domain: 'thefabricsales.com', sourceLocale: 'en' }
-
-// Dictionnaire avec entrées par locale
-FR: "coton" → "cotton"
-EN: "cotton" → "cotton" (passthrough)
+┌─────────────────────────────────────────────────────────────────┐
+│                    ADMIN PIPELINE                               │
+│  Discovery → Configuration → Scraping → Normalisation → Storage │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    DATA LAYER                                   │
+│  textiles | dictionary | unknowns | sites | profiles           │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    DESIGNER INTERFACE                           │
+│  Search → Favorites → Boards → Projects (Cristallisation)      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Documents Créés Session 16
+## Flux de Données Clés
 
-| Document                               | Contenu                                 |
-| -------------------------------------- | --------------------------------------- |
-| `SPEC_ADMIN_DATA_TUNING_COMPLETE.md` | Spec exhaustive workflow tuning admin   |
-| `ADR_020_SCRAPER_SOURCE_LOCALE.md`   | Architecture multi-locale dictionnaires |
-| `SESSION_16_ADMIN_TUNING_LOCALE.md`  | Note de session                         |
-
----
-
-## Ce Qui Reste à Faire
-
-### Immédiat (Session 17)
-
-**1. Exécuter ADR-020** (~30 min)
-
-```sql
--- Migration
-ALTER TABLE sites ADD COLUMN source_locale TEXT DEFAULT 'fr';
-UPDATE sites SET source_locale = 'en' WHERE domain = 'thefabricsales.com';
-
--- Seed dict EN (~150 termes)
-INSERT INTO dictionary_mappings (source_term, source_locale, translations, category_id)
-VALUES ('cotton', 'en', '{"en": "cotton"}', fiber_category_id), ...
-
--- Cleanup unknowns EN
-DELETE FROM unknown_terms WHERE source_platform = 'thefabricsales.com' 
-  AND term IN (SELECT source_term FROM dictionary_mappings WHERE source_locale = 'en');
-```
-
-**2. Extraction dimensions** (ADR-019, ~2h)
-
-* Détecter longueur dans tags ("3M", "5 mètres")
-* Détecter largeur dans body_html ("Laize 150cm", "Width: 140cm")
-
-**3. Dashboard qualité** (~1h)
-
-* Métriques par dimension (fiber 80%, color 55%, etc.)
-* Alertes sources problématiques
-
-### Court Terme
-
-* LLM suggestions pour unknowns
-* Batch processing unknowns
-* Browser dictionnaire
-
----
-
-## Architecture Clé
-
-### Pipeline Normalisation
+### 1. Pipeline Admin (Indexation)
 
 ```
-Scraper(site.sourceLocale)
-    ↓
-Extract terms
-    ↓
-Lookup dictionary WHERE source_locale = site.sourceLocale
-    ↓
-Found → translations['en']
-Not found → Log unknown WITH sourceLocale
+Site Shopify → Discovery (structure) → Profile
+           → Scraping (produits) → Extraction dimensions
+           → Normalisation (FR/EN → EN) → Storage textiles
 ```
 
-### Tables Concernées
+### 2. Parcours Designer
 
-```sql
-sites (+ source_locale TEXT)
-dictionary_mappings (source_term, source_locale, translations JSONB)
-unknown_terms (term, source_locale, category, status)
-textiles (source_locale pour traçabilité)
+```
+Search → Résultats filtrés → Favoris
+      → Board (canvas visuel) → Zones
+      → Cristallisation → Projet concret
+```
+
+### 3. Système de Normalisation
+
+```
+Terme FR ("soie") → Dictionary Lookup → Terme EN ("silk")
+Terme inconnu → Unknown Terms → Admin Review → Dictionary
 ```
 
 ---
 
-## Fichiers à Modifier (Session 17)
+## Décisions Architecturales Clés
 
-| Fichier                                                               | Modification                         |
-| --------------------------------------------------------------------- | ------------------------------------ |
-| `database/migrations/XXX.sql`                                       | Migration sourceLocale + seed EN     |
-| `src/features/admin/services/scrapingService.ts`                    | Passer sourceLocale à normalisation |
-| `src/features/normalization/infrastructure/normalizationService.ts` | Filtrer par sourceLocale             |
-| `src/features/normalization/infrastructure/dictionaryCache.ts`      | Cache par locale                     |
+### ADR-001 à ADR-021 (Points Majeurs)
 
----
+| ADR               | Décision            | Impact                        |
+| ----------------- | -------------------- | ----------------------------- |
+| ADR-005           | Light DDD            | Structure modules par domaine |
+| ADR-007           | Adapter Pattern      | Scrapers extensibles          |
+| ADR-009           | i18n Strategy        | FR source → EN storage       |
+| ADR-017           | Unified Repositories | Client/Server same API        |
+| ADR-020           | Source Locale        | Dictionnaires par langue      |
+| **ADR-021** | Extraction Patterns  | Dimensions auto-détectées   |
 
-## Métriques Cibles
+### Principes Établis
 
-| Métrique              | Actuel | Cible Post-Session 17 |
-| ---------------------- | ------ | --------------------- |
-| Unknowns TFS           | ~600   | <50                   |
-| Couverture dict EN     | 0%     | 90%                   |
-| Textiles avec longueur | 15%    | 80%                   |
-| Textiles avec largeur  | 0%     | 40%                   |
-
----
-
-## Questions Ouvertes
-
-1. **LLM fallback** : temps réel ou suggestions batch ?
-2. **Pattern storage** : JSONB dans SiteProfile ou table séparée ?
-3. **Re-scraping** : automatique après ajout mappings ou manuel ?
+1. **Qualité > Quantité** : Préférer 80% de couverture avec données propres
+2. **Admin-Driven** : Configuration sans code via UI admin
+3. **Demand-Driven** : Indexation sur demande (pas scraping continu)
+4. **Optimistic Updates** : UX réactive (favoris, boards)
 
 ---
 
-## Commandes Utiles
+## État MVP Phase 1
 
-```powershell
-# Lancer le dev server
-npm run dev
+### Complété (~90%)
 
-# Voir les unknowns en base
-# (via Supabase Dashboard ou SQL)
-SELECT term, source_platform, occurrences 
-FROM deadstock.unknown_terms 
-WHERE status = 'pending' 
-ORDER BY occurrences DESC;
+* ✅ Recherche avec filtres
+* ✅ Système favoris instantané
+* ✅ Boards avec drag-and-drop
+* ✅ Admin discovery/scraping
+* ✅ Normalisation FR fonctionnelle
+* ✅ **Extraction dimensions (nouveau)**
 
-# Compter par source
-SELECT source_platform, COUNT(*) 
-FROM deadstock.unknown_terms 
-WHERE status = 'pending' 
-GROUP BY source_platform;
+### En Cours
+
+* ⚠️ Dictionnaire EN (600 unknowns TFS)
+* ⚠️ Dashboard qualité unifié
+* ⚠️ Toggle patterns UI
+
+### Planifié
+
+* 🔲 LLM suggestions unknowns
+* 🔲 API professionnelle
+* 🔲 Multi-tenant
+
+---
+
+## Sources de Données
+
+### Actuellement Supportées
+
+| Source           | Plateforme | Locale | Produits |
+| ---------------- | ---------- | ------ | -------- |
+| My Little Coupon | Shopify    | FR     | ~11,000  |
+| The Fabric Sales | Shopify    | EN     | ~3,000   |
+
+### Planifiées
+
+* Recovo (Shopify)
+* Nona Source (Custom)
+* Première Vision (API?)
+
+---
+
+## Technologies Utilisées
+
+### Core Stack
+
+* **Next.js 16** : Framework React full-stack
+* **TypeScript** : Typage strict
+* **Supabase** : PostgreSQL + Auth + Realtime
+* **Tailwind CSS** : Styling utility-first
+
+### Libraries Clés
+
+* `lucide-react` : Icons
+* `date-fns` : Manipulation dates
+* `@supabase/supabase-js` : Client DB
+
+### Outils Dev
+
+* PowerShell (Windows)
+* Supabase CLI
+* VS Code
+
+---
+
+## Conventions de Code
+
+### Structure Fichiers
+
+```
+src/features/{domain}/
+├── domain/types.ts       # Interfaces domaine
+├── application/          # Use cases, actions
+├── infrastructure/       # Repos, services externes
+└── components/           # UI spécifique domaine
 ```
 
+### Naming
+
+* **Files** : camelCase (`extractionService.ts`)
+* **Components** : PascalCase (`ExtractionPatternsCard`)
+* **Types** : PascalCase (`ExtractionPattern`)
+* **Tables DB** : snake_case (`extraction_patterns`)
+
+### Patterns
+
+* Repository pour accès données
+* Server Actions pour mutations
+* Optimistic Updates pour UX
+
 ---
 
-## Liens Rapides
+## Liens Importants
+
+### Documentation Projet
+
+* [PROJECT_OVERVIEW.md](https://claude.ai/mnt/project/PROJECT_OVERVIEW.md)
+* [PRODUCT_VISION.md](https://claude.ai/mnt/project/PRODUCT_VISION.md)
+* [PHASES_V2.md](https://claude.ai/mnt/project/PHASES_V2.md)
+
+### Specs Techniques
+
+* [DATABASE_ARCHITECTURE.md](https://claude.ai/mnt/project/DATABASE_ARCHITECTURE.md)
+* [SPEC_ADMIN_DATA_TUNING_COMPLETE.md](https://claude.ai/mnt/project/SPEC_ADMIN_DATA_TUNING_COMPLETE.md)
+* [SPEC_BOARD_MODULE.md](https://claude.ai/mnt/project/SPEC_BOARD_MODULE.md)
+
+### ADRs Récents
 
 * [ADR-020 Source Locale](https://claude.ai/mnt/project/ADR_020_SCRAPER_SOURCE_LOCALE.md)
-* [SPEC Admin Tuning](https://claude.ai/mnt/project/SPEC_ADMIN_DATA_TUNING_COMPLETE.md)
-* [Database Architecture](https://claude.ai/mnt/project/DATABASE_ARCHITECTURE.md)
-* [Session 16 Notes](https://claude.ai/mnt/project/SESSION_16_ADMIN_TUNING_LOCALE.md)
+* [ADR-021 Extraction Patterns](https://claude.ai/mnt/project/ADR_021_EXTRACTION_PATTERNS_SYSTEM.md)

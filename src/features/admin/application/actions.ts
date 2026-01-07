@@ -32,7 +32,6 @@ function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile
     totalCollections: dbProfile.total_collections || 0,
     relevantCollections: dbProfile.relevant_collections || 0,
     estimatedProducts: dbProfile.estimated_products || 0,
-    // NOUVEAU - Ajouter ces lignes
     estimatedAvailable: dbProfile.estimated_available || 0,
     globalAnalysis: dbProfile.global_analysis || {
       allProductTypes: [],
@@ -43,6 +42,12 @@ function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile
       weightStats: null,
       availabilityRate: 0,
       deadstockScore: { score: 0, grade: 'F', factors: {}, recommendations: [] },
+    },
+    // NOUVEAU - Extraction patterns
+    extractionPatterns: dbProfile.extraction_patterns || {
+      patterns: [],
+      analyzedAt: new Date().toISOString(),
+      productsAnalyzed: 0,
     },
   };
 }
@@ -110,7 +115,7 @@ async function performDiscovery(siteId: string, siteUrl: string, supabase: any) 
   }
 
   // 3. Save new profile to database
- const profileData = {
+const profileData = {
   site_id: siteId,
   discovered_at: profile.discoveredAt.toISOString(),
   valid_until: profile.validUntil.toISOString(),
@@ -124,13 +129,12 @@ async function performDiscovery(siteId: string, siteUrl: string, supabase: any) 
   total_collections: profile.totalCollections,
   relevant_collections: profile.relevantCollections,
   estimated_products: profile.estimatedProducts,
-  // NOUVEAU - Ajouter ces lignes
   estimated_available: profile.estimatedAvailable,
   global_analysis: profile.globalAnalysis,
+  extraction_patterns: profile.extractionPatterns,  // ← AJOUTER CETTE LIGNE
   needs_rediscovery: false,
   rediscovery_reason: null,
 };
-
   console.log('[Action] Saving profile:', {
     site_id: profileData.site_id,
     collections_count: profileData.collections.length,

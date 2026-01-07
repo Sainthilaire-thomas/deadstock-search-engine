@@ -53,6 +53,10 @@ interface DbSiteProfile {
   sites?: {
     url: string;
   };
+  // NOUVEAU - Champs ajoutés
+  estimated_available?: number;
+  global_analysis?: any;
+  extraction_patterns?: any;
 }
 
 interface DbSite {
@@ -378,22 +382,37 @@ async saveProfile(profile: SiteProfile): Promise<void> {
   /**
    * Convert database row to domain model
    */
-  toDomain(data: DbSiteProfile): SiteProfile {
+toDomain(data: DbSiteProfile): SiteProfile {
     return {
       siteUrl: data.sites?.url || '',
+      platform: data.is_shopify ? 'shopify' : 'unknown',
       isShopify: data.is_shopify,
       discoveredAt: new Date(data.discovered_at),
       validUntil: new Date(data.valid_until),
-      
       collections: data.collections as CollectionData[],
       sampleProducts: data.sample_products,
       dataStructure: data.data_structure as DataStructure,
       qualityMetrics: data.quality_metrics as QualityMetrics,
       recommendations: data.recommendations as Recommendation[],
-      
       totalCollections: data.total_collections,
       relevantCollections: data.relevant_collections,
       estimatedProducts: data.estimated_products,
+      estimatedAvailable: data.estimated_available || 0,
+      globalAnalysis: data.global_analysis || {
+        allProductTypes: [],
+        allTags: [],
+        allVendors: [],
+        priceDistribution: { under10: 0, from10to30: 0, from30to50: 0, from50to100: 0, over100: 0 },
+        priceStats: null,
+        weightStats: null,
+        availabilityRate: 0,
+        deadstockScore: { score: 0, grade: 'F', factors: {}, recommendations: [] },
+      },
+      extractionPatterns: data.extraction_patterns || {
+        patterns: [],
+        analyzedAt: new Date().toISOString(),
+        productsAnalyzed: 0,
+      },
     };
   },
 };

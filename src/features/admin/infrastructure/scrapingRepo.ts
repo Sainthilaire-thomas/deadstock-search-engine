@@ -12,6 +12,8 @@ import type { ShopifyProduct, ScrapingConfig, ScrapingResult } from '../services
 import { extractTermsFromShopify } from '../utils/extractTerms';
 import { normalizeTextile, type NormalizeTextileOutput } from '@/features/normalization/application/normalizeTextile';
 import type { Locale } from '@/features/tuning/domain/types';
+import { extractDimensions, type ExtractedDimensions } from '../services/extractionService';
+import type { ExtractionPatterns } from '../domain/types';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -276,7 +278,8 @@ async saveProducts(
   products: ShopifyProduct[],
   siteUrl: string,
   jobId: string,
-  sourceLocale?: Locale  // ← NOUVEAU
+  sourceLocale?: Locale,
+  extractionPatterns?: ExtractionPatterns | null  // ← NOUVEAU
 ): Promise<{ saved: number; updated: number; skipped: number }> {
     const supabase = createScraperClient();
     const normalizedUrl = normalizeUrl(siteUrl);
@@ -321,6 +324,15 @@ async saveProducts(
         // ========================================================================
         const qualityScore = calculateQualityScore(product, normalized);
         
+          // ========================================================================
+        // STEP 3.5: Extract dimensions using patterns
+        // ========================================================================
+        const dimensions = extractDimensions(product, extractionPatterns ?? null);
+        
+        if (dimensions.length || dimensions.width || dimensions.weight) {
+          console.log(`      📏 Dimensions: length=${dimensions.length?.value || '-'}${dimensions.length?.unit || ''}, width=${dimensions.width?.value || '-'}${dimensions.width?.unit || ''}, weight=${dimensions.weight?.value || '-'}${dimensions.weight?.unit || ''}`);
+        }
+
         // ========================================================================
         // STEP 4: Map to database schema
         // ========================================================================
@@ -366,9 +378,14 @@ async saveProducts(
           // Quality
           data_quality_score: qualityScore,
           
-          // Metadata
-          quantity_value: product.variants[0]?.inventory_quantity || 1,
-          quantity_unit: 'unit',
+         // Metadata
+           // Dimensions (from extraction patterns)
+          quantity_value: dimensions.length?.value || product.variants[0]?.inventory_quantity || 1,
+          quantity_unit: dimensions.length?.unit || 'unit',
+          width_value: dimensions.width?.value || null,
+          width_unit: dimensions.width?.unit || null,
+          weight_value: dimensions.weight?.value || null,
+          weight_unit: dimensions.weight?.unit || null,
           updated_at: new Date().toISOString(),
         };
         

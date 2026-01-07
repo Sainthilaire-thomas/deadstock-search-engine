@@ -755,6 +755,7 @@ export type Database = {
           discovered_at: string | null
           estimated_available: number | null
           estimated_products: number | null
+          extraction_patterns: Json | null
           global_analysis: Json | null
           id: string
           is_shopify: boolean | null
@@ -776,6 +777,7 @@ export type Database = {
           discovered_at?: string | null
           estimated_available?: number | null
           estimated_products?: number | null
+          extraction_patterns?: Json | null
           global_analysis?: Json | null
           id?: string
           is_shopify?: boolean | null
@@ -797,6 +799,7 @@ export type Database = {
           discovered_at?: string | null
           estimated_available?: number | null
           estimated_products?: number | null
+          extraction_patterns?: Json | null
           global_analysis?: Json | null
           id?: string
           is_shopify?: boolean | null

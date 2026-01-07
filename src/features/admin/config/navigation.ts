@@ -97,16 +97,16 @@ export const adminNavStructure: NavSection[] = [
     type: 'separator',
   },
   // TODO: Activer quand les pages seront créées
-  // {
-  //   key: 'dictionary',
-  //   label: 'Dictionnaire',
-  //   href: '/admin/dictionary',
-  //   icon: Book,
-  // },
-  // {
-  //   key: 'demands',
-  //   label: 'Demandes',
-  //   href: '/admin/demands',
-  //   icon: MessageSquare,
-  // },
+  {
+    key: 'dictionary',
+    label: 'Dictionnaire',
+   href: '/admin/dictionary',
+  icon: Book,
+  },
+   {
+    key: 'demands',
+    label: 'Demandes',
+    href: '/admin/demands',
+     icon: MessageSquare,
+   },
 ];

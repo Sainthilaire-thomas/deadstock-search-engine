@@ -13,6 +13,8 @@
  */
 
 import { addMonths } from 'date-fns';
+import { detectExtractionPatterns } from './extractionPatternDetector';
+import type { ExtractionPatterns } from '../domain/types';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -231,7 +233,7 @@ export interface SiteProfile {
   // Collections - ALL with analysis
   collections: CollectionData[];
   sampleProducts: ShopifyProduct[];
-  
+
   // Data structure analysis
   dataStructure: DataStructure;
   qualityMetrics: QualityMetrics;
@@ -239,6 +241,9 @@ export interface SiteProfile {
 
   // NOUVEAU - Global analysis
   globalAnalysis: GlobalAnalysis;
+
+  // NOUVEAU - Extraction patterns détectés
+  extractionPatterns: ExtractionPatterns;
 
   // Metadata
   totalCollections: number;
@@ -1142,17 +1147,39 @@ class DiscoveryService {
     console.log(`   - Weight: ${Math.round(qualityMetrics.hasWeight * 100)}%`);
     console.log(`   - Product Type: ${Math.round(qualityMetrics.hasProductType * 100)}%\n`);
 
-    // Step 7: Analyze data structure
+    // Step 7: Detect extraction patterns (NOUVEAU)
+    console.log('🔍 Detecting extraction patterns...');
+    const extractionResult = detectExtractionPatterns(allSampledProducts);
+    const extractionPatterns: ExtractionPatterns = {
+      patterns: extractionResult.patterns,
+      analyzedAt: extractionResult.analyzedAt,
+      productsAnalyzed: extractionResult.productsAnalyzed,
+    };
+    
+    if (extractionPatterns.patterns.length > 0) {
+      console.log(`   Found ${extractionPatterns.patterns.length} patterns:`);
+      for (const p of extractionPatterns.patterns) {
+        const status = p.enabled ? '✅' : '⚪';
+        console.log(`   ${status} ${p.field} (${p.source}): ${Math.round(p.coverage * 100)}% coverage`);
+      }
+    } else {
+      console.log(`   ⚠️ No extraction patterns detected`);
+    }
+    console.log('');
+
+    // Step 8: Analyze data structure (était Step 7)
     const dataStructure = analyzeDataStructure(allSampledProducts);
 
-    // Step 8: Generate recommendations
+    // Step 9: Generate recommendations (était Step 8)
     const recommendations = generateRecommendations(qualityMetrics, collectionsData, globalAnalysis);
 
-    // Step 9: Calculate totals
+    // Step 10: Calculate totals (était Step 9)
     const totalProducts = collectionsData.reduce((sum, c) => sum + c.productsCount, 0);
     const estimatedAvailable = Math.round(totalProducts * (globalAnalysis.availabilityRate / 100));
 
-    // Step 10: Create profile
+  
+    // Step 11: Create profile
+    // Step 11: Create profile
     const profile: SiteProfile = {
       siteUrl: normalizedUrl,
       platform,
@@ -1166,6 +1193,7 @@ class DiscoveryService {
       qualityMetrics,
       recommendations,
       globalAnalysis,
+      extractionPatterns,  // ← NOUVEAU
 
       totalCollections: allCollections.length,
       relevantCollections: relevantCount,

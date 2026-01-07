@@ -10,9 +10,11 @@
  */
 
 import type { SiteProfile } from './discoveryService';
+import { getExtractionPatternsForSite } from './extractionService';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database.types';
 import { scrapingRepo } from '../infrastructure/scrapingRepo';
+
 import type { Locale } from '@/features/tuning/domain/types';
 
 // Type for textiles insert
@@ -232,17 +234,43 @@ class ScrapingService {
       }
     }
 
-   // =========================================================================
-// SAVE PRODUCTS TO DATABASE WITH NORMALIZATION
 // =========================================================================
-console.log(`\n💾 Saving ${allProducts.length} products with normalization...`);
+    // LOAD EXTRACTION PATTERNS
+    // =========================================================================
+    console.log(`\n🔍 Loading extraction patterns...`);
+    const supabase = createAdminClient();
+    
+    // Get site ID from URL
+    const normalizedUrl = profile.siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const { data: site } = await supabase
+      .from('sites')
+      .select('id')
+      .eq('url', normalizedUrl)
+      .single();
+    
+    let extractionPatterns = null;
+    if (site) {
+      extractionPatterns = await getExtractionPatternsForSite(site.id, supabase);
+      if (extractionPatterns?.patterns?.length) {
+        const enabledCount = extractionPatterns.patterns.filter(p => p.enabled).length;
+        console.log(`   ✅ Found ${enabledCount} enabled patterns`);
+      } else {
+        console.log(`   ⚠️ No extraction patterns found`);
+      }
+    }
 
-const saveResult = await scrapingRepo.saveProducts(
-  allProducts,
-  profile.siteUrl,
-  'direct-scrape',  // jobId placeholder
-  finalConfig.sourceLocale
-);
+    // =========================================================================
+    // SAVE PRODUCTS TO DATABASE WITH NORMALIZATION
+    // =========================================================================
+    console.log(`\n💾 Saving ${allProducts.length} products with normalization...`);
+
+    const saveResult = await scrapingRepo.saveProducts(
+      allProducts,
+      profile.siteUrl,
+      'direct-scrape',  // jobId placeholder
+      finalConfig.sourceLocale,
+      extractionPatterns  // ← NOUVEAU
+    );
 
 const savedCount = saveResult.saved + saveResult.updated;
     
