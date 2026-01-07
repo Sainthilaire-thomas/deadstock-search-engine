@@ -1,205 +1,229 @@
+# Context Summary - Deadstock Search Engine
 
-# CONTEXT_SUMMARY.md - Résumé du Contexte Projet
-
-**Dernière mise à jour** : 6 janvier 2026
+**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
 
 ---
 
-## Le Projet en Bref
+## 🎯 Vision Produit
 
-**Deadstock Textile Search Engine** est un moteur de recherche B2B permettant aux designers de mode de trouver des tissus deadstock (fins de série, surplus de production) auprès de multiples fournisseurs européens.
+**Deadstock** est un moteur de recherche textile B2B qui agrège les inventaires de tissus deadstock de multiples fournisseurs pour aider les designers indépendants à trouver des matériaux durables.
 
 ### Proposition de Valeur
 
-* **Agrégation** : Un seul point de recherche pour tous les fournisseurs
-* **Normalisation** : Données uniformisées (matières, couleurs, motifs)
-* **Outils Design** : Boards visuels, favoris, cristallisation en projets
+* **Agrégation multi-sources** : Un seul endroit pour chercher
+* **Normalisation intelligente** : Données standardisées (EN)
+* **Outils créatifs** : Boards, calcul métrage, projets
+* **Durabilité** : Focus deadstock = économie circulaire
 
 ### Marché Cible
 
-* Designers de mode indépendants
-* Petites marques éco-responsables
-* Studios de design textile
+* Designers textiles indépendants
+* Créateurs DIY couture (1.25 Mrd€)
+* Couturières professionnelles (40K entreprises)
+* Tapissiers/décorateurs
 
 ---
 
-## Architecture Conceptuelle
+## 🏗️ Architecture Technique
+
+### Stack
+
+```
+Frontend: Next.js 15 + React 19 + TypeScript + Tailwind + shadcn/ui
+Backend: Supabase (PostgreSQL) + Server Actions + RLS
+Deploy: Vercel
+```
+
+### Pattern Architecture
+
+* **Light DDD** : Séparation domain/infrastructure/application
+* **Feature-based** : Un dossier par module fonctionnel
+* **Server Actions** : Mutations via Next.js
+* **Optimistic Updates** : UX fluide (favoris, boards)
+
+### Architecture Données (ADR-024)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    ADMIN PIPELINE                               │
-│  Discovery → Configuration → Scraping → Normalisation → Storage │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    DATA LAYER                                   │
-│  textiles | dictionary | unknowns | sites | profiles           │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    DESIGNER INTERFACE                           │
-│  Search → Favorites → Boards → Projects (Cristallisation)      │
+│                     STANDARD DEADSTOCK                          │
+│                   (attribute_categories)                        │
+│  fiber ⭐ │ color ⭐ │ pattern │ weave │ [extensible...]        │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────┐
+│                   DICTIONNAIRE                                  │
+│                (dictionary_mappings)                            │
+│  "soie" (fr) → "silk" (fiber)                                  │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────┐
+│              TEXTILES + ATTRIBUTES                              │
+│  textiles (données fixes)     │  textile_attributes (classif.) │
+│  • prix, dimensions           │  • fiber: silk                 │
+│  • disponibilité              │  • color: red                  │
+│  • source                     │  • pattern: solid              │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────┐
+│                   VUE MATÉRIALISÉE                              │
+│                    (textiles_search)                            │
+│  Performance: 2.8ms │ Scalable 1M+ │ Refresh nuit              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Flux de Données Clés
+## 📊 État des Données
 
-### 1. Pipeline Admin (Indexation)
+### Sources Actives
+
+| Source           | Locale | Textiles | Qualité |
+| ---------------- | ------ | -------- | -------- |
+| My Little Coupon | FR     | ~100     | 98%      |
+| The Fabric Sales | EN     | ~60      | 90%      |
+
+### Normalisation
+
+* **256 termes** dans le dictionnaire (181 EN, 75 FR)
+* **4 catégories** : fiber, color, pattern, weave
+* **<10 unknowns** restants
+
+### Nouvelle Architecture
+
+* `textile_attributes` : 293 rows (peuplé ✅)
+* `textiles_search` : Vue matérialisée (créée ✅)
+* Performance : 2.8ms par requête
+
+---
+
+## 🔧 Modules Fonctionnels
+
+### Utilisateur
+
+| Module                    | Fonction                        |
+| ------------------------- | ------------------------------- |
+| **Search**          | Recherche textiles avec filtres |
+| **Favorites**       | Sauvegarde sélection           |
+| **Boards**          | Organisation visuelle projets   |
+| **Crystallization** | Board → Projet concret         |
+| **Pattern Import**  | Upload PDF, calcul métrage     |
+
+### Admin
+
+| Module              | Fonction                       |
+| ------------------- | ------------------------------ |
+| **Sites**     | Gestion sources à scraper     |
+| **Discovery** | Analyse automatique sites      |
+| **Scraping**  | Lancement jobs extraction      |
+| **Tuning**    | Gestion dictionnaire, unknowns |
+
+---
+
+## 🎯 Flux Utilisateur Principal
 
 ```
-Site Shopify → Discovery (structure) → Profile
-           → Scraping (produits) → Extraction dimensions
-           → Normalisation (FR/EN → EN) → Storage textiles
-```
+1. RECHERCHE
+   Rechercher textiles → Filtrer → Voir résultats
 
-### 2. Parcours Designer
+2. SÉLECTION
+   Ajouter favoris → Organiser sur Board
 
-```
-Search → Résultats filtrés → Favoris
-      → Board (canvas visuel) → Zones
-      → Cristallisation → Projet concret
-```
+3. PROJET
+   Créer zones → Cristalliser → Projet concret
 
-### 3. Système de Normalisation
-
-```
-Terme FR ("soie") → Dictionary Lookup → Terme EN ("silk")
-Terme inconnu → Unknown Terms → Admin Review → Dictionary
+4. RÉALISATION
+   Calcul métrage → Liste courses → Achat
 ```
 
 ---
 
-## Décisions Architecturales Clés
+## 📋 Conventions Code
 
-### ADR-001 à ADR-021 (Points Majeurs)
+### Nommage
 
-| ADR               | Décision            | Impact                        |
-| ----------------- | -------------------- | ----------------------------- |
-| ADR-005           | Light DDD            | Structure modules par domaine |
-| ADR-007           | Adapter Pattern      | Scrapers extensibles          |
-| ADR-009           | i18n Strategy        | FR source → EN storage       |
-| ADR-017           | Unified Repositories | Client/Server same API        |
-| ADR-020           | Source Locale        | Dictionnaires par langue      |
-| **ADR-021** | Extraction Patterns  | Dimensions auto-détectées   |
+* **Fichiers** : kebab-case (`textile-repository.ts`)
+* **Components** : PascalCase (`TextileCard.tsx`)
+* **Functions** : camelCase (`getAvailableFilters`)
+* **DB columns** : snake_case (`material_type`)
 
-### Principes Établis
+### Structure Feature
 
-1. **Qualité > Quantité** : Préférer 80% de couverture avec données propres
-2. **Admin-Driven** : Configuration sans code via UI admin
-3. **Demand-Driven** : Indexation sur demande (pas scraping continu)
-4. **Optimistic Updates** : UX réactive (favoris, boards)
+```
+features/[name]/
+├── domain/types.ts
+├── infrastructure/[name]Repository.ts
+├── application/[action].ts
+├── components/[Component].tsx
+└── context/[Name]Context.tsx
+```
+
+### Imports
+
+```typescript
+// Ordre: React → Next → Libs → Local → Types
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { TextileCard } from './TextileCard';
+import type { Textile } from '../domain/types';
+```
 
 ---
 
-## État MVP Phase 1
+## 🗺️ Roadmap
 
-### Complété (~90%)
+### MVP Phase 1 (90% ✅)
 
 * ✅ Recherche avec filtres
-* ✅ Système favoris instantané
-* ✅ Boards avec drag-and-drop
-* ✅ Admin discovery/scraping
-* ✅ Normalisation FR fonctionnelle
-* ✅ **Extraction dimensions (nouveau)**
+* ✅ Favoris
+* ✅ Boards
+* ✅ Admin complet
+* 🔄 Architecture données optimisée
+* 🔲 Authentification
 
-### En Cours
+### Phase 2 (Prévue)
 
-* ⚠️ Dictionnaire EN (600 unknowns TFS)
-* ⚠️ Dashboard qualité unifié
-* ⚠️ Toggle patterns UI
+* API publique
+* Multi-utilisateurs
+* Alertes nouveaux textiles
+* Historique prix
 
-### Planifié
+### Phase 3 (Vision)
 
-* 🔲 LLM suggestions unknowns
-* 🔲 API professionnelle
-* 🔲 Multi-tenant
-
----
-
-## Sources de Données
-
-### Actuellement Supportées
-
-| Source           | Plateforme | Locale | Produits |
-| ---------------- | ---------- | ------ | -------- |
-| My Little Coupon | Shopify    | FR     | ~11,000  |
-| The Fabric Sales | Shopify    | EN     | ~3,000   |
-
-### Planifiées
-
-* Recovo (Shopify)
-* Nona Source (Custom)
-* Première Vision (API?)
+* Marketplace accessoires
+* Groupage commandes
+* CO2 tracking
+* Intégrations (Figma, Adobe)
 
 ---
 
-## Technologies Utilisées
+## 📝 Sessions Récentes
 
-### Core Stack
-
-* **Next.js 16** : Framework React full-stack
-* **TypeScript** : Typage strict
-* **Supabase** : PostgreSQL + Auth + Realtime
-* **Tailwind CSS** : Styling utility-first
-
-### Libraries Clés
-
-* `lucide-react` : Icons
-* `date-fns` : Manipulation dates
-* `@supabase/supabase-js` : Client DB
-
-### Outils Dev
-
-* PowerShell (Windows)
-* Supabase CLI
-* VS Code
+| Session      | Focus                             | Résultat                                |
+| ------------ | --------------------------------- | ---------------------------------------- |
+| 17           | Extraction Patterns               | ✅ ADR-021, détection auto patterns     |
+| **18** | **Textile Standard System** | **✅ ADR-024, vue matérialisée** |
+| 19           | (À venir)                        | Connecter API à vue                     |
 
 ---
 
-## Conventions de Code
+## 🔑 Points Clés pour IA
 
-### Structure Fichiers
-
-```
-src/features/{domain}/
-├── domain/types.ts       # Interfaces domaine
-├── application/          # Use cases, actions
-├── infrastructure/       # Repos, services externes
-└── components/           # UI spécifique domaine
-```
-
-### Naming
-
-* **Files** : camelCase (`extractionService.ts`)
-* **Components** : PascalCase (`ExtractionPatternsCard`)
-* **Types** : PascalCase (`ExtractionPattern`)
-* **Tables DB** : snake_case (`extraction_patterns`)
-
-### Patterns
-
-* Repository pour accès données
-* Server Actions pour mutations
-* Optimistic Updates pour UX
+1. **Architecture EAV + Vue Mat.** : `textile_attributes` (flexible) → `textiles_search` (performant)
+2. **Dual-level tuning** : Dictionnaire (global) + Patterns (par site)
+3. **Standard extensible** : `attribute_categories` avec `is_searchable`
+4. **Session-based** : Pas d'auth pour MVP, cookie session_id
+5. **Refresh nocturne** : Vue rafraîchie après scraping, 0 impact utilisateur
 
 ---
 
-## Liens Importants
+## 📚 Documentation Clé
 
-### Documentation Projet
+* `ADR_024_TEXTILE_STANDARD_SYSTEM.md` - Architecture données
+* `SPEC_BOARD_MODULE.md` - Spécification boards
+* `DATABASE_ARCHITECTURE.md` - Schéma complet
+* `TUNING_SYSTEM.md` - Système normalisation
 
-* [PROJECT_OVERVIEW.md](https://claude.ai/mnt/project/PROJECT_OVERVIEW.md)
-* [PRODUCT_VISION.md](https://claude.ai/mnt/project/PRODUCT_VISION.md)
-* [PHASES_V2.md](https://claude.ai/mnt/project/PHASES_V2.md)
+---
 
-### Specs Techniques
-
-* [DATABASE_ARCHITECTURE.md](https://claude.ai/mnt/project/DATABASE_ARCHITECTURE.md)
-* [SPEC_ADMIN_DATA_TUNING_COMPLETE.md](https://claude.ai/mnt/project/SPEC_ADMIN_DATA_TUNING_COMPLETE.md)
-* [SPEC_BOARD_MODULE.md](https://claude.ai/mnt/project/SPEC_BOARD_MODULE.md)
-
-### ADRs Récents
-
-* [ADR-020 Source Locale](https://claude.ai/mnt/project/ADR_020_SCRAPER_SOURCE_LOCALE.md)
-* [ADR-021 Extraction Patterns](https://claude.ai/mnt/project/ADR_021_EXTRACTION_PATTERNS_SYSTEM.md)
+**Contact:** Thomas (Founder & Developer)

@@ -1,207 +1,225 @@
+# Current State - Deadstock Search Engine
 
-# CURRENT_STATE.md - État Actuel du Projet
-
-**Dernière mise à jour** : 6 janvier 2026
-
-**Session** : 17
+**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
 
 ---
 
-## Vue d'Ensemble
+## 🎯 Statut Global
 
-Le **Deadstock Textile Search Engine** est une plateforme SaaS permettant aux designers de mode indépendants de rechercher des tissus deadstock auprès de multiples fournisseurs via une interface unifiée.
-
----
-
-## État des Modules
-
-### Module Search (100% ✅)
-
-* Recherche full-text avec filtres
-* Normalisation des matières/couleurs/motifs
-* Interface responsive avec grille de résultats
-
-### Module Favorites (100% ✅)
-
-* Synchronisation instantanée (optimistic updates)
-* Repository unifié client/serveur
-* Toggle depuis n'importe quelle vue
-
-### Module Board (95% ✅)
-
-* Canvas drag-and-drop
-* Zones de travail redimensionnables
-* Import depuis favoris
-* Cristallisation en projets
-
-### Module Admin - Sites (95% ✅)
-
-* Discovery automatique des sites Shopify
-* Configuration des collections à scraper
-* Scraping avec normalisation
-* **NOUVEAU** : Extraction des dimensions (longueur, largeur, poids)
-
-### Module Admin - Tuning (75% ⚠️)
-
-* Interface unknowns avec filtres
-* Dictionnaire FR fonctionnel
-* **À faire** : Dictionnaire EN, LLM suggestions
-
-### Module Cristallisation (85% ✅)
-
-* Transformation zone → projet
-* Règles de validation
-* Migration données
+| Métrique               | Valeur                          |
+| ----------------------- | ------------------------------- |
+| **Phase**         | MVP Phase 1                     |
+| **Progression**   | ~90%                            |
+| **Sprint actuel** | Data Architecture & Performance |
 
 ---
 
-## Base de Données
+## 📊 Données en Base
 
-### Tables Principales (Schema: deadstock)
+### Textiles
 
-| Table               | Enregistrements | Notes                    |
-| ------------------- | --------------- | ------------------------ |
-| textiles            | ~500            | Produits scrapés        |
-| sites               | 3               | MLC, TFS, Recovo         |
-| site_profiles       | 2               | Avec extraction_patterns |
-| dictionary_mappings | ~250            | FR principalement        |
-| unknown_terms       | ~620            | Majoritairement EN (TFS) |
-| favorites           | Variable        | Par session user         |
-| boards              | Variable        | Par session user         |
+| Métrique            | Valeur    |
+| -------------------- | --------- |
+| Total textiles       | 160       |
+| Textiles disponibles | 160       |
+| Avec fiber           | 95 (59%)  |
+| Avec color           | 115 (72%) |
+| Avec pattern         | 83 (52%)  |
 
-### Colonnes Clés textiles
+### Sources
 
-| Colonne            | Utilisation                            |
-| ------------------ | -------------------------------------- |
-| `material_type`  | Matière normalisée (EN)              |
-| `color`          | Couleur normalisée (EN)               |
-| `pattern`        | Motif normalisé (EN)                  |
-| `quantity_value` | **Longueur en mètres**(nouveau) |
-| `width_value`    | **Largeur en cm**(nouveau)       |
-| `weight_value`   | **Grammage gsm**(nouveau)        |
+| Site             | Status    | Textiles | Qualité |
+| ---------------- | --------- | -------- | -------- |
+| My Little Coupon | ✅ Actif  | ~100     | 98%      |
+| The Fabric Sales | ✅ Actif  | ~60      | 90%      |
+| Recovo           | 🔲 Prévu | —       | —       |
+
+### Dictionnaire
+
+| Métrique      | Valeur |
+| -------------- | ------ |
+| Termes EN      | 181    |
+| Termes FR      | 75     |
+| Total mappings | 256    |
+| Unknown terms  | <10    |
+
+### Nouvelle Architecture (Session 18)
+
+| Table                         | Rows | Status     |
+| ----------------------------- | ---- | ---------- |
+| `textile_attributes`        | 293  | ✅ Peuplé |
+| `textiles_search`(vue mat.) | 160  | ✅ Créé  |
+| `attribute_categories`      | 4    | ✅ Actif   |
 
 ---
 
-## Architecture Technique
+## 🏗️ Modules Applicatifs
 
-### Stack
+### ✅ Complétés
 
-* **Frontend** : Next.js 16.1.1, React 19, TypeScript
-* **Styling** : Tailwind CSS, Lucide React
-* **Backend** : Supabase PostgreSQL
-* **Schema** : `deadstock` (séparé du public)
+| Module                    | Status  | Description                          |
+| ------------------------- | ------- | ------------------------------------ |
+| **Search**          | ✅ 95%  | Recherche textiles avec filtres      |
+| **Favorites**       | ✅ 100% | Système favoris avec sync instant   |
+| **Boards**          | ✅ 90%  | Canvas interactif, zones, éléments |
+| **Crystallization** | ✅ 85%  | Board → Projet                      |
+| **Admin Sites**     | ✅ 100% | CRUD sites, discovery                |
+| **Admin Scraping**  | ✅ 100% | Configuration, jobs, preview         |
+| **Admin Tuning**    | ✅ 90%  | Dictionnaire, unknowns               |
+| **Pattern Import**  | ✅ 80%  | Upload PDF, calcul métrage          |
 
-### Patterns Architecturaux
+### 🔄 En Cours
 
-* Domain-Driven Design (light)
-* Repository Pattern (client/server unifié)
-* Adapter Pattern (scrapers)
-* Optimistic Updates (favorites)
+| Module                       | Status | Reste à faire                      |
+| ---------------------------- | ------ | ----------------------------------- |
+| **Data Architecture**  | 🔄 70% | Connecter API à vue matérialisée |
+| **Admin Discovery**    | 🔄 80% | Interface mapping standard          |
+| **Filtres Dynamiques** | 🔄 30% | Utiliser `attribute_categories`   |
 
-### Fichiers Clés
+### 🔲 À Faire
+
+| Module               | Priorité | Description              |
+| -------------------- | --------- | ------------------------ |
+| Admin Pattern Tuning | P3        | Interface regex par site |
+| Authentification     | P2        | Supabase Auth            |
+| Multi-langue UI      | P3        | i18n français/anglais   |
+
+---
+
+## 🗄️ Architecture Base de Données
+
+### Schema `deadstock`
+
+```
+Tables principales:
+├── textiles (160 rows)
+├── textile_attributes (293 rows) ← NOUVEAU
+├── attribute_categories (4 rows)
+├── dictionary_mappings (256 rows)
+├── unknown_terms
+├── sites (3 rows)
+├── site_profiles
+├── scraping_jobs
+├── favorites
+├── boards
+├── board_elements
+├── board_zones
+└── projects
+
+Vues:
+├── textiles_search (vue matérialisée) ← NOUVEAU
+├── textiles_with_attributes
+└── active_textiles
+
+Fonctions:
+├── refresh_textiles_search() ← NOUVEAU
+├── get_searchable_categories()
+└── increment_mapping_usage()
+```
+
+### Performance Recherche
+
+| Métrique               | Valeur    |
+| ----------------------- | --------- |
+| Temps requête filtrée | 2.8 ms    |
+| Temps refresh vue       | 96 ms     |
+| Index utilisés         | BitmapAnd |
+
+---
+
+## 🔧 Stack Technique
+
+### Frontend
+
+* Next.js 15.1.1
+* React 19
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+
+### Backend
+
+* Supabase (PostgreSQL)
+* Server Actions
+* Row Level Security
+
+### Infrastructure
+
+* Vercel (hosting)
+* Supabase (database)
+
+---
+
+## 📁 Structure Projet
 
 ```
 src/
+├── app/
+│   ├── admin/
+│   │   ├── discovery/
+│   │   ├── sites/
+│   │   ├── jobs/
+│   │   ├── tuning/
+│   │   └── dictionary/
+│   ├── boards/
+│   ├── favorites/
+│   ├── search/
+│   └── tools/
 ├── features/
 │   ├── admin/
-│   │   ├── services/
-│   │   │   ├── discoveryService.ts      # Discovery sites
-│   │   │   ├── scrapingService.ts       # Scraping orchestration
-│   │   │   ├── extractionPatternDetector.ts  # Pattern detection
-│   │   │   └── extractionService.ts     # Dimension extraction
-│   │   └── infrastructure/
-│   │       └── scrapingRepo.ts          # Persistence
-│   ├── normalization/                   # Normalisation pipeline
-│   └── tuning/                          # Dictionnaire & unknowns
-├── app/
-│   └── admin/
-│       ├── discovery/[siteSlug]/        # Détail site + patterns
-│       ├── scraping/                    # Jobs scraping
-│       └── tuning/                      # Dictionnaire UI
+│   ├── boards/
+│   ├── favorites/
+│   ├── normalization/
+│   ├── search/
+│   └── tuning/
+└── components/
+    ├── search/
+    └── ui/
 ```
 
 ---
 
-## Métriques Actuelles
+## 📋 ADRs Actifs
 
-### Qualité des Données (My Little Coupon)
-
-| Métrique               | Valeur        |
-| ----------------------- | ------------- |
-| Images                  | 100%          |
-| Prix                    | 100%          |
-| Tags                    | 100%          |
-| Poids                   | 86%           |
-| Product Type            | 94%           |
-| **Overall Score** | **98%** |
-
-### Extraction Dimensions (MLC)
-
-| Dimension        | Couverture |
-| ---------------- | ---------- |
-| Longueur         | 100%       |
-| Largeur          | 100%       |
-| Poids (grammage) | 86%        |
-
-### Normalisation
-
-| Source   | Couverture Dict  |
-| -------- | ---------------- |
-| FR (MLC) | ~85%             |
-| EN (TFS) | ~10% (à seeder) |
-
-### Unknowns
-
-| Source   | Count | Cause        |
-| -------- | ----- | ------------ |
-| TFS (EN) | ~600  | Dict EN vide |
-| MLC (FR) | ~20   | Normal       |
+| ADR               | Titre                              | Status                |
+| ----------------- | ---------------------------------- | --------------------- |
+| ADR-010           | Dynamic Attribute System           | ✅ Implémenté       |
+| ADR-020           | Source Locale Configuration        | ✅ Implémenté       |
+| ADR-021           | Extraction Patterns System         | ✅ Implémenté       |
+| ADR-022           | Demand Driven Indexation           | 📋 Prévu             |
+| ADR-023           | Scraping Normalization Integration | ✅ Implémenté       |
+| **ADR-024** | **Textile Standard System**  | **🔄 En cours** |
 
 ---
 
-## Dernières Modifications (Session 17)
+## 🎯 Prochaines Priorités
 
-### Nouveaux Fichiers
+### Immédiat (Session 19)
 
-* `extractionPatternDetector.ts` - Détection auto patterns
-* `extractionService.ts` - Application patterns
-* `ExtractionPatternsCard.tsx` - UI patterns
-* `/admin/discovery/[siteSlug]/page.tsx` - Page détail
+1. Connecter API recherche à `textiles_search`
+2. Filtres dynamiques via `attribute_categories`
+3. Commit migrations SQL
 
-### Modifications
+### Court terme
 
-* `discoveryService.ts` - Intégration détection patterns
-* `scrapingService.ts` - Chargement patterns
-* `scrapingRepo.ts` - Sauvegarde dimensions
-* Migration DB `extraction_patterns`
+4. Dual-write scraping → `textile_attributes`
+5. Refresh vue après scraping
+6. Clarifier `quantity_value` avec `sale_type`
 
----
+### Moyen terme
 
-## Configuration
-
-### Sites Configurés
-
-| Site             | URL                | Locale | Status                 |
-| ---------------- | ------------------ | ------ | ---------------------- |
-| My Little Coupon | mylittlecoupon.fr  | FR     | ✅ Active              |
-| The Fabric Sales | thefabricsales.com | EN     | ⚠️ Dict EN à seeder |
-| Recovo           | recovo.co          | EN     | 🔲 Non configuré      |
-
-### Patterns Extraction (MLC)
-
-| Field  | Source    | Coverage | Enabled |
-| ------ | --------- | -------- | ------- |
-| length | tags      | 100%     | ✅      |
-| width  | body_html | 82%      | ✅      |
-| width  | title     | 18%      | ❌      |
-| weight | body_html | 86%      | ✅      |
-| weight | variant   | 86%      | ✅      |
+7. Interface tuning patterns
+8. Hiérarchie catégories
+9. Authentification utilisateurs
 
 ---
 
-## Liens Documentation
+## 🔗 Liens Utiles
 
-* [PROJECT_OVERVIEW.md](https://claude.ai/mnt/project/PROJECT_OVERVIEW.md)
-* [DATABASE_ARCHITECTURE.md](https://claude.ai/mnt/project/DATABASE_ARCHITECTURE.md)
-* [PHASES_V2.md](https://claude.ai/mnt/project/PHASES_V2.md)
-* [ADR Index](https://claude.ai/mnt/project/) - ADR_001 à ADR_021
+* [Vercel Dashboard](https://vercel.com/)
+* [Supabase Dashboard](https://supabase.com/dashboard)
+* [GitHub Repository](https://github.com/)
+
+---
+
+**Dernière session:** Session 18 - Textile Standard System

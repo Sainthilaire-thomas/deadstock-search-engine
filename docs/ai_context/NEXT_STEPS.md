@@ -1,202 +1,236 @@
+# Next Steps - Deadstock Search Engine
 
-# NEXT_STEPS.md - Prochaines Étapes
-
-**Dernière mise à jour** : 6 janvier 2026
-
-**Dernière session** : 17 (Extraction Patterns)
+**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
 
 ---
 
-## Priorité Immédiate (Session 18)
+## 🎯 Priorité Immédiate (Session 19)
 
-### 1. Exécuter ADR-020 : Dictionnaire EN (~1h)
+### 1. Connecter API Recherche à Vue Matérialisée
 
-**Contexte** : 600 unknowns de TFS causés par absence de dictionnaire anglais.
+**Fichier:** `src/features/search/infrastructure/textileRepository.ts`
 
-**Actions** :
+```typescript
+// AVANT (colonnes legacy)
+async search(filters: SearchFilters): Promise<Textile[]> {
+  let query = supabase.from('textiles').select('*');
+  if (filters.materials) query = query.in('material_type', filters.materials);
+  // ...
+}
 
-```sql
--- 1. Seed dictionnaire EN (~150 termes)
-INSERT INTO deadstock.dictionary_mappings (source_term, source_locale, target_term, ...)
-VALUES 
-  ('cotton', 'en', 'cotton', 'fiber', ...),
-  ('silk', 'en', 'silk', 'fiber', ...),
-  ('blue', 'en', 'blue', 'color', ...),
-  ...
-
--- 2. Cleanup unknowns EN existants
-DELETE FROM deadstock.unknown_terms 
-WHERE source_platform LIKE '%thefabricsales%'
-  AND term IN (SELECT source_term FROM dictionary_mappings WHERE source_locale = 'en');
-
--- 3. Ajouter stopwords
-INSERT INTO deadstock.dictionary_mappings (source_term, source_locale, target_term, category_id, is_stopword)
-VALUES ('fabric', 'en', NULL, 'fiber', true), ...
-```
-
-**Résultat attendu** : Unknowns TFS 600 → <50
-
----
-
-### 2. Tester Extraction sur TFS (~30min)
-
-**Contexte** : Valider que les patterns fonctionnent aussi pour une source EN.
-
-**Actions** :
-
-1. Lancer discovery sur `thefabricsales.com`
-2. Vérifier patterns détectés (body_html EN différent)
-3. Scraper quelques produits
-4. Valider extraction dimensions
-
-**Patterns attendus TFS** :
-
-* Width: `Width: 150cm` dans body_html
-* Weight: `Weight: 150gr/m2` dans body_html
-* Length: N/A (vendu au mètre linéaire)
-
----
-
-### 3. Dashboard Qualité Unifié (~2h)
-
-**Contexte** : Vue centralisée des métriques de qualité des données.
-
-**Page** : `/admin/tuning/quality`
-
-**Sections** :
-
-1. **Score Global** : Moyenne pondérée toutes sources
-2. **Par Dimension** : % couverture material/color/pattern/length/width/weight
-3. **Par Source** : Détail par site
-4. **Alertes** : Sources avec problèmes
-
-**Maquette** :
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Qualité des Données                               [Actualiser] │
-├─────────────────────────────────────────────────────────────────┤
-│ SCORE GLOBAL: 87%                                              │
-│                                                                 │
-│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐│
-│ │ Matière     │ │ Couleur     │ │ Largeur     │ │ Poids       ││
-│ │ 95%    ✅   │ │ 88%    ✅   │ │ 76%    ⚠️   │ │ 82%    ✅   ││
-│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘│
-│                                                                 │
-│ PAR SOURCE                                                      │
-│ ┌───────────────────────────────────────────────────────────┐  │
-│ │ mylittlecoupon.fr  │ 98% │ ████████████████████░░ │ ✅    │  │
-│ │ thefabricsales.com │ 72% │ ██████████████░░░░░░░░ │ ⚠️    │  │
-│ └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Court Terme (Sessions 19-20)
-
-### 4. Toggle Patterns UI
-
-Permettre à l'admin d'activer/désactiver les patterns depuis l'interface.
-
-**Fichiers** :
-
-* Server action `toggleExtractionPattern(patternId, enabled)`
-* Modifier `ExtractionPatternsCard` pour être interactif
-* Option re-scrape après modification
-
-### 5. Test Pattern Live
-
-Interface pour tester un regex sur les produits samples avant activation.
-
-**UI** :
-
-* Input regex
-* Sélection source (tags/title/body_html)
-* Preview sur 10 produits
-* Bouton "Ajouter comme pattern"
-
-### 6. LLM Suggestions Unknowns (ADR-004)
-
-Ajouter suggestions LLM pour les unknowns avec bouton approve/reject.
-
-**Flow** :
-
-1. Unknown sans suggestion → Bouton "Demander suggestion"
-2. Appel API Claude/GPT
-3. Affichage suggestion avec confidence
-4. Admin approve → Ajout dictionnaire
-
----
-
-## Moyen Terme (Phase 2)
-
-### 7. Extraction Composition
-
-Détecter "100% coton", "80% viscose 20% elasthanne".
-
-**Storage** : `composition JSONB`
-
-```json
-{
-  "fibers": [
-    {"fiber": "viscose", "percentage": 80},
-    {"fiber": "elastane", "percentage": 20}
-  ]
+// APRÈS (vue matérialisée)
+async search(filters: SearchFilters): Promise<Textile[]> {
+  let query = supabase.from('textiles_search').select('*');
+  if (filters.materials) query = query.in('fiber', filters.materials);
+  // ...
 }
 ```
 
-### 8. Re-scraping Ciblé
+**Tâches:**
 
-Après modification patterns, re-scraper uniquement les produits affectés.
+* [ ] Modifier `search()` pour utiliser `textiles_search`
+* [ ] Modifier `getAvailableFilters()` pour utiliser `textile_attributes`
+* [ ] Tester performance
 
-### 9. API Professionnelle
+### 2. Filtres Dynamiques
 
-Exposer une API REST pour intégrations tierces.
+**Fichier:** `src/features/search/infrastructure/textileRepository.ts`
+
+```typescript
+// APRÈS (dynamique)
+async getAvailableFilters(): Promise<DynamicFilters> {
+  const { data: categories } = await supabase
+    .rpc('get_searchable_categories');
+  
+  const filters = await Promise.all(
+    categories.map(async (cat) => {
+      const { data } = await supabase
+        .from('textile_attributes')
+        .select('value')
+        .eq('category_slug', cat.slug);
+      return { slug: cat.slug, name: cat.name, values: [...new Set(data)] };
+    })
+  );
+  
+  return { categories: filters };
+}
+```
+
+**Tâches:**
+
+* [ ] Créer type `DynamicFilters`
+* [ ] Modifier `getAvailableFilters()`
+* [ ] Adapter `Filters.tsx` pour itérer sur catégories
+
+### 3. Commit Migrations
+
+```bash
+git add database/migrations/021_create_textiles_search_materialized_view.sql
+git add database/migrations/022_create_refresh_function.sql
+git add docs/sessions/SESSION_18_TEXTILE_STANDARD_SYSTEM.md
+git commit -m "feat(db): Vue matérialisée textiles_search + Session 18 notes"
+```
 
 ---
 
-## Long Terme (Phase 3)
+## 📅 Court Terme (Sessions 20-21)
 
-### 10. Multi-tenant
+### 4. Dual-Write Scraping
 
-Isolation par workspace/organisation.
+**Fichier:** `src/features/admin/services/scrapingService.ts`
 
-### 11. Reverse Marketplace
+Modifier le scraping pour écrire dans `textile_attributes` en plus des colonnes legacy.
 
-Designers postent demandes, suppliers répondent.
+```typescript
+// Après sauvegarde textile
+await supabase.from('textile_attributes').upsert([
+  { textile_id, category_slug: 'fiber', value: normalized.fiber, ... },
+  { textile_id, category_slug: 'color', value: normalized.color, ... },
+]);
+```
 
-### 12. AI Design Assistant
+**Tâches:**
 
-Suggestions de tissus basées sur le projet.
+* [ ] Modifier `saveProducts()` dans scrapingRepo
+* [ ] Ajouter upsert `textile_attributes`
+* [ ] Ajouter refresh vue après job
+
+### 5. Refresh Vue Après Scraping
+
+```typescript
+// À la fin du scraping job
+await supabase.rpc('refresh_textiles_search');
+```
+
+### 6. Clarifier quantity_value
+
+**Migration:** Ajouter `sale_type`
+
+```sql
+ALTER TABLE deadstock.textiles 
+ADD COLUMN sale_type TEXT DEFAULT 'fixed_length'
+CHECK (sale_type IN ('fixed_length', 'cut_to_order', 'by_piece'));
+
+UPDATE textiles SET sale_type = 'fixed_length' 
+WHERE source_platform LIKE '%mylittlecoupon%';
+
+UPDATE textiles SET sale_type = 'cut_to_order' 
+WHERE source_platform LIKE '%thefabricsales%';
+```
 
 ---
 
-## Backlog Technique
+## 🗓️ Moyen Terme (Sessions 22+)
 
-| Item                       | Priorité | Effort |
-| -------------------------- | --------- | ------ |
-| Dark mode complet          | Low       | 2h     |
-| Tests unitaires extraction | Medium    | 3h     |
-| Pagination discovery       | Low       | 1h     |
-| Export CSV textiles        | Medium    | 2h     |
-| Logs scraping persistants  | Low       | 2h     |
+### 7. Interface Discovery Enrichie
+
+Afficher le mapping standard ↔ extraction dans `/admin/discovery/[siteSlug]`
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Mapping Standard Deadstock                                      │
+├───────────┬───────────┬──────────┬────────────────┐            │
+│ Standard  │ Status    │ Source   │ Coverage       │            │
+├───────────┼───────────┼──────────┼────────────────┤            │
+│ fiber ⭐  │ ✅ Mappé  │ tags     │ 85%            │            │
+│ color ⭐  │ ✅ Mappé  │ tags     │ 80%            │            │
+│ width     │ ✅ Mappé  │ body     │ 100%           │            │
+│ length    │ ❌ N/A    │ —        │ Vente au mètre │            │
+└───────────┴───────────┴──────────┴────────────────┘            │
+```
+
+### 8. Interface Tuning Patterns
+
+```
+/admin/tuning → Onglets [Dictionnaire] [Patterns]
+
+Patterns (par site):
+┌──────────┬────────────────┬──────────┬──────────┐
+│ Attribut │ Pattern        │ Coverage │ Échecs   │
+├──────────┼────────────────┼──────────┼──────────┤
+│ width    │ /Width:(\d+)/  │ 100%     │ 0        │
+│ weight   │ /(\d+)gsm/     │ 95%      │ 12       │
+└──────────┴────────────────┴──────────┴──────────┘
+```
+
+### 9. Hiérarchie Catégories
+
+Enrichir `attribute_categories` avec sous-catégories :
+
+```
+fiber
+├── natural
+│   ├── silk
+│   ├── cotton
+│   └── wool
+└── synthetic
+    ├── polyester
+    └── nylon
+```
 
 ---
 
-## Métriques de Succès Session 18
+## 🔮 Long Terme (Phase 2)
 
-| Métrique          | Cible              |
-| ------------------ | ------------------ |
-| Unknowns TFS       | <50 (vs 600)       |
-| Extraction TFS     | >70% dimensions    |
-| Dashboard qualité | Page fonctionnelle |
+### 10. Authentification
+
+* Supabase Auth
+* Rôles admin/user
+* Migration session_id → user_id
+
+### 11. API Publique
+
+* REST endpoints documentés
+* Rate limiting
+* API keys
+
+### 12. Suppression Colonnes Legacy
+
+* Retirer `material_type`, `color`, `pattern` de `textiles`
+* Migrer `width_value`, `weight_value` vers `textile_attributes`
+* Utiliser uniquement `textiles_search` pour requêtes
 
 ---
 
-## Notes pour Prochaine Session
+## ✅ Checklist Session 19
 
-1. **Commencer par** seed dictionnaire EN (quick win)
-2. **Ne pas oublier** les stopwords ("fabric", "colour", etc.)
-3. **Tester** scraping TFS après seed
-4. **Si temps** commencer dashboard qualité
+```
+[ ] Modifier textileRepository.search() → textiles_search
+[ ] Modifier textileRepository.getAvailableFilters() → textile_attributes
+[ ] Créer type DynamicFilters
+[ ] Adapter Filters.tsx pour catégories dynamiques
+[ ] Tester recherche avec nouveaux filtres
+[ ] Commit migrations 021, 022
+[ ] Créer note SESSION_19
+```
+
+---
+
+## 📊 Métriques Cibles
+
+| Métrique             | Actuel | Cible Session 19 |
+| --------------------- | ------ | ---------------- |
+| API utilise vue mat.  | ❌     | ✅               |
+| Filtres dynamiques    | ❌     | ✅               |
+| Performance recherche | 2.8ms  | <5ms             |
+| Dual-write scraping   | ❌     | 🔲 Session 20    |
+
+---
+
+## 🔗 Fichiers à Modifier
+
+### Session 19
+
+* `src/features/search/infrastructure/textileRepository.ts`
+* `src/features/search/domain/types.ts`
+* `src/components/search/Filters.tsx`
+
+### Session 20
+
+* `src/features/admin/infrastructure/scrapingRepo.ts`
+* `src/features/admin/services/scrapingService.ts`
+* `database/migrations/023_add_sale_type.sql`
+
+---
+
+**Prochaine session:** Connecter API à vue matérialisée
