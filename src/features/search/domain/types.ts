@@ -1,9 +1,13 @@
 ﻿// src/features/search/domain/types.ts
 import type { GarmentType } from '@/features/pattern/domain/types';
 
+// Filtres dynamiques par catégorie (slug -> valeurs sélectionnées)
 export interface SearchFilters {
   keywords?: string;
-  materials?: string[];  // Mappe vers 'fiber' dans la vue
+  // Filtres dynamiques par catégorie slug
+  categoryFilters?: Record<string, string[]>;
+  // Legacy filters (pour rétrocompatibilité pendant transition)
+  materials?: string[];
   colors?: string[];
   patterns?: string[];
   minQuantity?: number;
@@ -78,8 +82,19 @@ export interface SearchResult {
   filters: AvailableFilters;
 }
 
+// Catégorie de filtre dynamique
+export interface FilterCategory {
+  slug: string;           // 'fiber', 'color', 'pattern', 'weave'
+  name: string;           // 'Fiber', 'Color', etc.
+  displayOrder: number;   // Ordre d'affichage
+  values: string[];       // Valeurs disponibles ['silk', 'cotton', ...]
+}
+
+// Filtres disponibles (version dynamique)
 export interface AvailableFilters {
-  materials: string[];  // fiber values
+  categories: FilterCategory[];
+  // Legacy (pour rétrocompatibilité)
+  materials: string[];
   colors: string[];
   patterns: string[];
 }

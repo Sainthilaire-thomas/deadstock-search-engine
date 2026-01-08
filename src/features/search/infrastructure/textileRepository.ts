@@ -1,7 +1,7 @@
 ﻿// src/features/search/infrastructure/textileRepository.ts
 
 import { createClient } from '@/lib/supabase/client';
-import type { SearchFilters, Textile, AvailableFilters } from '../domain/types';
+import type { SearchFilters, Textile, AvailableFilters, FilterCategory } from '../domain/types';
 
 export const textileRepository = {
   async search(filters: SearchFilters): Promise<Textile[]> {
@@ -13,17 +13,23 @@ export const textileRepository = {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Filtres fiber (anciennement materials/material_type)
+    // Filtres dynamiques par catégorie
+    if (filters.categoryFilters) {
+      for (const [slug, values] of Object.entries(filters.categoryFilters)) {
+        if (values && values.length > 0) {
+          // Le slug correspond à la colonne dans textiles_search (fiber, color, pattern, weave)
+          query = query.in(slug, values);
+        }
+      }
+    }
+
+    // Legacy filters (rétrocompatibilité)
     if (filters.materials && filters.materials.length > 0) {
       query = query.in('fiber', filters.materials);
     }
-
-    // Filtres couleurs
     if (filters.colors && filters.colors.length > 0) {
       query = query.in('color', filters.colors);
     }
-
-    // Filtres patterns
     if (filters.patterns && filters.patterns.length > 0) {
       query = query.in('pattern', filters.patterns);
     }
@@ -59,14 +65,13 @@ export const textileRepository = {
     // Mapper fiber vers material_type pour compatibilité avec le reste de l'app
     return (data || []).map(textile => ({
       ...textile,
-      material_type: textile.fiber, // Alias pour rétrocompatibilité
+      material_type: textile.fiber,
     }));
   },
 
   async findById(id: string): Promise<Textile | null> {
     const supabase = createClient();
 
-    // Garder la table textiles pour les lookups individuels (favoris, boards)
     const { data, error } = await supabase
       .from('textiles')
       .select('*')
@@ -84,26 +89,52 @@ export const textileRepository = {
   async getAvailableFilters(): Promise<AvailableFilters> {
     const supabase = createClient();
 
-    // Utiliser la vue matérialisée pour les filtres
-    const { data: fibers } = await supabase
-      .from('textiles_search')
-      .select('fiber')
-      .not('fiber', 'is', null);
+    // 1. Récupérer les catégories searchable depuis attribute_categories
+    const { data: categoriesData, error: catError } = await supabase
+      .from('attribute_categories')
+      .select('slug, name, display_order')
+      .eq('is_searchable', true)
+      .order('display_order', { ascending: true });
 
-    const { data: colors } = await supabase
-      .from('textiles_search')
-      .select('color')
-      .not('color', 'is', null);
+    if (catError) {
+      console.error('Error fetching categories:', catError);
+    }
 
-    const { data: patterns } = await supabase
-      .from('textiles_search')
-      .select('pattern')
-      .not('pattern', 'is', null);
+    // 2. Pour chaque catégorie, récupérer les valeurs distinctes depuis textile_attributes
+    const categories: FilterCategory[] = [];
+
+    for (const cat of categoriesData || []) {
+      const { data: valuesData } = await supabase
+        .from('textile_attributes')
+        .select('value')
+        .eq('category_slug', cat.slug);
+
+      const uniqueValues = [...new Set(valuesData?.map(v => v.value))]
+        .filter(Boolean)
+        .sort() as string[];
+
+      // N'ajouter que si on a des valeurs
+      if (uniqueValues.length > 0) {
+        categories.push({
+          slug: cat.slug,
+          name: cat.name,
+          displayOrder: cat.display_order,
+          values: uniqueValues,
+        });
+      }
+    }
+
+    // 3. Legacy format pour rétrocompatibilité
+    const fiberCategory = categories.find(c => c.slug === 'fiber');
+    const colorCategory = categories.find(c => c.slug === 'color');
+    const patternCategory = categories.find(c => c.slug === 'pattern');
 
     return {
-      materials: [...new Set(fibers?.map(f => f.fiber))].filter(Boolean).sort(),
-      colors: [...new Set(colors?.map(c => c.color))].filter(Boolean).sort(),
-      patterns: [...new Set(patterns?.map(p => p.pattern))].filter(Boolean).sort(),
+      categories,
+      // Legacy
+      materials: fiberCategory?.values || [],
+      colors: colorCategory?.values || [],
+      patterns: patternCategory?.values || [],
     };
   },
 };

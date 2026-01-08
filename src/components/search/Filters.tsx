@@ -13,6 +13,14 @@ import type { AvailableFilters, SearchFilters, YardageSearchFilter } from '@/fea
 import { PatternImportModal } from '@/features/pattern/components/PatternImportModal';
 import { YardageFilterBadge } from './YardageFilterBadge';
 
+// Traductions des noms de catégories
+const categoryLabels: Record<string, string> = {
+  fiber: 'Matière',
+  color: 'Couleur',
+  pattern: 'Motif',
+  weave: 'Tissage',
+};
+
 interface FiltersProps {
   availableFilters: AvailableFilters;
   currentFilters: SearchFilters;
@@ -22,31 +30,29 @@ interface FiltersProps {
 export function Filters({ availableFilters, currentFilters, onFiltersChange }: FiltersProps) {
   const [showPatternModal, setShowPatternModal] = useState(false);
 
-  const handleMaterialToggle = (material: string) => {
-    const current = currentFilters.materials || [];
-    const updated = current.includes(material)
-      ? current.filter(m => m !== material)
-      : [...current, material];
+  // Handler générique pour toggle une valeur dans une catégorie
+  const handleCategoryToggle = (categorySlug: string, value: string) => {
+    const currentCategoryFilters = currentFilters.categoryFilters || {};
+    const currentValues = currentCategoryFilters[categorySlug] || [];
+    
+    const updatedValues = currentValues.includes(value)
+      ? currentValues.filter(v => v !== value)
+      : [...currentValues, value];
 
-    onFiltersChange({ ...currentFilters, materials: updated });
-  };
+    const updatedCategoryFilters = {
+      ...currentCategoryFilters,
+      [categorySlug]: updatedValues,
+    };
 
-  const handleColorToggle = (color: string) => {
-    const current = currentFilters.colors || [];
-    const updated = current.includes(color)
-      ? current.filter(c => c !== color)
-      : [...current, color];
+    // Nettoyer les catégories vides
+    if (updatedValues.length === 0) {
+      delete updatedCategoryFilters[categorySlug];
+    }
 
-    onFiltersChange({ ...currentFilters, colors: updated });
-  };
-
-  const handlePatternToggle = (pattern: string) => {
-    const current = currentFilters.patterns || [];
-    const updated = current.includes(pattern)
-      ? current.filter(p => p !== pattern)
-      : [...current, pattern];
-
-    onFiltersChange({ ...currentFilters, patterns: updated });
+    onFiltersChange({ 
+      ...currentFilters, 
+      categoryFilters: updatedCategoryFilters,
+    });
   };
 
   const handleYardageFilterApply = (filter: YardageSearchFilter) => {
@@ -61,11 +67,15 @@ export function Filters({ availableFilters, currentFilters, onFiltersChange }: F
     onFiltersChange({});
   };
 
-  const hasActiveFilters =
-    (currentFilters.materials?.length || 0) > 0 ||
-    (currentFilters.colors?.length || 0) > 0 ||
-    (currentFilters.patterns?.length || 0) > 0 ||
+  // Vérifier si des filtres sont actifs
+  const hasActiveFilters = 
+    Object.values(currentFilters.categoryFilters || {}).some(values => values.length > 0) ||
     currentFilters.yardageFilter?.active;
+
+  // Vérifier si une valeur est sélectionnée
+  const isValueSelected = (categorySlug: string, value: string): boolean => {
+    return currentFilters.categoryFilters?.[categorySlug]?.includes(value) || false;
+  };
 
   return (
     <>
@@ -100,82 +110,41 @@ export function Filters({ availableFilters, currentFilters, onFiltersChange }: F
             onClick={() => setShowPatternModal(true)}
           >
             <Calculator className="w-4 h-4 mr-2" />
-            {currentFilters.yardageFilter?.active 
-              ? 'Modifier le patron' 
+            {currentFilters.yardageFilter?.active
+              ? 'Modifier le patron'
               : "📐 J'ai un patron"}
           </Button>
 
           <Separator />
 
-          {/* Materials */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm">Matière</h3>
-            <div className="space-y-2">
-              {availableFilters.materials.map((material) => (
-                <div key={material} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`material-${material}`}
-                    checked={currentFilters.materials?.includes(material)}
-                    onCheckedChange={() => handleMaterialToggle(material)}
-                  />
-                  <Label
-                    htmlFor={`material-${material}`}
-                    className="text-sm font-normal cursor-pointer capitalize"
-                  >
-                    {material}
-                  </Label>
+          {/* Dynamic Categories */}
+          {availableFilters.categories?.map((category, index) => (
+            <div key={category.slug}>
+              {index > 0 && <Separator className="mb-6" />}
+              <div className="space-y-3">
+                <h3 className="font-medium text-sm">
+                  {categoryLabels[category.slug] || category.name}
+                </h3>
+                <div className="space-y-2">
+                  {category.values.map((value) => (
+                    <div key={`${category.slug}-${value}`} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`${category.slug}-${value}`}
+                        checked={isValueSelected(category.slug, value)}
+                        onCheckedChange={() => handleCategoryToggle(category.slug, value)}
+                      />
+                      <Label
+                        htmlFor={`${category.slug}-${value}`}
+                        className="text-sm font-normal cursor-pointer capitalize"
+                      >
+                        {value}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Colors */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm">Couleur</h3>
-            <div className="space-y-2">
-              {availableFilters.colors.map((color) => (
-                <div key={color} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`color-${color}`}
-                    checked={currentFilters.colors?.includes(color)}
-                    onCheckedChange={() => handleColorToggle(color)}
-                  />
-                  <Label
-                    htmlFor={`color-${color}`}
-                    className="text-sm font-normal cursor-pointer capitalize"
-                  >
-                    {color}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Patterns */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm">Motif</h3>
-            <div className="space-y-2">
-              {availableFilters.patterns.map((pattern) => (
-                <div key={pattern} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`pattern-${pattern}`}
-                    checked={currentFilters.patterns?.includes(pattern)}
-                    onCheckedChange={() => handlePatternToggle(pattern)}
-                  />
-                  <Label
-                    htmlFor={`pattern-${pattern}`}
-                    className="text-sm font-normal cursor-pointer capitalize"
-                  >
-                    {pattern}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </CardContent>
       </Card>
 
