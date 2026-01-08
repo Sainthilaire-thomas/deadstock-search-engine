@@ -3,18 +3,17 @@ import type { GarmentType } from '@/features/pattern/domain/types';
 
 export interface SearchFilters {
   keywords?: string;
-  materials?: string[];
+  materials?: string[];  // Mappe vers 'fiber' dans la vue
   colors?: string[];
   patterns?: string[];
   minQuantity?: number;
   maxQuantity?: number;
   minPrice?: number;
   maxPrice?: number;
-  // NEW: Yardage filter from pattern import
+  // Yardage filter from pattern import
   yardageFilter?: YardageSearchFilter | null;
 }
 
-// NEW: Yardage filter type
 export interface YardageSearchFilter {
   active: boolean;
   patternName: string;
@@ -23,24 +22,49 @@ export interface YardageSearchFilter {
   yardageByWidth: Record<number, number>;
 }
 
+// Type pour les résultats de la vue matérialisée textiles_search
 export interface Textile {
   id: string;
   name: string;
   description: string | null;
-  material_type: string | null;
-  color: string | null;
-  pattern: string | null;
-  quantity_value: number;
-  quantity_unit: string;
-  price_value: number | null;
-  price_currency: string;
   image_url: string | null;
+  additional_images: string[] | null;
   source_url: string;
   source_platform: string;
-  supplier_name: string | null;
+  source_product_id: string | null;
+  site_id: string | null;
+  price_value: number | null;
+  price_currency: string;
+  price_per_unit: number | null;
+  price_per_unit_label: string | null;
+  width_value: number | null;
+  width_unit: string | null;
+  weight_value: number | null;
+  weight_unit: string | null;
+  quantity_value: number | null;
+  quantity_unit: string | null;
+  minimum_order_value: number | null;
+  minimum_order_unit: string | null;
   available: boolean;
+  supplier_name: string | null;
+  supplier_location: string | null;
   created_at: string;
-  // NEW: Computed field for yardage sufficiency
+  updated_at: string | null;
+  scraped_at: string | null;
+  data_quality_score: number | null;
+  // Attributs normalisés (depuis textile_attributes via la vue)
+  fiber: string | null;
+  color: string | null;
+  pattern: string | null;
+  weave: string | null;
+  // Scores de confiance
+  fiber_confidence: number | null;
+  color_confidence: number | null;
+  pattern_confidence: number | null;
+  weave_confidence: number | null;
+  // Alias pour rétrocompatibilité
+  material_type?: string | null;
+  // Champ calculé pour yardage sufficiency
   yardageSufficiency?: {
     sufficient: boolean;
     needed: number;
@@ -55,7 +79,7 @@ export interface SearchResult {
 }
 
 export interface AvailableFilters {
-  materials: string[];
+  materials: string[];  // fiber values
   colors: string[];
   patterns: string[];
 }
