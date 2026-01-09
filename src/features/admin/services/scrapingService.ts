@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database.types';
 import { scrapingRepo } from '../infrastructure/scrapingRepo';
 
+
 import type { Locale } from '@/features/tuning/domain/types';
 
 // Type for textiles insert
@@ -50,6 +51,10 @@ export interface ShopifyVariant {
   weight?: number;
   weight_unit?: string;
   grams?: number;
+  // Shopify options (used for variant selection)
+  option1?: string | null;  // Usually color
+  option2?: string | null;  // Often length/size
+  option3?: string | null;  // Can be lot reference or "Cutting"
 }
 
 export interface ShopifyProduct {
@@ -274,7 +279,7 @@ class ScrapingService {
 
 const savedCount = saveResult.saved + saveResult.updated;
     
-    console.log(`   ✅ Saved: ${savedCount} products`);
+   console.log(`   ✅ Saved: ${savedCount} products, ${saveResult.attributes} attributes`);
 
     const endedAt = new Date();
     const duration = endedAt.getTime() - startedAt.getTime();
@@ -287,6 +292,22 @@ const savedCount = saveResult.saved + saveResult.updated;
     console.log(`   Products: ${allProducts.length} valid, ${productsSkipped} skipped, ${savedCount} saved`);
     console.log(`   Quality: ${Math.round(qualityScore * 100)}%`);
     console.log(`   Errors: ${errors.length}\n`);
+
+    // =========================================================================
+    // REFRESH MATERIALIZED VIEW
+    // =========================================================================
+    console.log(`🔄 Refreshing textiles_search view...`);
+    const refreshStart = Date.now();
+    
+    const { error: refreshError } = await supabase.rpc('refresh_textiles_search');
+    
+    if (refreshError) {
+      console.error(`   ⚠️  Refresh failed:`, refreshError.message);
+    } else {
+      const refreshDuration = Date.now() - refreshStart;
+      console.log(`   ✅ View refreshed in ${refreshDuration}ms\n`);
+    }
+
 
     return {
       siteUrl: profile.siteUrl,

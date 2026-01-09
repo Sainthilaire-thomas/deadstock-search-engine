@@ -1,225 +1,134 @@
+
 # Current State - Deadstock Search Engine
 
-**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
+**Dernière mise à jour** : 9 Janvier 2026
+
+**Session** : 20
 
 ---
 
-## 🎯 Statut Global
+## État Global du Projet
 
-| Métrique               | Valeur                          |
-| ----------------------- | ------------------------------- |
-| **Phase**         | MVP Phase 1                     |
-| **Progression**   | ~90%                            |
-| **Sprint actuel** | Data Architecture & Performance |
-
----
-
-## 📊 Données en Base
-
-### Textiles
-
-| Métrique            | Valeur    |
-| -------------------- | --------- |
-| Total textiles       | 160       |
-| Textiles disponibles | 160       |
-| Avec fiber           | 95 (59%)  |
-| Avec color           | 115 (72%) |
-| Avec pattern         | 83 (52%)  |
-
-### Sources
-
-| Site             | Status    | Textiles | Qualité |
-| ---------------- | --------- | -------- | -------- |
-| My Little Coupon | ✅ Actif  | ~100     | 98%      |
-| The Fabric Sales | ✅ Actif  | ~60      | 90%      |
-| Recovo           | 🔲 Prévu | —       | —       |
-
-### Dictionnaire
-
-| Métrique      | Valeur |
-| -------------- | ------ |
-| Termes EN      | 181    |
-| Termes FR      | 75     |
-| Total mappings | 256    |
-| Unknown terms  | <10    |
-
-### Nouvelle Architecture (Session 18)
-
-| Table                         | Rows | Status     |
-| ----------------------------- | ---- | ---------- |
-| `textile_attributes`        | 293  | ✅ Peuplé |
-| `textiles_search`(vue mat.) | 160  | ✅ Créé  |
-| `attribute_categories`      | 4    | ✅ Actif   |
+| Métrique                  | Valeur                            |
+| -------------------------- | --------------------------------- |
+| **MVP Phase 1**      | ~92% complet                      |
+| **Textiles en base** | 268                               |
+| **Sources actives**  | 4 (MLC, TFS, Nona Source, Recovo) |
+| **Unknowns pending** | 0                                 |
 
 ---
 
-## 🏗️ Modules Applicatifs
+## Modules - État Détaillé
 
-### ✅ Complétés
+### ✅ Search Module (100%)
 
-| Module                    | Status  | Description                          |
-| ------------------------- | ------- | ------------------------------------ |
-| **Search**          | ✅ 95%  | Recherche textiles avec filtres      |
-| **Favorites**       | ✅ 100% | Système favoris avec sync instant   |
-| **Boards**          | ✅ 90%  | Canvas interactif, zones, éléments |
-| **Crystallization** | ✅ 85%  | Board → Projet                      |
-| **Admin Sites**     | ✅ 100% | CRUD sites, discovery                |
-| **Admin Scraping**  | ✅ 100% | Configuration, jobs, preview         |
-| **Admin Tuning**    | ✅ 90%  | Dictionnaire, unknowns               |
-| **Pattern Import**  | ✅ 80%  | Upload PDF, calcul métrage          |
+* Interface de recherche fonctionnelle
+* Filtres dynamiques via `textiles_search` materialized view
+* 2.8ms query performance
+* Filtres: Fiber, Color, Pattern, Price range
 
-### 🔄 En Cours
+### ✅ Favorites Module (100%)
 
-| Module                       | Status | Reste à faire                      |
-| ---------------------------- | ------ | ----------------------------------- |
-| **Data Architecture**  | 🔄 70% | Connecter API à vue matérialisée |
-| **Admin Discovery**    | 🔄 80% | Interface mapping standard          |
-| **Filtres Dynamiques** | 🔄 30% | Utiliser `attribute_categories`   |
+* Sync instantanée avec optimistic updates
+* React Context pour état global
+* Support anonymous + authenticated users
 
-### 🔲 À Faire
+### ✅ Boards Module (95%)
 
-| Module               | Priorité | Description              |
-| -------------------- | --------- | ------------------------ |
-| Admin Pattern Tuning | P3        | Interface regex par site |
-| Authentification     | P2        | Supabase Auth            |
-| Multi-langue UI      | P3        | i18n français/anglais   |
+* Canvas drag-drop fonctionnel
+* Éléments: textiles, notes, color palettes, zones
+* Cristallisation zones → projets concrets
 
----
+### ✅ Admin Module - Sites & Discovery (95%)
 
-## 🗄️ Architecture Base de Données
+* Discovery automatique sites Shopify
+* Deadstock Score calculation
+* Extraction patterns detection
+* Interface `/admin/discovery/[siteId]`
 
-### Schema `deadstock`
+### ✅ Admin Module - Scraping (95%)
 
-```
-Tables principales:
-├── textiles (160 rows)
-├── textile_attributes (293 rows) ← NOUVEAU
-├── attribute_categories (4 rows)
-├── dictionary_mappings (256 rows)
-├── unknown_terms
-├── sites (3 rows)
-├── site_profiles
-├── scraping_jobs
-├── favorites
-├── boards
-├── board_elements
-├── board_zones
-└── projects
+* Pipeline complet avec normalisation
+* **NEW** : Variant analysis intelligent (ADR-025)
+* **NEW** : `sale_type` detection (fixed_length, hybrid, cut_to_order)
+* **NEW** : `price_per_meter` calculation
+* **NEW** : `quantity_value` extraction depuis variants
+* Dual-write: `textiles` + `textile_attributes`
+* Materialized view refresh automatique
 
-Vues:
-├── textiles_search (vue matérialisée) ← NOUVEAU
-├── textiles_with_attributes
-└── active_textiles
+### ✅ Admin Module - Tuning (90%)
 
-Fonctions:
-├── refresh_textiles_search() ← NOUVEAU
-├── get_searchable_categories()
-└── increment_mapping_usage()
-```
+* Interface unknowns `/admin/tuning`
+* Multi-locale dictionaries (FR/EN)
+* Approve/Reject workflow
 
-### Performance Recherche
+### ⏳ Admin Module - Discovery UI Avancée (30%)
 
-| Métrique               | Valeur    |
-| ----------------------- | --------- |
-| Temps requête filtrée | 2.8 ms    |
-| Temps refresh vue       | 96 ms     |
-| Index utilisés         | BitmapAnd |
+* Patterns d'extraction affichés
+* **TODO** : Toggle enable/disable patterns
+* **TODO** : Coverage preview dashboard
+* **TODO** : Test pattern live
 
 ---
 
-## 🔧 Stack Technique
+## Base de Données
 
-### Frontend
+### Tables Principales
 
-* Next.js 15.1.1
-* React 19
-* TypeScript
-* Tailwind CSS
-* shadcn/ui
+| Table                   | Rows | Status    |
+| ----------------------- | ---- | --------- |
+| `textiles`            | 268  | ✅ Active |
+| `textile_attributes`  | ~500 | ✅ Active |
+| `dictionary_mappings` | 256  | ✅ Active |
+| `sites`               | 4    | ✅ Active |
+| `site_profiles`       | 4    | ✅ Active |
+| `favorites`           | ~20  | ✅ Active |
+| `boards`              | ~5   | ✅ Active |
 
-### Backend
+### Colonnes Récentes (Session 20)
 
-* Supabase (PostgreSQL)
-* Server Actions
-* Row Level Security
+* `textiles.sale_type` : 'fixed_length' | 'hybrid' | 'cut_to_order' | 'by_piece'
+* `textiles.price_per_meter` : Calculated price per meter
 
-### Infrastructure
+### Materialized View
 
-* Vercel (hosting)
-* Supabase (database)
-
----
-
-## 📁 Structure Projet
-
-```
-src/
-├── app/
-│   ├── admin/
-│   │   ├── discovery/
-│   │   ├── sites/
-│   │   ├── jobs/
-│   │   ├── tuning/
-│   │   └── dictionary/
-│   ├── boards/
-│   ├── favorites/
-│   ├── search/
-│   └── tools/
-├── features/
-│   ├── admin/
-│   ├── boards/
-│   ├── favorites/
-│   ├── normalization/
-│   ├── search/
-│   └── tuning/
-└── components/
-    ├── search/
-    └── ui/
-```
+* `textiles_search` : Vue optimisée pour recherche, refresh après scraping
 
 ---
 
-## 📋 ADRs Actifs
+## Code - Fichiers Clés Modifiés (Session 20)
 
-| ADR               | Titre                              | Status                |
-| ----------------- | ---------------------------------- | --------------------- |
-| ADR-010           | Dynamic Attribute System           | ✅ Implémenté       |
-| ADR-020           | Source Locale Configuration        | ✅ Implémenté       |
-| ADR-021           | Extraction Patterns System         | ✅ Implémenté       |
-| ADR-022           | Demand Driven Indexation           | 📋 Prévu             |
-| ADR-023           | Scraping Normalization Integration | ✅ Implémenté       |
-| **ADR-024** | **Textile Standard System**  | **🔄 En cours** |
+| Fichier                                               | Modification                                          |
+| ----------------------------------------------------- | ----------------------------------------------------- |
+| `src/features/admin/utils/variantAnalyzer.ts`       | **NEW**- Analyse intelligente variants Shopify  |
+| `src/features/admin/infrastructure/scrapingRepo.ts` | Utilise variantAnalyzer pour available/price/quantity |
+| `src/features/admin/services/scrapingService.ts`    | Types ShopifyVariant enrichis (option1/2/3)           |
 
 ---
 
-## 🎯 Prochaines Priorités
+## Bugs Corrigés (Session 20)
 
-### Immédiat (Session 19)
+### Bug Critique: Nona Source 79% Unavailable
 
-1. Connecter API recherche à `textiles_search`
-2. Filtres dynamiques via `attribute_categories`
-3. Commit migrations SQL
-
-### Court terme
-
-4. Dual-write scraping → `textile_attributes`
-5. Refresh vue après scraping
-6. Clarifier `quantity_value` avec `sale_type`
-
-### Moyen terme
-
-7. Interface tuning patterns
-8. Hiérarchie catégories
-9. Authentification utilisateurs
+* **Cause** : Scraper prenait uniquement `variants[0]` pour `available` et `price`
+* **Impact** : 79 textiles marqués unavailable à tort
+* **Solution** : `variantAnalyzer.ts` analyse TOUS les variants
+* **Status** : ✅ Corrigé - 100% available maintenant
 
 ---
 
-## 🔗 Liens Utiles
+## Performance
 
-* [Vercel Dashboard](https://vercel.com/)
-* [Supabase Dashboard](https://supabase.com/dashboard)
-* [GitHub Repository](https://github.com/)
+| Métrique                 | Valeur |
+| ------------------------- | ------ |
+| Search query              | 2.8ms  |
+| Materialized view refresh | ~270ms |
+| Scraping 10 products      | ~4s    |
 
 ---
 
-**Dernière session:** Session 18 - Textile Standard System
+## Prochaines Priorités
+
+1. **Interface Discovery avancée** - Toggle patterns, coverage dashboard
+2. **Scraping complet** - Plus de produits depuis les sources
+3. **Optimisation documentation** - Consolidation pour réduire context window

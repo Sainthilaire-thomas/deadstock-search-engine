@@ -37,10 +37,12 @@ export interface Textile {
   source_platform: string;
   source_product_id: string | null;
   site_id: string | null;
-  price_value: number | null;
+ price_value: number | null;
   price_currency: string;
   price_per_unit: number | null;
   price_per_unit_label: string | null;
+  price_per_meter: number | null;  // NEW - ADR-025
+  sale_type: 'fixed_length' | 'hybrid' | 'cut_to_order' | 'by_piece' | null;  // NEW - ADR-025
   width_value: number | null;
   width_unit: string | null;
   weight_value: number | null;

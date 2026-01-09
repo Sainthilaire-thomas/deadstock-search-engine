@@ -1,236 +1,142 @@
+
 # Next Steps - Deadstock Search Engine
 
-**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
+**Dernière mise à jour** : 9 Janvier 2026
+
+**Après Session** : 20
 
 ---
 
-## 🎯 Priorité Immédiate (Session 19)
+## 🎯 Priorité Immédiate (Session 21)
 
-### 1. Connecter API Recherche à Vue Matérialisée
+### 1. Consolidation Documentation (CRITIQUE)
 
-**Fichier:** `src/features/search/infrastructure/textileRepository.ts`
+**Problème** : La documentation projet occupe 22% du context window, limitant l'espace pour le code et les conversations.
 
-```typescript
-// AVANT (colonnes legacy)
-async search(filters: SearchFilters): Promise<Textile[]> {
-  let query = supabase.from('textiles').select('*');
-  if (filters.materials) query = query.in('material_type', filters.materials);
-  // ...
-}
+**Action** : Créer un document unique `PROJECT_CONTEXT_COMPACT.md` (~20KB max) qui consolide :
 
-// APRÈS (vue matérialisée)
-async search(filters: SearchFilters): Promise<Textile[]> {
-  let query = supabase.from('textiles_search').select('*');
-  if (filters.materials) query = query.in('fiber', filters.materials);
-  // ...
-}
-```
+* Architecture essentielle
+* Tables DB actuelles (pas l'historique)
+* Fichiers clés par module
+* Patterns de code utilisés
+* État actuel simplifié
 
-**Tâches:**
+**Documents à archiver** (ne plus charger systématiquement) :
 
-* [ ] Modifier `search()` pour utiliser `textiles_search`
-* [ ] Modifier `getAvailableFilters()` pour utiliser `textile_attributes`
-* [ ] Tester performance
+* ADR_001 à ADR_023 (décisions historiques, consultables si besoin)
+* SESSION_7 à SESSION_19 (historique, archivé)
+* SPEC_* anciens (remplacés par implémentation)
+* ARCHITECTURE_UX_BOARD_REALISATION.md (83K!)
+* SPEC_ADMIN_DATA_TUNING_COMPLETE.md (83K!)
 
-### 2. Filtres Dynamiques
+**Documents à conserver actifs** :
 
-**Fichier:** `src/features/search/infrastructure/textileRepository.ts`
-
-```typescript
-// APRÈS (dynamique)
-async getAvailableFilters(): Promise<DynamicFilters> {
-  const { data: categories } = await supabase
-    .rpc('get_searchable_categories');
-  
-  const filters = await Promise.all(
-    categories.map(async (cat) => {
-      const { data } = await supabase
-        .from('textile_attributes')
-        .select('value')
-        .eq('category_slug', cat.slug);
-      return { slug: cat.slug, name: cat.name, values: [...new Set(data)] };
-    })
-  );
-  
-  return { categories: filters };
-}
-```
-
-**Tâches:**
-
-* [ ] Créer type `DynamicFilters`
-* [ ] Modifier `getAvailableFilters()`
-* [ ] Adapter `Filters.tsx` pour itérer sur catégories
-
-### 3. Commit Migrations
-
-```bash
-git add database/migrations/021_create_textiles_search_materialized_view.sql
-git add database/migrations/022_create_refresh_function.sql
-git add docs/sessions/SESSION_18_TEXTILE_STANDARD_SYSTEM.md
-git commit -m "feat(db): Vue matérialisée textiles_search + Session 18 notes"
-```
+* `PROJECT_CONTEXT_COMPACT.md` (nouveau, consolidé)
+* `CURRENT_STATE.md` (état actuel)
+* `NEXT_STEPS.md` (roadmap)
+* `ADR_024_TEXTILE_STANDARD_SYSTEM.md` (architecture actuelle)
+* `ADR_025_ADMIN_ARCHITECTURE_CLARIFICATION.md` (récent, variant analysis)
+* `GLOSSAIRE.md` (référence termes)
 
 ---
 
-## 📅 Court Terme (Sessions 20-21)
+## 📋 Backlog Priorisé
 
-### 4. Dual-Write Scraping
+### P1 - Court Terme (Sessions 21-22)
 
-**Fichier:** `src/features/admin/services/scrapingService.ts`
+#### 1.1 Documentation Consolidée
 
-Modifier le scraping pour écrire dans `textile_attributes` en plus des colonnes legacy.
+* [ ] Créer `PROJECT_CONTEXT_COMPACT.md`
+* [ ] Archiver documents obsolètes
+* [ ] Tester que Claude peut travailler efficacement avec contexte réduit
 
-```typescript
-// Après sauvegarde textile
-await supabase.from('textile_attributes').upsert([
-  { textile_id, category_slug: 'fiber', value: normalized.fiber, ... },
-  { textile_id, category_slug: 'color', value: normalized.color, ... },
-]);
-```
+#### 1.2 Interface Discovery Avancée
 
-**Tâches:**
+* [ ] Onglet "Extraction" dans `/admin/sites/[id]/configure`
+* [ ] Toggle enable/disable patterns
+* [ ] Dashboard couverture attributs (% fiber, color, width, etc.)
+* [ ] Bouton "Test on 10 products"
 
-* [ ] Modifier `saveProducts()` dans scrapingRepo
-* [ ] Ajouter upsert `textile_attributes`
-* [ ] Ajouter refresh vue après job
+#### 1.3 Scraping Scale
 
-### 5. Refresh Vue Après Scraping
+* [ ] Scraper plus de produits Nona Source (2500+ disponibles)
+* [ ] Scraper plus de produits MLC (11000+ disponibles)
+* [ ] Monitorer qualité données
 
-```typescript
-// À la fin du scraping job
-await supabase.rpc('refresh_textiles_search');
-```
+### P2 - Moyen Terme (Sessions 23-25)
 
-### 6. Clarifier quantity_value
+#### 2.1 Search UX Improvements
 
-**Migration:** Ajouter `sale_type`
+* [ ] Afficher `sale_type` dans les cards textiles
+* [ ] Afficher `price_per_meter` formaté
+* [ ] Afficher `quantity_value` avec unité
+* [ ] Indicateur visuel disponibilité
 
-```sql
-ALTER TABLE deadstock.textiles 
-ADD COLUMN sale_type TEXT DEFAULT 'fixed_length'
-CHECK (sale_type IN ('fixed_length', 'cut_to_order', 'by_piece'));
+#### 2.2 Filtres Dynamiques Complets
 
-UPDATE textiles SET sale_type = 'fixed_length' 
-WHERE source_platform LIKE '%mylittlecoupon%';
+* [ ] Filtre par `sale_type`
+* [ ] Filtre par `price_per_meter` range
+* [ ] Filtre par `quantity_value` min
 
-UPDATE textiles SET sale_type = 'cut_to_order' 
-WHERE source_platform LIKE '%thefabricsales%';
-```
+#### 2.3 Admin Quality Dashboard
 
----
+* [ ] Métriques globales (textiles, coverage, unknowns)
+* [ ] Qualité par source
+* [ ] Alertes si qualité dégradée
 
-## 🗓️ Moyen Terme (Sessions 22+)
+### P3 - Long Terme (Phase 2)
 
-### 7. Interface Discovery Enrichie
-
-Afficher le mapping standard ↔ extraction dans `/admin/discovery/[siteSlug]`
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Mapping Standard Deadstock                                      │
-├───────────┬───────────┬──────────┬────────────────┐            │
-│ Standard  │ Status    │ Source   │ Coverage       │            │
-├───────────┼───────────┼──────────┼────────────────┤            │
-│ fiber ⭐  │ ✅ Mappé  │ tags     │ 85%            │            │
-│ color ⭐  │ ✅ Mappé  │ tags     │ 80%            │            │
-│ width     │ ✅ Mappé  │ body     │ 100%           │            │
-│ length    │ ❌ N/A    │ —        │ Vente au mètre │            │
-└───────────┴───────────┴──────────┴────────────────┘            │
-```
-
-### 8. Interface Tuning Patterns
-
-```
-/admin/tuning → Onglets [Dictionnaire] [Patterns]
-
-Patterns (par site):
-┌──────────┬────────────────┬──────────┬──────────┐
-│ Attribut │ Pattern        │ Coverage │ Échecs   │
-├──────────┼────────────────┼──────────┼──────────┤
-│ width    │ /Width:(\d+)/  │ 100%     │ 0        │
-│ weight   │ /(\d+)gsm/     │ 95%      │ 12       │
-└──────────┴────────────────┴──────────┴──────────┘
-```
-
-### 9. Hiérarchie Catégories
-
-Enrichir `attribute_categories` avec sous-catégories :
-
-```
-fiber
-├── natural
-│   ├── silk
-│   ├── cotton
-│   └── wool
-└── synthetic
-    ├── polyester
-    └── nylon
-```
+* [ ] Authentification utilisateurs
+* [ ] Subscriptions / Pricing
+* [ ] API pour partenaires
+* [ ] Nouvelles sources (Recovo complet, Queen of Raw, etc.)
 
 ---
 
-## 🔮 Long Terme (Phase 2)
+## 🔧 Tâches Techniques en Attente
 
-### 10. Authentification
+### Database
 
-* Supabase Auth
-* Rôles admin/user
-* Migration session_id → user_id
+* [ ] Index sur `textiles.sale_type` si recherche fréquente
+* [ ] Cleanup colonnes legacy si plus utilisées
 
-### 11. API Publique
+### Code
 
-* REST endpoints documentés
-* Rate limiting
-* API keys
+* [ ] Tests unitaires `variantAnalyzer.ts`
+* [ ] Tests E2E scraping pipeline
 
-### 12. Suppression Colonnes Legacy
+### DevOps
 
-* Retirer `material_type`, `color`, `pattern` de `textiles`
-* Migrer `width_value`, `weight_value` vers `textile_attributes`
-* Utiliser uniquement `textiles_search` pour requêtes
+* [ ] Monitoring Supabase (usage, performance)
+* [ ] Alertes si scraping échoue
 
 ---
 
-## ✅ Checklist Session 19
+## 📝 Notes pour Prochaine Session
 
-```
-[ ] Modifier textileRepository.search() → textiles_search
-[ ] Modifier textileRepository.getAvailableFilters() → textile_attributes
-[ ] Créer type DynamicFilters
-[ ] Adapter Filters.tsx pour catégories dynamiques
-[ ] Tester recherche avec nouveaux filtres
-[ ] Commit migrations 021, 022
-[ ] Créer note SESSION_19
-```
+### Contexte Minimal à Charger
 
----
+Pour la session 21, charger uniquement :
 
-## 📊 Métriques Cibles
+1. `PROJECT_CONTEXT_COMPACT.md` (à créer)
+2. `CURRENT_STATE.md`
+3. `NEXT_STEPS.md`
+4. `GLOSSAIRE.md` (si besoin termes métier)
 
-| Métrique             | Actuel | Cible Session 19 |
-| --------------------- | ------ | ---------------- |
-| API utilise vue mat.  | ❌     | ✅               |
-| Filtres dynamiques    | ❌     | ✅               |
-| Performance recherche | 2.8ms  | <5ms             |
-| Dual-write scraping   | ❌     | 🔲 Session 20    |
+### Questions Ouvertes
+
+1. Faut-il détecter automatiquement le `sale_type` lors du Discovery (pas seulement Scraping) ?
+2. Comment gérer les produits "hybrid" dans l'affichage (2 prix possibles) ?
+3. Prioriser MLC ou Nona Source pour le prochain gros scraping ?
 
 ---
 
-## 🔗 Fichiers à Modifier
+## ✅ Accompli Session 20
 
-### Session 19
-
-* `src/features/search/infrastructure/textileRepository.ts`
-* `src/features/search/domain/types.ts`
-* `src/components/search/Filters.tsx`
-
-### Session 20
-
-* `src/features/admin/infrastructure/scrapingRepo.ts`
-* `src/features/admin/services/scrapingService.ts`
-* `database/migrations/023_add_sale_type.sql`
-
----
-
-**Prochaine session:** Connecter API à vue matérialisée
+* [X] Analyse bug Nona Source (79% unavailable)
+* [X] Migration 026 - fix données existantes avec `analyze_nona_variants()`
+* [X] ADR-025 - documentation écart vision/implémentation
+* [X] `variantAnalyzer.ts` - analyse intelligente variants
+* [X] Modification `scrapingRepo.ts` pour utiliser analyzer
+* [X] Test scraping 10 produits Nona Source
+* [X] Vérification données corrigées (100% available)

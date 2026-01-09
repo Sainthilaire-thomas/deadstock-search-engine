@@ -49,6 +49,7 @@ function mapDbProfileToSiteProfile(dbProfile: any, siteUrl: string): SiteProfile
       analyzedAt: new Date().toISOString(),
       productsAnalyzed: 0,
     },
+     saleTypeDetection: dbProfile.sale_type_detection || null,
   };
 }
 
@@ -131,8 +132,9 @@ const profileData = {
   estimated_products: profile.estimatedProducts,
   estimated_available: profile.estimatedAvailable,
   global_analysis: profile.globalAnalysis,
-  extraction_patterns: profile.extractionPatterns,  // ← AJOUTER CETTE LIGNE
-  needs_rediscovery: false,
+  extraction_patterns: profile.extractionPatterns,
+sale_type_detection: profile.saleTypeDetection,  // ← NOUVELLE LIGNE
+needs_rediscovery: false,
   rediscovery_reason: null,
 };
   console.log('[Action] Saving profile:', {

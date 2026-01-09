@@ -15,6 +15,7 @@
 import { addMonths } from 'date-fns';
 import { detectExtractionPatterns } from './extractionPatternDetector';
 import type { ExtractionPatterns } from '../domain/types';
+import { detectSaleType, type SaleTypeDetection } from './saleTypeDetector';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -244,6 +245,9 @@ export interface SiteProfile {
 
   // NOUVEAU - Extraction patterns détectés
   extractionPatterns: ExtractionPatterns;
+
+  // NOUVEAU - Sale type detection (ADR-026)
+  saleTypeDetection: SaleTypeDetection;
 
   // Metadata
   totalCollections: number;
@@ -1167,19 +1171,32 @@ class DiscoveryService {
     }
     console.log('');
 
-    // Step 8: Analyze data structure (était Step 7)
+       // Step 8: Detect sale type (ADR-026)
+    console.log('🏷️  Detecting sale type...');
+    const saleTypeDetection = detectSaleType(allSampledProducts);
+    console.log(`   Type: ${saleTypeDetection.dominantType.toUpperCase()} (${saleTypeDetection.confidence}% confidence)`);
+    console.log(`   ${saleTypeDetection.description}`);
+    if (saleTypeDetection.recommendations.length > 0) {
+      console.log(`   Recommendations:`);
+      for (const rec of saleTypeDetection.recommendations) {
+        console.log(`   - ${rec}`);
+      }
+    }
+    console.log('');
+
+    // Step 9: Analyze data structure (était Step 7)
     const dataStructure = analyzeDataStructure(allSampledProducts);
 
-    // Step 9: Generate recommendations (était Step 8)
+    // Step 10: Generate recommendations (était Step 8)
     const recommendations = generateRecommendations(qualityMetrics, collectionsData, globalAnalysis);
 
-    // Step 10: Calculate totals (était Step 9)
+    // Step 11: Calculate totals (était Step 9)
     const totalProducts = collectionsData.reduce((sum, c) => sum + c.productsCount, 0);
     const estimatedAvailable = Math.round(totalProducts * (globalAnalysis.availabilityRate / 100));
 
   
-    // Step 11: Create profile
-    // Step 11: Create profile
+   
+    // Step 12: Create profile
     const profile: SiteProfile = {
       siteUrl: normalizedUrl,
       platform,
@@ -1194,7 +1211,7 @@ class DiscoveryService {
       recommendations,
       globalAnalysis,
       extractionPatterns,  // ← NOUVEAU
-
+saleTypeDetection,  
       totalCollections: allCollections.length,
       relevantCollections: relevantCount,
       estimatedProducts: totalProducts,

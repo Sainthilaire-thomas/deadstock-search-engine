@@ -14,6 +14,19 @@ import { normalizeTextile, type NormalizeTextileOutput } from '@/features/normal
 import type { Locale } from '@/features/tuning/domain/types';
 import { extractDimensions, type ExtractedDimensions } from '../services/extractionService';
 import type { ExtractionPatterns } from '../domain/types';
+import { analyzeVariants } from '../utils/variantAnalyzer';
+
+// ============================================================================
+// CATEGORY IDs (for textile_attributes dual-write)
+// ============================================================================
+
+const CATEGORY_IDS = {
+  fiber: 'd68146d7-46a0-4dc4-8283-388e5d83e979',
+  color: '4c5841b1-430a-4501-9f0e-1d978869a77d',
+  pattern: 'be7768ee-cad6-48fc-adb9-30000296642a',
+  weave: '1d191a33-6d64-4399-9d28-8e84f33a1bcb',
+} as const;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -139,6 +152,86 @@ function buildReviewReasons(unknowns: Record<string, string>): any[] | null {
   }
   
   return reasons.length > 0 ? reasons : null;
+}
+
+// ============================================================================
+// HELPER: SAVE TEXTILE ATTRIBUTES (dual-write)
+// ============================================================================
+
+async function saveTextileAttributes(
+  supabase: ReturnType<typeof createScraperClient>,
+  textileId: string,
+  normalized: NormalizeTextileOutput,
+  extractedTerms: ReturnType<typeof extractTermsFromShopify>,
+  sourceLocale?: Locale
+): Promise<number> {
+  const attributes: Array<{
+    textile_id: string;
+    category_id: string;
+    category_slug: string;
+    value: string;
+    source_term: string | null;
+    source_locale: string;
+    confidence: number;
+  }> = [];
+
+  // Fiber (material)
+  if (normalized.material?.value) {
+    attributes.push({
+      textile_id: textileId,
+      category_id: CATEGORY_IDS.fiber,
+      category_slug: 'fiber',
+      value: normalized.material.value,
+      source_term: extractedTerms.materials[0] || null,
+      source_locale: sourceLocale || 'fr',
+      confidence: 1.0,
+    });
+  }
+
+  // Color
+  if (normalized.color?.value) {
+    attributes.push({
+      textile_id: textileId,
+      category_id: CATEGORY_IDS.color,
+      category_slug: 'color',
+      value: normalized.color.value,
+      source_term: extractedTerms.colors[0] || null,
+      source_locale: sourceLocale || 'fr',
+      confidence: 1.0,
+    });
+  }
+
+  // Pattern
+  if (normalized.pattern?.value) {
+    attributes.push({
+      textile_id: textileId,
+      category_id: CATEGORY_IDS.pattern,
+      category_slug: 'pattern',
+      value: normalized.pattern.value,
+      source_term: extractedTerms.patterns[0] || null,
+      source_locale: sourceLocale || 'fr',
+      confidence: 1.0,
+    });
+  }
+
+  if (attributes.length === 0) {
+    return 0;
+  }
+
+  // Upsert with conflict on (textile_id, category_id)
+  const { error } = await supabase
+    .from('textile_attributes')
+    .upsert(attributes, {
+      onConflict: 'textile_id,category_id',
+      ignoreDuplicates: false,
+    });
+
+  if (error) {
+    console.error(`      ⚠️  Failed to save attributes:`, error.message);
+    return 0;
+  }
+
+  return attributes.length;
 }
 
 // ============================================================================
@@ -279,14 +372,15 @@ async saveProducts(
   siteUrl: string,
   jobId: string,
   sourceLocale?: Locale,
-  extractionPatterns?: ExtractionPatterns | null  // ← NOUVEAU
-): Promise<{ saved: number; updated: number; skipped: number }> {
+  extractionPatterns?: ExtractionPatterns | null
+): Promise<{ saved: number; updated: number; skipped: number; attributes: number }> {
     const supabase = createScraperClient();
     const normalizedUrl = normalizeUrl(siteUrl);
     
     let saved = 0;
     let updated = 0;
     let skipped = 0;
+    let attributesTotal = 0;
     
     console.log(`\n💾 Saving ${products.length} products with normalization...`);
     
@@ -324,7 +418,7 @@ async saveProducts(
         // ========================================================================
         const qualityScore = calculateQualityScore(product, normalized);
         
-          // ========================================================================
+        // ========================================================================
         // STEP 3.5: Extract dimensions using patterns
         // ========================================================================
         const dimensions = extractDimensions(product, extractionPatterns ?? null);
@@ -333,64 +427,107 @@ async saveProducts(
           console.log(`      📏 Dimensions: length=${dimensions.length?.value || '-'}${dimensions.length?.unit || ''}, width=${dimensions.width?.value || '-'}${dimensions.width?.unit || ''}, weight=${dimensions.weight?.value || '-'}${dimensions.weight?.unit || ''}`);
         }
 
+       // ========================================================================
+        // STEP 4: Analyze variants (NEW - ADR-025)
         // ========================================================================
-        // STEP 4: Map to database schema
-        // ========================================================================
-        const price = parseFloat(product.variants[0]?.price || '0');
+        const variantAnalysis = analyzeVariants(product);
         
+        if (variantAnalysis.saleType !== 'by_piece') {
+          console.log(`      🔍 Variants: ${variantAnalysis.availableVariantCount}/${variantAnalysis.totalVariantCount} available, type=${variantAnalysis.saleType}`);
+          if (variantAnalysis.pricePerMeter) {
+            console.log(`      💰 Price/m: ${variantAnalysis.pricePerMeter}€`);
+          }
+          if (variantAnalysis.maxLength) {
+            console.log(`      📏 Max length: ${variantAnalysis.maxLength}m`);
+          }
+        }
+
+        // ========================================================================
+        // STEP 5: Map to database schema
+        // ========================================================================
+        // Use variant analysis for availability and pricing
+        const bestVariant = variantAnalysis.bestVariant || product.variants[0];
+        const price = variantAnalysis.minPrice ?? parseFloat(bestVariant?.price || '0');
+
+        // Determine quantity: prefer variant analysis, then extraction patterns, then default
+        let quantityValue: number = 1;
+        let quantityUnit: string = 'unit';
+        
+        if (variantAnalysis.maxLength !== null && variantAnalysis.maxLength > 0) {
+          // From variant analysis (e.g., Nona Source option2)
+          quantityValue = variantAnalysis.maxLength;
+          quantityUnit = 'm';
+        } else if (dimensions.length?.value) {
+          // From extraction patterns (e.g., tags "3M")
+          quantityValue = dimensions.length.value;
+          quantityUnit = dimensions.length.unit || 'm';
+        } else if (bestVariant?.inventory_quantity && bestVariant.inventory_quantity > 0) {
+          // From inventory
+          quantityValue = bestVariant.inventory_quantity;
+          quantityUnit = 'unit';
+        }
+
         const textileData = {
           // Basic product info
           name: product.title,
           description: product.body_html || '',
           price_value: price,
           price_currency: 'EUR',
-          available: product.variants[0]?.available || false,
+          available: variantAnalysis.available,  // ← FIXED: uses variant analysis
           image_url: product.images[0]?.src || null,
           additional_images: product.images.length > 1 ? product.images.slice(1).map(img => img.src) : [],
-          
+
           // Source tracking
           source_url: `https://${normalizedUrl}/products/${product.handle}`,
           source_platform: normalizedUrl,
           source_product_id: product.id.toString(),
           raw_data: product,
           scraped_at: new Date().toISOString(),
-          
+
           // Normalized attributes
           material_type: normalized.material?.value || null,
           color: normalized.color?.value || null,
           pattern: normalized.pattern?.value || null,
-          
+
           // Original values (for traceability)
           material_original: extractedTerms.materials[0] || null,
           color_original: extractedTerms.colors[0] || null,
           pattern_original: extractedTerms.patterns[0] || null,
           tags_original: product.tags,
-          
+
           // Confidence scores (1.0 if found in dictionary, 0.0 if not)
           material_confidence: normalized.material ? 1.0 : 0.0,
           color_confidence: normalized.color ? 1.0 : 0.0,
           pattern_confidence: normalized.pattern ? 1.0 : 0.0,
-          
+
           // Supervision flags
           needs_review: Object.keys(normalized.unknowns).length > 0,
           review_reasons: buildReviewReasons(normalized.unknowns),
-          
+
           // Quality
           data_quality_score: qualityScore,
+
+          // Sale type (NEW - ADR-025)
+          sale_type: variantAnalysis.saleType,
           
-         // Metadata
-           // Dimensions (from extraction patterns)
-          quantity_value: dimensions.length?.value || product.variants[0]?.inventory_quantity || 1,
-          quantity_unit: dimensions.length?.unit || 'unit',
+          // Price per meter (NEW - ADR-025)
+          price_per_meter: variantAnalysis.pricePerMeter,
+
+          // Quantity (length) - FIXED: uses variant analysis
+          quantity_value: quantityValue,
+          quantity_unit: quantityUnit,
+          
+          // Dimensions from extraction patterns
           width_value: dimensions.width?.value || null,
           width_unit: dimensions.width?.unit || null,
-          weight_value: dimensions.weight?.value || null,
-          weight_unit: dimensions.weight?.unit || null,
+          weight_value: dimensions.weight?.value || bestVariant?.grams || null,
+          weight_unit: dimensions.weight?.unit || (bestVariant?.grams ? 'g' : null),
+          
           updated_at: new Date().toISOString(),
         };
         
         // ========================================================================
-        // STEP 5: UPSERT to database
+        // STEP 6: UPSERT to database
         // ========================================================================
         const { data, error } = await supabase
           .from('textiles')
@@ -405,6 +542,7 @@ async saveProducts(
           skipped++;
         } else if (data && data.length > 0) {
           const record = data[0];
+          const textileId = record.id;
           
           // Determine if INSERT or UPDATE
           const createdAt = new Date(record.created_at).getTime();
@@ -417,6 +555,22 @@ async saveProducts(
             updated++;
             console.log(`      ♻️  Updated (existing)`);
           }
+
+          // ================================================================
+          // STEP 7: DUAL-WRITE to textile_attributes
+          // ================================================================
+          const attrCount = await saveTextileAttributes(
+            supabase,
+            textileId,
+            normalized,
+            extractedTerms,
+            sourceLocale
+          );
+          if (attrCount > 0) {
+            attributesTotal += attrCount;
+            console.log(`      📊 Attributes: ${attrCount} saved`);
+          }
+
         } else {
           skipped++;
         }
@@ -437,9 +591,10 @@ async saveProducts(
     console.log(`   New: ${saved}`);
     console.log(`   Updated: ${updated}`);
     console.log(`   Skipped: ${skipped}`);
+    console.log(`   Attributes: ${attributesTotal}`);
     console.log(`   Normalization coverage: ${Math.round((saved + updated) / (saved + updated + skipped) * 100)}%\n`);
     
-    return { saved, updated, skipped };
+    return { saved, updated, skipped, attributes: attributesTotal };
   },
   
   /**

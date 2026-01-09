@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FavoriteButton } from '@/features/favorites/components/FavoriteButton';
 import { AddToBoardButton } from '@/features/boards/components/AddToBoardButton';
+import { PriceDisplay } from './PriceDisplay';
 import type { Textile } from '@/features/search/domain/types';
 
 interface TextileGridProps {
@@ -48,17 +49,17 @@ export function TextileGrid({ textiles, isLoading = false }: TextileGridProps) {
         <div key={textile.id} className='relative'>
           {/* Boutons actions - EN DEHORS du Link */}
           <div className='absolute top-2 right-2 z-20 flex gap-1'>
-            <AddToBoardButton
-              textile={{
-                id: textile.id,
-                name: textile.name,
-                source: textile.source_platform || '',
-                price: textile.price_value,
-                imageUrl: textile.image_url,
-                availableQuantity: textile.quantity_value,
-                material: textile.material_type,
-                color: textile.color,
-              }}
+           <AddToBoardButton
+  textile={{
+    id: textile.id,
+    name: textile.name,
+    source: textile.source_platform || '',
+    price: textile.price_value,
+    imageUrl: textile.image_url,
+    availableQuantity: textile.quantity_value,
+    material: textile.material_type ?? null,
+    color: textile.color ?? null,
+  }}
               variant='ghost'
               size='icon'
             />
@@ -134,15 +135,13 @@ export function TextileGrid({ textiles, isLoading = false }: TextileGridProps) {
                       {textile.quantity_unit}
                     </span>
                   </div>
-                  {textile.price_value && (
-                    <div className='flex justify-between'>
-                      <span>Prix</span>
-                      <span className='font-medium text-foreground'>
-                        {textile.price_value.toFixed(2)} {textile.price_currency}/
-                        {textile.quantity_unit}
-                      </span>
-                    </div>
-                  )}
+                 <PriceDisplay
+  saleType={textile.sale_type}
+  price={(textile as any).price ?? textile.price_value}
+  pricePerMeter={textile.price_per_meter}
+  quantity={textile.quantity_value}
+  currency={textile.price_currency || '€'}
+/>
                   
                   {/* Yardage detail when filter active */}
                   {textile.yardageSufficiency && (

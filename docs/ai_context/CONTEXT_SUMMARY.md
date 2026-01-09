@@ -1,26 +1,28 @@
+
 # Context Summary - Deadstock Search Engine
 
-**Dernière mise à jour:** 7 Janvier 2026 (Session 18)
+**Version** : 2.0
+
+**Date** : 9 Janvier 2026
 
 ---
 
-## 🎯 Vision Produit
+## 🎯 Qu'est-ce que Deadstock Search Engine ?
 
-**Deadstock** est un moteur de recherche textile B2B qui agrège les inventaires de tissus deadstock de multiples fournisseurs pour aider les designers indépendants à trouver des matériaux durables.
+**Plateforme B2B SaaS** qui agrège les inventaires de tissus deadstock de multiples fournisseurs dans une interface de recherche unifiée pour les créateurs de mode indépendants.
 
-### Proposition de Valeur
+### Problème résolu
 
-* **Agrégation multi-sources** : Un seul endroit pour chercher
-* **Normalisation intelligente** : Données standardisées (EN)
-* **Outils créatifs** : Boards, calcul métrage, projets
-* **Durabilité** : Focus deadstock = économie circulaire
+* Designers cherchent des tissus deadstock (fins de série, chutes) pour créations éco-responsables
+* Sources fragmentées (MLC, Nona Source, TFS, Recovo...)
+* Difficile de comparer prix, disponibilités, caractéristiques
 
-### Marché Cible
+### Solution
 
-* Designers textiles indépendants
-* Créateurs DIY couture (1.25 Mrd€)
-* Couturières professionnelles (40K entreprises)
-* Tapissiers/décorateurs
+* Moteur de recherche unifié multi-sources
+* Normalisation des données (matière, couleur, motif)
+* Filtres intelligents
+* Favoris et boards pour organiser la recherche
 
 ---
 
@@ -28,202 +30,137 @@
 
 ### Stack
 
-```
-Frontend: Next.js 15 + React 19 + TypeScript + Tailwind + shadcn/ui
-Backend: Supabase (PostgreSQL) + Server Actions + RLS
-Deploy: Vercel
-```
+* **Frontend** : Next.js 16, React 19, TypeScript, Tailwind
+* **Backend** : Supabase PostgreSQL (schema `deadstock`)
+* **Pattern** : Light DDD avec feature modules
 
-### Pattern Architecture
-
-* **Light DDD** : Séparation domain/infrastructure/application
-* **Feature-based** : Un dossier par module fonctionnel
-* **Server Actions** : Mutations via Next.js
-* **Optimistic Updates** : UX fluide (favoris, boards)
-
-### Architecture Données (ADR-024)
+### Structure Modules
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     STANDARD DEADSTOCK                          │
-│                   (attribute_categories)                        │
-│  fiber ⭐ │ color ⭐ │ pattern │ weave │ [extensible...]        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────────┐
-│                   DICTIONNAIRE                                  │
-│                (dictionary_mappings)                            │
-│  "soie" (fr) → "silk" (fiber)                                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────────┐
-│              TEXTILES + ATTRIBUTES                              │
-│  textiles (données fixes)     │  textile_attributes (classif.) │
-│  • prix, dimensions           │  • fiber: silk                 │
-│  • disponibilité              │  • color: red                  │
-│  • source                     │  • pattern: solid              │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────────┐
-│                   VUE MATÉRIALISÉE                              │
-│                    (textiles_search)                            │
-│  Performance: 2.8ms │ Scalable 1M+ │ Refresh nuit              │
-└─────────────────────────────────────────────────────────────────┘
+src/features/
+├── admin/          # Discovery, Scraping, Tuning
+├── search/         # Recherche textiles
+├── favorites/      # Gestion favoris
+├── boards/         # Canvas de travail
+├── normalization/  # Pipeline normalisation
+└── tuning/         # Gestion dictionnaire
+```
+
+### Base de Données - Tables Clés
+
+```
+deadstock.textiles          # Produits scrapés
+deadstock.textile_attributes # Attributs EAV (fiber, color, pattern)
+deadstock.dictionary_mappings # Traductions/normalisation
+deadstock.sites             # Sources configurées
+deadstock.site_profiles     # Résultats discovery
+deadstock.textiles_search   # Vue matérialisée (recherche)
 ```
 
 ---
 
-## 📊 État des Données
+## 🔄 Pipeline de Données
 
-### Sources Actives
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  DISCOVERY  │────▶│  SCRAPING   │────▶│   SEARCH    │
+│             │     │             │     │             │
+│ Analyse     │     │ Fetch +     │     │ Materialized│
+│ structure   │     │ Normalize + │     │ view +      │
+│ site        │     │ Save        │     │ Filters     │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
 
-| Source           | Locale | Textiles | Qualité |
-| ---------------- | ------ | -------- | -------- |
-| My Little Coupon | FR     | ~100     | 98%      |
-| The Fabric Sales | EN     | ~60      | 90%      |
+### Discovery
+
+* Analyse collections Shopify
+* Détecte patterns d'extraction
+* Calcule Deadstock Score
+* Stocke dans `site_profiles`
+
+### Scraping (Session 20 - amélioré)
+
+* Fetch produits via Shopify API
+* **Variant Analysis** : Analyse TOUS les variants pour:
+  * `available` = any variant available
+  * `sale_type` = fixed_length | hybrid | cut_to_order
+  * `price_per_meter` = calculé intelligemment
+  * `quantity_value` = longueur depuis option2
+* Normalisation via dictionnaire (FR/EN)
+* Dual-write: `textiles` + `textile_attributes`
+* Refresh materialized view
+
+### Search
+
+* Query sur `textiles_search` (materialized view)
+* Filtres dynamiques depuis `textile_attributes`
+* Performance ~3ms
+
+---
+
+## 📊 État Actuel (Session 20)
+
+| Source           | Textiles      | Available      | Sale Type                     |
+| ---------------- | ------------- | -------------- | ----------------------------- |
+| My Little Coupon | 59            | 100%           | fixed_length                  |
+| Nona Source      | 100           | 100%           | fixed_length (92), hybrid (8) |
+| The Fabric Sales | 109           | 100%           | cut_to_order                  |
+| **Total**  | **268** | **100%** | -                             |
+
+---
+
+## 🔧 Fichiers Importants à Connaître
+
+### Scraping Pipeline
+
+* `src/features/admin/services/scrapingService.ts` - Orchestration
+* `src/features/admin/infrastructure/scrapingRepo.ts` - Persistence + normalisation
+* `src/features/admin/utils/variantAnalyzer.ts` - **NEW** Analyse variants
+* `src/features/admin/utils/extractTerms.ts` - Extraction termes depuis tags
 
 ### Normalisation
 
-* **256 termes** dans le dictionnaire (181 EN, 75 FR)
-* **4 catégories** : fiber, color, pattern, weave
-* **<10 unknowns** restants
+* `src/features/normalization/application/normalizeTextile.ts` - Entry point
+* `src/features/normalization/infrastructure/normalizationService.ts` - Dictionary lookup
 
-### Nouvelle Architecture
+### Search
 
-* `textile_attributes` : 293 rows (peuplé ✅)
-* `textiles_search` : Vue matérialisée (créée ✅)
-* Performance : 2.8ms par requête
+* `src/features/search/infrastructure/textileRepository.ts` - Queries
+* Vue matérialisée: `deadstock.textiles_search`
 
 ---
 
-## 🔧 Modules Fonctionnels
+## ⚠️ Points d'Attention
 
-### Utilisateur
+### Sale Types (Modèles de vente)
 
-| Module                    | Fonction                        |
-| ------------------------- | ------------------------------- |
-| **Search**          | Recherche textiles avec filtres |
-| **Favorites**       | Sauvegarde sélection           |
-| **Boards**          | Organisation visuelle projets   |
-| **Crystallization** | Board → Projet concret         |
-| **Pattern Import**  | Upload PDF, calcul métrage     |
+| Type             | Description                          | quantity_value      |
+| ---------------- | ------------------------------------ | ------------------- |
+| `fixed_length` | Coupons fixes (MLC, Nona)            | Longueur en mètres |
+| `hybrid`       | Coupons + coupe à la demande (Nona) | Longueur max        |
+| `cut_to_order` | Vente au mètre (TFS)                | Stock ou NULL       |
+| `by_piece`     | Vente à la pièce                   | Nombre de pièces   |
 
-### Admin
+### Variant Analysis (Nona Source)
 
-| Module              | Fonction                       |
-| ------------------- | ------------------------------ |
-| **Sites**     | Gestion sources à scraper     |
-| **Discovery** | Analyse automatique sites      |
-| **Scraping**  | Lancement jobs extraction      |
-| **Tuning**    | Gestion dictionnaire, unknowns |
+* `option1` = Color
+* `option2` = Length (meters)
+* `option3` = Lot reference OR "Cutting"
+* Si "Cutting" présent → `sale_type = hybrid`
 
 ---
 
-## 🎯 Flux Utilisateur Principal
+## 📝 ADRs Récents Importants
 
-```
-1. RECHERCHE
-   Rechercher textiles → Filtrer → Voir résultats
-
-2. SÉLECTION
-   Ajouter favoris → Organiser sur Board
-
-3. PROJET
-   Créer zones → Cristalliser → Projet concret
-
-4. RÉALISATION
-   Calcul métrage → Liste courses → Achat
-```
+| ADR     | Sujet                                               | Status          |
+| ------- | --------------------------------------------------- | --------------- |
+| ADR-024 | Textile Standard System (EAV + Materialized View)   | ✅ Implémenté |
+| ADR-025 | Admin Architecture Clarification (Variant Analysis) | ✅ Implémenté |
 
 ---
 
-## 📋 Conventions Code
+## 🚀 Prochaines Étapes
 
-### Nommage
-
-* **Fichiers** : kebab-case (`textile-repository.ts`)
-* **Components** : PascalCase (`TextileCard.tsx`)
-* **Functions** : camelCase (`getAvailableFilters`)
-* **DB columns** : snake_case (`material_type`)
-
-### Structure Feature
-
-```
-features/[name]/
-├── domain/types.ts
-├── infrastructure/[name]Repository.ts
-├── application/[action].ts
-├── components/[Component].tsx
-└── context/[Name]Context.tsx
-```
-
-### Imports
-
-```typescript
-// Ordre: React → Next → Libs → Local → Types
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { TextileCard } from './TextileCard';
-import type { Textile } from '../domain/types';
-```
-
----
-
-## 🗺️ Roadmap
-
-### MVP Phase 1 (90% ✅)
-
-* ✅ Recherche avec filtres
-* ✅ Favoris
-* ✅ Boards
-* ✅ Admin complet
-* 🔄 Architecture données optimisée
-* 🔲 Authentification
-
-### Phase 2 (Prévue)
-
-* API publique
-* Multi-utilisateurs
-* Alertes nouveaux textiles
-* Historique prix
-
-### Phase 3 (Vision)
-
-* Marketplace accessoires
-* Groupage commandes
-* CO2 tracking
-* Intégrations (Figma, Adobe)
-
----
-
-## 📝 Sessions Récentes
-
-| Session      | Focus                             | Résultat                                |
-| ------------ | --------------------------------- | ---------------------------------------- |
-| 17           | Extraction Patterns               | ✅ ADR-021, détection auto patterns     |
-| **18** | **Textile Standard System** | **✅ ADR-024, vue matérialisée** |
-| 19           | (À venir)                        | Connecter API à vue                     |
-
----
-
-## 🔑 Points Clés pour IA
-
-1. **Architecture EAV + Vue Mat.** : `textile_attributes` (flexible) → `textiles_search` (performant)
-2. **Dual-level tuning** : Dictionnaire (global) + Patterns (par site)
-3. **Standard extensible** : `attribute_categories` avec `is_searchable`
-4. **Session-based** : Pas d'auth pour MVP, cookie session_id
-5. **Refresh nocturne** : Vue rafraîchie après scraping, 0 impact utilisateur
-
----
-
-## 📚 Documentation Clé
-
-* `ADR_024_TEXTILE_STANDARD_SYSTEM.md` - Architecture données
-* `SPEC_BOARD_MODULE.md` - Spécification boards
-* `DATABASE_ARCHITECTURE.md` - Schéma complet
-* `TUNING_SYSTEM.md` - Système normalisation
-
----
-
-**Contact:** Thomas (Founder & Developer)
+1. Interface Discovery avancée (toggle patterns, coverage)
+2. Scraping à grande échelle
+3. Consolidation documentation (réduire taille)

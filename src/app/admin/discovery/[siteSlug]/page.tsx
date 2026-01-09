@@ -10,7 +10,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ExtractionPatternsCard } from '@/features/admin/components/ExtractionPatternsCard';
 import { notFound } from 'next/navigation';
 import type { ExtractionPatterns } from '@/features/admin/domain/types';
-
+import { SaleTypeCard } from '@/features/admin/components/SaleTypeCard';
+import type { SaleTypeDetection } from '@/features/admin/domain/types';
 // ============================================================================
 // TYPES (pour caster les JSON de Supabase)
 // ============================================================================
@@ -86,8 +87,9 @@ export default async function DiscoverySiteDetailPage({
   const qualityMetrics = (profile?.quality_metrics ?? null) as QualityMetrics | null;
   const collections = (Array.isArray(profile?.collections) ? profile.collections : []) as unknown as CollectionData[];
   const extractionPatterns = ((profile as Record<string, unknown>)?.extraction_patterns ?? null) as ExtractionPatterns | null;
-
-  return (
+const saleTypeDetection = ((profile as Record<string, unknown>)?.sale_type_detection ?? null) as SaleTypeDetection | null;
+ 
+return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -184,12 +186,14 @@ export default async function DiscoverySiteDetailPage({
         </TabsList>
 
         {/* Extraction Tab */}
-        <TabsContent value="extraction">
-          <ExtractionPatternsCard 
-            extractionPatterns={extractionPatterns}
-            readOnly={true}
-          />
-        </TabsContent>
+       <TabsContent value="extraction" className="space-y-4">
+  <SaleTypeCard saleTypeDetection={saleTypeDetection} />
+  <ExtractionPatternsCard 
+    extractionPatterns={extractionPatterns}
+    readOnly={true}
+  />
+</TabsContent>
+        
 
         {/* Collections Tab */}
         <TabsContent value="collections">

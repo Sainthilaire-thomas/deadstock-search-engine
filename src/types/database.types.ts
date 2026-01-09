@@ -1,4 +1,6 @@
-﻿export type Json =
+﻿Need to install the following packages:
+supabase@2.71.3
+Ok to proceed? (y) export type Json =
   | string
   | number
   | boolean
@@ -373,6 +375,13 @@ export type Database = {
             columns: ["textile_id"]
             isOneToOne: false
             referencedRelation: "textiles_needing_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorites_textile_id_fkey"
+            columns: ["textile_id"]
+            isOneToOne: false
+            referencedRelation: "textiles_search"
             referencedColumns: ["id"]
           },
           {
@@ -949,6 +958,13 @@ export type Database = {
             foreignKeyName: "textile_attributes_textile_id_fkey"
             columns: ["textile_id"]
             isOneToOne: false
+            referencedRelation: "textiles_search"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "textile_attributes_textile_id_fkey"
+            columns: ["textile_id"]
+            isOneToOne: false
             referencedRelation: "textiles_with_attributes"
             referencedColumns: ["id"]
           },
@@ -1266,6 +1282,13 @@ export type Database = {
             foreignKeyName: "user_favorites_textile_id_fkey"
             columns: ["textile_id"]
             isOneToOne: false
+            referencedRelation: "textiles_search"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_favorites_textile_id_fkey"
+            columns: ["textile_id"]
+            isOneToOne: false
             referencedRelation: "textiles_with_attributes"
             referencedColumns: ["id"]
           },
@@ -1480,6 +1503,55 @@ export type Database = {
         }
         Relationships: []
       }
+      textiles_search: {
+        Row: {
+          additional_images: string[] | null
+          available: boolean | null
+          color: string | null
+          color_confidence: number | null
+          created_at: string | null
+          data_quality_score: number | null
+          description: string | null
+          fiber: string | null
+          fiber_confidence: number | null
+          id: string | null
+          image_url: string | null
+          minimum_order_unit: string | null
+          minimum_order_value: number | null
+          name: string | null
+          pattern: string | null
+          pattern_confidence: number | null
+          price_currency: string | null
+          price_per_unit: number | null
+          price_per_unit_label: string | null
+          price_value: number | null
+          quantity_unit: string | null
+          quantity_value: number | null
+          scraped_at: string | null
+          site_id: string | null
+          source_platform: string | null
+          source_product_id: string | null
+          source_url: string | null
+          supplier_location: string | null
+          supplier_name: string | null
+          updated_at: string | null
+          weave: string | null
+          weave_confidence: number | null
+          weight_unit: string | null
+          weight_value: number | null
+          width_unit: string | null
+          width_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "textiles_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       textiles_with_attributes: {
         Row: {
           additional_images: string[] | null
@@ -1662,6 +1734,14 @@ export type Database = {
           p_term: string
         }
         Returns: string
+      }
+      refresh_textiles_search: {
+        Args: never
+        Returns: {
+          duration_ms: number
+          status: string
+          total_rows: number
+        }[]
       }
       search_textiles: {
         Args: {

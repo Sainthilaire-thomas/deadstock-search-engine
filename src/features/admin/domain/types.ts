@@ -94,3 +94,33 @@ export interface ExtractionPatterns {
   analyzedAt: string;            // ISO date
   productsAnalyzed: number;
 }
+
+
+// ============================================================================
+// SALE TYPE DETECTION (ADR-026)
+// ============================================================================
+
+export type SaleType = 'fixed_length' | 'hybrid' | 'cut_to_order' | 'by_piece' | 'unknown';
+
+export interface SaleTypeEvidence {
+  hasMultipleVariants: boolean;
+  hasLengthInOptions: boolean;
+  hasCuttingOption: boolean;
+  hasPricePerUnit: boolean;
+  hasFixedLengthTags: boolean;
+  sampleSize: number;
+  variantStructure: 'single' | 'color_only' | 'color_length' | 'color_length_lot' | 'unknown';
+  optionAnalysis: {
+    option1Values: string[];
+    option2Values: string[];
+    option3Values: string[];
+  };
+}
+
+export interface SaleTypeDetection {
+  dominantType: SaleType;
+  confidence: number;
+  evidence: SaleTypeEvidence;
+  description: string;
+  recommendations: string[];
+}
