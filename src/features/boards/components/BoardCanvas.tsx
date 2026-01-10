@@ -21,8 +21,8 @@ import { CrystallizationDialog } from './CrystallizationDialog';
 import { PaletteEditor } from './PaletteEditor';
 import { PatternImportModal } from '@/features/pattern/components/PatternImportModal';
 import { getFavoritesAction } from '@/features/favorites/actions/favoriteActions';
-import type { BoardElement, BoardZone, CalculationElementData, TextileElementData, PaletteElementData } from '../domain/types';
-import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
+import { ImageUploadModal } from './ImageUploadModal';
+import type { BoardElement, BoardZone, CalculationElementData, TextileElementData, PaletteElementData, InspirationElementData } from '../domain/types';import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
 import type { FavoriteWithTextile } from '@/features/favorites/domain/types';
 
 // Constantes pour le resize
@@ -77,6 +77,8 @@ export function BoardCanvas() {
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
   const [crystallizingZone, setCrystallizingZone] = useState<BoardZone | null>(null);
+const [showImageModal, setShowImageModal] = useState(false);
+const [editingImageId, setEditingImageId] = useState<string | null>(null);
 
   // Modals/Sheets state
   const [showFavoritesSheet, setShowFavoritesSheet] = useState(false);
@@ -197,7 +199,7 @@ export function BoardCanvas() {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ne pas intercepter si on est en train d'éditer
-    if (editingElementId || editingZoneId || editingPaletteId) return;
+    if (editingElementId || editingZoneId || editingPaletteId || editingImageId) return;
 
     // Ne pas intercepter si on est dans un input
     const target = e.target as HTMLElement;
@@ -225,6 +227,8 @@ export function BoardCanvas() {
       setEditingPaletteId(null);
       setShowFavoritesSheet(false);
       setShowPatternModal(false);
+      setEditingImageId(null);
+setShowImageModal(false);
     }
   }, [selectedElementIds, selectedZoneId, editingElementId, editingZoneId, editingPaletteId, removeElement, removeZone, clearSelection]);
 
@@ -296,6 +300,8 @@ export function BoardCanvas() {
         await addZone('Nouvelle zone', position);
         break;
       case 'image':
+  setShowImageModal(true);
+  break;
       case 'video':
       case 'link':
       case 'pdf':
@@ -339,6 +345,36 @@ export function BoardCanvas() {
     setShowPatternModal(false);
   };
 
+  const handleAddImage = async (data: InspirationElementData) => {
+  const position = {
+    x: 100 + Math.random() * 200,
+    y: 100 + Math.random() * 200,
+  };
+
+  await addElement({
+    elementType: 'inspiration', // Utilise le type existant
+    elementData: data,
+    positionX: position.x,
+    positionY: position.y,
+    width: 200,
+    height: 180,
+  });
+
+  setShowImageModal(false);
+  toast.success('Image ajoutée au board');
+};
+
+const handleSaveImage = async (elementId: string, data: InspirationElementData) => {
+  const element = elements.find((e) => e.id === elementId);
+  if (element && element.elementType === 'inspiration') {
+    await updateElement(elementId, {
+      elementData: data,
+    });
+    toast.success('Image mise à jour');
+  }
+  setEditingImageId(null);
+};
+
   // ============================================
   // DELETE HANDLERS
   // ============================================
@@ -364,13 +400,15 @@ export function BoardCanvas() {
     }
   };
 
-  const handleDoubleClick = (element: BoardElement) => {
-    if (element.elementType === 'note') {
-      setEditingElementId(element.id);
-    } else if (element.elementType === 'palette') {
-      setEditingPaletteId(element.id);
-    }
-  };
+ const handleDoubleClick = (element: BoardElement) => {
+  if (element.elementType === 'note') {
+    setEditingElementId(element.id);
+  } else if (element.elementType === 'palette') {
+    setEditingPaletteId(element.id);
+  } else if (element.elementType === 'inspiration') {
+    setEditingImageId(element.id);
+  }
+};
 
   const handleZoneDoubleClick = (zone: BoardZone) => {
     setEditingZoneId(zone.id);
@@ -878,6 +916,27 @@ export function BoardCanvas() {
           />
         );
       })()}
+
+      {/* Image Upload Modal */}
+{showImageModal && (
+  <ImageUploadModal
+    onSave={handleAddImage}
+    onCancel={() => setShowImageModal(false)}
+  />
+)}
+
+{/* Image Edit Modal */}
+{editingImageId && (() => {
+  const element = elements.find(e => e.id === editingImageId);
+  if (!element || element.elementType !== 'inspiration') return null;
+  return (
+    <ImageUploadModal
+      initialData={element.elementData as InspirationElementData}
+      onSave={(data) => handleSaveImage(editingImageId, data)}
+      onCancel={() => setEditingImageId(null)}
+    />
+  );
+})()}
     </div>
   );
 }

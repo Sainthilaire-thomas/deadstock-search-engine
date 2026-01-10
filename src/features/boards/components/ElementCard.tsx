@@ -7,7 +7,9 @@ import { GripVertical, X } from 'lucide-react';
 import { ELEMENT_TYPE_LABELS, isPaletteElement } from '../domain/types';
 import { NoteEditor } from './NoteEditor';
 import { PaletteElement } from './elements/PaletteElement';
-import type { BoardElement, PaletteElementData } from '../domain/types';
+import { ImageElement } from './elements/ImageElement';
+import type { BoardElement, PaletteElementData, InspirationElementData } from '../domain/types';
+
 
 interface ElementCardProps {
   element: BoardElement;
@@ -144,8 +146,12 @@ export function ElementCard({
                   <CalculationPreview data={element.elementData as any} />
                 )}
                 {element.elementType === 'inspiration' && (
-                  <InspirationPreview data={element.elementData as any} />
-                )}
+  <ImageElement 
+    data={element.elementData as InspirationElementData} 
+    width={width - 24}
+    height={height - 44}
+  />
+)}
               </div>
             </div>
           </>
@@ -249,25 +255,6 @@ function CalculationPreview({ data }: { data: any }) {
       {data.result && (
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {data.result.recommended}m recommandés
-        </p>
-      )}
-    </div>
-  );
-}
-
-function InspirationPreview({ data }: { data: any }) {
-  return (
-    <div className="h-full">
-      {data.imageUrl ? (
-        <img
-          src={data.imageUrl}
-          alt={data.caption || 'Inspiration'}
-          className="w-full h-full object-cover rounded-sm"
-          draggable={false}
-        />
-      ) : (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {data.caption || 'Inspiration'}
         </p>
       )}
     </div>

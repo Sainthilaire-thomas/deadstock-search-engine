@@ -135,12 +135,11 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
       <Divider />
 
       {/* Section: Médias */}
-      <ToolButton
-        icon={<Image className="w-5 h-5" strokeWidth={1.5} />}
-        tooltip="Image / Inspiration"
-        onClick={() => onAddElement('image')}
-        disabled // Sprint 5
-      />
+     <ToolButton
+  icon={<Image className="w-5 h-5" strokeWidth={1.5} />}
+  tooltip="Image / Inspiration"
+  onClick={() => onAddElement('image')}
+/>
 
       <ToolButton
         icon={<Video className="w-5 h-5" strokeWidth={1.5} />}
