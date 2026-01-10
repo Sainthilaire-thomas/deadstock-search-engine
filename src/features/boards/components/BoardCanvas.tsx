@@ -1,14 +1,29 @@
-// src/features/boards/components/BoardCanvas.tsx
+﻿// src/features/boards/components/BoardCanvas.tsx
+// VERSION SPRINT 3 - Avec PaletteEditor intégré
 
 'use client';
 
-import { useRef, useState } from 'react';
-import { Layout, MousePointer } from 'lucide-react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Layout, MousePointer, Heart, Plus, Check, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import { useBoard } from '../context/BoardContext';
+import { BoardToolbar } from './BoardToolbar';
 import { ZoneCard } from './ZoneCard';
 import { ElementCard } from './ElementCard';
 import { CrystallizationDialog } from './CrystallizationDialog';
-import type { BoardElement, BoardZone } from '../domain/types';
+import { PaletteEditor } from './PaletteEditor';
+import { PatternImportModal } from '@/features/pattern/components/PatternImportModal';
+import { getFavoritesAction } from '@/features/favorites/actions/favoriteActions';
+import type { BoardElement, BoardZone, CalculationElementData, TextileElementData, PaletteElementData } from '../domain/types';
+import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
+import type { FavoriteWithTextile } from '@/features/favorites/domain/types';
 
 // Constantes pour le resize
 const MIN_ZONE_WIDTH = 150;
@@ -16,30 +31,211 @@ const MIN_ZONE_HEIGHT = 100;
 
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
+type ToolType =
+  | 'image'
+  | 'video'
+  | 'textile'
+  | 'palette'
+  | 'calculation'
+  | 'note'
+  | 'link'
+  | 'pdf'
+  | 'pattern'
+  | 'silhouette'
+  | 'zone';
+
 export function BoardCanvas() {
   const {
     elements,
     zones,
+    viewMode,
     selectedElementIds,
     selectedZoneId,
     toggleElementSelection,
     clearSelection,
-    moveElement,
+    moveElementLocal,
+    saveElementPosition,
     updateElement,
+    removeElement,
     selectZone,
-    moveZone,
-    resizeZone,
+    moveZoneLocal,
+    saveZonePosition,
+    resizeZoneLocal,
+    saveZoneSize,
     updateZone,
+    removeZone,
     setDragging,
+    toggleViewMode,
+    addNote,
+    addPalette,
+    addZone,
+    addElement,
   } = useBoard();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
   const [crystallizingZone, setCrystallizingZone] = useState<BoardZone | null>(null);
+
+  // Modals/Sheets state
+  const [showFavoritesSheet, setShowFavoritesSheet] = useState(false);
+  const [showPatternModal, setShowPatternModal] = useState(false);
+
+  // Favorites state
+  const [favorites, setFavorites] = useState<FavoriteWithTextile[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [addingTextileId, setAddingTextileId] = useState<string | null>(null);
 
   // Extraire boardId
   const boardId = zones[0]?.boardId || elements[0]?.boardId || '';
+
+  // ============================================
+  // DRAG STATE - Local pour fluidité maximale
+  // ============================================
+
+  const [dragPosition, setDragPosition] = useState<{
+    type: 'element' | 'zone';
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Ref pour éviter closure stale dans les event listeners
+  const dragPositionRef = useRef(dragPosition);
+  dragPositionRef.current = dragPosition;
+
+  const [resizeState, setResizeState] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  // Ref pour éviter closure stale dans les event listeners
+  const resizeStateRef = useRef(resizeState);
+  resizeStateRef.current = resizeState;
+
+  // IDs des textiles déjà sur le board
+  const textileIdsOnBoard = new Set(
+    elements
+      .filter((el) => el.elementType === 'textile')
+      .map((el) => (el.elementData as TextileElementData)?.textileId)
+      .filter(Boolean)
+  );
+
+  // ============================================
+  // FAVORITES LOADING
+  // ============================================
+
+  useEffect(() => {
+    if (showFavoritesSheet) {
+      loadFavorites();
+    }
+  }, [showFavoritesSheet]);
+
+  const loadFavorites = async () => {
+    setFavoritesLoading(true);
+    try {
+      const result = await getFavoritesAction();
+      if (result.success && result.data) {
+        setFavorites(result.data);
+      }
+    } catch (error) {
+      console.error('Erreur chargement favoris:', error);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
+
+  const handleAddTextile = async (favorite: FavoriteWithTextile) => {
+    if (!favorite.textile) return;
+
+    const textile = favorite.textile;
+    setAddingTextileId(textile.id);
+
+    try {
+      const position = {
+        x: 100 + Math.random() * 300,
+        y: 100 + Math.random() * 200,
+      };
+
+      const elementData: TextileElementData = {
+        textileId: textile.id,
+        snapshot: {
+          name: textile.name,
+          source: textile.source_platform || '',
+          price: textile.price_value || 0,
+          currency: textile.price_currency || 'EUR',
+          imageUrl: textile.image_url || null,
+          availableQuantity: textile.quantity_value || null,
+          material: textile.material_type || null,
+          color: textile.color || null,
+        },
+      };
+
+      await addElement({
+        elementType: 'textile',
+        elementData,
+        positionX: position.x,
+        positionY: position.y,
+      });
+
+      toast.success(`"${textile.name}" ajouté au board`);
+    } catch (error) {
+      console.error('Erreur ajout textile:', error);
+      toast.error("Erreur lors de l'ajout du tissu");
+    } finally {
+      setAddingTextileId(null);
+    }
+  };
+
+  // ============================================
+  // KEYBOARD SHORTCUTS (Delete/Backspace)
+  // ============================================
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Ne pas intercepter si on est en train d'éditer
+    if (editingElementId || editingZoneId || editingPaletteId) return;
+
+    // Ne pas intercepter si on est dans un input
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+
+      // Supprimer les éléments sélectionnés
+      if (selectedElementIds.length > 0) {
+        selectedElementIds.forEach(id => removeElement(id));
+      }
+
+      // Supprimer la zone sélectionnée
+      if (selectedZoneId) {
+        removeZone(selectedZoneId);
+      }
+    }
+
+    // Escape pour déselectionner et fermer les modals
+    if (e.key === 'Escape') {
+      clearSelection();
+      setEditingElementId(null);
+      setEditingZoneId(null);
+      setEditingPaletteId(null);
+      setShowFavoritesSheet(false);
+      setShowPatternModal(false);
+    }
+  }, [selectedElementIds, selectedZoneId, editingElementId, editingZoneId, editingPaletteId, removeElement, removeZone, clearSelection]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // ============================================
+  // DRAG REFS
+  // ============================================
 
   // Drag state for elements
   const elementDragRef = useRef<{
@@ -72,7 +268,91 @@ export function BoardCanvas() {
   } | null>(null);
 
   // ============================================
-  // HANDLERS
+  // TOOL HANDLERS
+  // ============================================
+
+  const handleAddElement = async (type: ToolType) => {
+    const position = {
+      x: 100 + Math.random() * 200,
+      y: 100 + Math.random() * 200,
+    };
+
+    switch (type) {
+      case 'note':
+        await addNote(position);
+        break;
+      case 'palette':
+        // Ouvrir l'éditeur pour créer une nouvelle palette
+        const defaultColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+        await addPalette(defaultColors, position);
+        break;
+      case 'textile':
+        setShowFavoritesSheet(true);
+        break;
+      case 'calculation':
+        setShowPatternModal(true);
+        break;
+      case 'zone':
+        await addZone('Nouvelle zone', position);
+        break;
+      case 'image':
+      case 'video':
+      case 'link':
+      case 'pdf':
+      case 'pattern':
+      case 'silhouette':
+        console.log(`Type ${type} sera implémenté dans un prochain sprint`);
+        break;
+    }
+  };
+
+  const handleAddPatternCalculation = async (data: PatternCalculationElementData) => {
+    const position = {
+      x: 100 + Math.random() * 200,
+      y: 100 + Math.random() * 200,
+    };
+
+    const elementData: CalculationElementData = {
+      summary: `${data.patternName} ${data.selectedSize} ×${data.quantity}`,
+      garmentType: data.garmentType,
+      source: data.source,
+      patternId: data.patternId,
+      patternName: data.patternName,
+      patternBrand: data.patternBrand,
+      selectedSize: data.selectedSize,
+      quantity: data.quantity,
+      modifiers: data.modifiers,
+      precisionLevel: data.precisionLevel,
+      yardageByWidth: data.yardageByWidth,
+      linkedTextileId: data.linkedTextileId,
+    };
+
+    await addElement({
+      elementType: 'calculation',
+      elementData,
+      positionX: position.x,
+      positionY: position.y,
+      width: 240,
+      height: 200,
+    });
+
+    setShowPatternModal(false);
+  };
+
+  // ============================================
+  // DELETE HANDLERS
+  // ============================================
+
+  const handleDeleteElement = (id: string) => {
+    removeElement(id);
+  };
+
+  const handleDeleteZone = (id: string) => {
+    removeZone(id);
+  };
+
+  // ============================================
+  // CANVAS HANDLERS
   // ============================================
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -80,12 +360,15 @@ export function BoardCanvas() {
       clearSelection();
       setEditingElementId(null);
       setEditingZoneId(null);
+      setEditingPaletteId(null);
     }
   };
 
   const handleDoubleClick = (element: BoardElement) => {
     if (element.elementType === 'note') {
       setEditingElementId(element.id);
+    } else if (element.elementType === 'palette') {
+      setEditingPaletteId(element.id);
     }
   };
 
@@ -110,15 +393,26 @@ export function BoardCanvas() {
     setEditingElementId(null);
   };
 
+  const handleSavePalette = async (elementId: string, data: PaletteElementData) => {
+    const element = elements.find((e) => e.id === elementId);
+    if (element && element.elementType === 'palette') {
+      await updateElement(elementId, {
+        elementData: data,
+      });
+      toast.success('Palette mise à jour');
+    }
+    setEditingPaletteId(null);
+  };
+
   // ============================================
   // ELEMENT DRAG
   // ============================================
 
   const handleElementMouseDown = (e: React.MouseEvent, element: BoardElement) => {
-    if (editingElementId === element.id) return;
+    if (e.button !== 0) return;
     e.stopPropagation();
 
-    if (!e.shiftKey && !selectedElementIds.includes(element.id)) {
+    if (!e.shiftKey) {
       clearSelection();
     }
     toggleElementSelection(element.id);
@@ -142,10 +436,19 @@ export function BoardCanvas() {
     const dy = e.clientY - elementDragRef.current.startY;
     const newX = Math.max(0, elementDragRef.current.elementStartX + dx);
     const newY = Math.max(0, elementDragRef.current.elementStartY + dy);
-    moveElement(elementDragRef.current.elementId, newX, newY);
+
+    setDragPosition({ type: 'element', id: elementDragRef.current.elementId, x: newX, y: newY });
   };
 
   const handleElementMouseUp = () => {
+    const pos = dragPositionRef.current;
+
+    if (pos && pos.type === 'element') {
+      moveElementLocal(pos.id, pos.x, pos.y);
+      saveElementPosition(pos.id, pos.x, pos.y);
+    }
+
+    setDragPosition(null);
     elementDragRef.current = null;
     setDragging(false);
     document.removeEventListener('mousemove', handleElementMouseMove);
@@ -157,7 +460,7 @@ export function BoardCanvas() {
   // ============================================
 
   const handleZoneMouseDown = (e: React.MouseEvent, zone: BoardZone) => {
-    if (editingZoneId === zone.id) return;
+    if (e.button !== 0) return;
     e.stopPropagation();
     selectZone(zone.id);
 
@@ -180,10 +483,19 @@ export function BoardCanvas() {
     const dy = e.clientY - zoneDragRef.current.startY;
     const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
     const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
-    moveZone(zoneDragRef.current.zoneId, newX, newY);
+
+    setDragPosition({ type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY });
   };
 
   const handleZoneMouseUp = () => {
+    const pos = dragPositionRef.current;
+
+    if (pos && pos.type === 'zone') {
+      moveZoneLocal(pos.id, pos.x, pos.y);
+      saveZonePosition(pos.id, pos.x, pos.y);
+    }
+
+    setDragPosition(null);
     zoneDragRef.current = null;
     setDragging(false);
     document.removeEventListener('mousemove', handleZoneMouseMove);
@@ -244,13 +556,26 @@ export function BoardCanvas() {
       newY = ref.zoneStartY + heightChange;
     }
 
-    if (newX !== ref.zoneStartX || newY !== ref.zoneStartY) {
-      moveZone(ref.zoneId, Math.max(0, newX), Math.max(0, newY));
-    }
-    resizeZone(ref.zoneId, newWidth, newHeight);
+    setResizeState({
+      id: ref.zoneId,
+      x: Math.max(0, newX),
+      y: Math.max(0, newY),
+      width: newWidth,
+      height: newHeight,
+    });
   };
 
   const handleZoneResizeEnd = () => {
+    const resize = resizeStateRef.current;
+
+    if (resize) {
+      moveZoneLocal(resize.id, resize.x, resize.y);
+      resizeZoneLocal(resize.id, resize.width, resize.height);
+      saveZonePosition(resize.id, resize.x, resize.y);
+      saveZoneSize(resize.id, resize.width, resize.height);
+    }
+
+    setResizeState(null);
     zoneResizeRef.current = null;
     setDragging(false);
     document.removeEventListener('mousemove', handleZoneResizeMove);
@@ -261,21 +586,6 @@ export function BoardCanvas() {
   // RENDER
   // ============================================
 
-  if (elements.length === 0 && zones.length === 0) {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
-          <Layout className="w-10 h-10 text-muted-foreground/50" />
-        </div>
-        <h2 className="text-lg font-medium mb-2">Board vide</h2>
-        <p className="text-muted-foreground text-center max-w-md px-4">
-          Ajoutez des notes, palettes ou zones depuis le panneau de droite pour commencer à
-          organiser vos idées.
-        </p>
-      </div>
-    );
-  }
-
   const allPositions = [
     ...elements.map((e) => ({ x: e.positionX + (e.width || 200), y: e.positionY + (e.height || 150) })),
     ...zones.map((z) => ({ x: z.positionX + z.width, y: z.positionY + z.height })),
@@ -283,55 +593,261 @@ export function BoardCanvas() {
   const canvasWidth = Math.max(1200, ...allPositions.map((p) => p.x + 100));
   const canvasHeight = Math.max(800, ...allPositions.map((p) => p.y + 100));
 
+  const isEmpty = elements.length === 0 && zones.length === 0;
+  const showZones = viewMode === 'project';
+
   return (
-    <div ref={canvasRef} className="absolute inset-0 overflow-auto" onClick={handleCanvasClick}>
+    <div className="flex h-full">
+      {/* Toolbar gauche 48px */}
+      <BoardToolbar
+        onAddElement={handleAddElement}
+        onToggleViewMode={toggleViewMode}
+        viewMode={viewMode}
+      />
+
+      {/* Canvas principal */}
       <div
-        className="relative"
-        style={{
-          width: canvasWidth,
-          height: canvasHeight,
-          minWidth: '100%',
-          minHeight: '100%',
-        }}
+        ref={canvasRef}
+        className="flex-1 relative overflow-auto bg-gray-50 dark:bg-gray-900"
+        onClick={handleCanvasClick}
       >
-        {/* Zones */}
-        {zones.map((zone) => (
-          <ZoneCard
-            key={zone.id}
-            zone={zone}
-            isSelected={selectedZoneId === zone.id}
-            isEditing={editingZoneId === zone.id}
-            onMouseDown={(e) => handleZoneMouseDown(e, zone)}
-            onDoubleClick={() => handleZoneDoubleClick(zone)}
-            onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle)}
-            onSaveName={(name) => handleSaveZoneName(zone.id, name)}
-            onCancelEdit={() => setEditingZoneId(null)}
-            onCrystallize={() => setCrystallizingZone(zone)}
-          />
-        ))}
+        {isEmpty ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+              <Layout className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+            </div>
+            <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Board vide
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-center max-w-md px-4">
+              Utilisez la barre d'outils à gauche pour ajouter des éléments :
+              notes, palettes, tissus, calculs...
+            </p>
+          </div>
+        ) : (
+          <div
+            className="relative"
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+              minWidth: '100%',
+              minHeight: '100%',
+            }}
+          >
+            {/* Zones */}
+            {zones.map((zone) => {
+              const isDragging = dragPosition?.type === 'zone' && dragPosition.id === zone.id;
+              const isResizing = resizeState?.id === zone.id;
 
-        {/* Éléments */}
-        {elements.map((element) => (
-          <ElementCard
-            key={element.id}
-            element={element}
-            isSelected={selectedElementIds.includes(element.id)}
-            isEditing={editingElementId === element.id}
-            onMouseDown={(e) => handleElementMouseDown(e, element)}
-            onDoubleClick={() => handleDoubleClick(element)}
-            onSaveNote={(content) => handleSaveNote(element.id, content)}
-            onCancelEdit={() => setEditingElementId(null)}
-          />
-        ))}
+              const position = isDragging
+                ? { x: dragPosition.x, y: dragPosition.y }
+                : isResizing
+                ? { x: resizeState.x, y: resizeState.y }
+                : { x: zone.positionX, y: zone.positionY };
+
+              const size = isResizing
+                ? { width: resizeState.width, height: resizeState.height }
+                : { width: zone.width, height: zone.height };
+
+              return (
+                <ZoneCard
+                  key={zone.id}
+                  zone={{
+                    ...zone,
+                    positionX: position.x,
+                    positionY: position.y,
+                    width: size.width,
+                    height: size.height,
+                  }}
+                  isSelected={selectedZoneId === zone.id}
+                  isEditing={editingZoneId === zone.id}
+                  isVisible={showZones}
+                  onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+                  onDoubleClick={() => handleZoneDoubleClick(zone)}
+                  onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle)}
+                  onSaveName={(name) => handleSaveZoneName(zone.id, name)}
+                  onCancelEdit={() => setEditingZoneId(null)}
+                  onCrystallize={() => setCrystallizingZone(zone)}
+                  onDelete={() => handleDeleteZone(zone.id)}
+                />
+              );
+            })}
+
+            {/* Éléments */}
+            {elements.map((element) => {
+              const pos = dragPosition;
+              const position = (pos?.type === 'element' && pos.id === element.id)
+                ? { x: pos.x, y: pos.y }
+                : { x: element.positionX, y: element.positionY };
+
+              return (
+                <ElementCard
+                  key={element.id}
+                  element={{
+                    ...element,
+                    positionX: position.x,
+                    positionY: position.y,
+                  }}
+                  isSelected={selectedElementIds.includes(element.id)}
+                  isEditing={editingElementId === element.id}
+                  onMouseDown={(e) => handleElementMouseDown(e, element)}
+                  onDoubleClick={() => handleDoubleClick(element)}
+                  onSaveNote={(content) => handleSaveNote(element.id, content)}
+                  onCancelEdit={() => setEditingElementId(null)}
+                  onDelete={() => handleDeleteElement(element.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Instructions */}
+        {!isEmpty && (
+          <div className="
+            absolute bottom-4 left-4
+            text-xs text-gray-400 dark:text-gray-500
+            flex items-center gap-2
+            bg-white/80 dark:bg-gray-800/80
+            backdrop-blur-sm
+            px-3 py-2
+            rounded
+            border border-gray-200 dark:border-gray-700
+          ">
+            <MousePointer className="w-3 h-3" />
+            Cliquer • Glisser • Double-clic éditer • Suppr supprimer
+          </div>
+        )}
+
+        {/* View mode indicator */}
+        <div className="
+          absolute top-4 right-4
+          text-xs
+          px-2 py-1
+          rounded
+          bg-white/80 dark:bg-gray-800/80
+          backdrop-blur-sm
+          border border-gray-200 dark:border-gray-700
+          text-gray-500 dark:text-gray-400
+        ">
+          Mode {viewMode === 'inspiration' ? 'Inspiration' : 'Projet'}
+          {viewMode === 'project' && zones.length > 0 && (
+            <span className="ml-1 text-gray-400">• {zones.length} zone{zones.length > 1 ? 's' : ''}</span>
+          )}
+        </div>
       </div>
 
-      {/* Instructions */}
-      <div className="absolute bottom-4 left-4 text-xs text-muted-foreground flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border">
-        <MousePointer className="w-3 h-3" />
-        Cliquer pour sélectionner • Glisser pour déplacer • Double-clic pour éditer
-      </div>
+      {/* Favorites Sheet */}
+      <Sheet open={showFavoritesSheet} onOpenChange={setShowFavoritesSheet}>
+        <SheetContent side="right" className="w-100 sm:w-135">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5" />
+              Ajouter un tissu depuis mes favoris
+            </SheetTitle>
+          </SheetHeader>
 
-      {/* Crystallization Dialog */}
+          <div className="mt-6">
+            {favoritesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : favorites.length === 0 ? (
+              <div className="text-center py-12">
+                <Heart className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">
+                  Aucun favori pour le moment.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ajoutez des tissus à vos favoris depuis la recherche.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+                {favorites.map((favorite) => {
+                  const textile = favorite.textile;
+                  if (!textile) return null;
+
+                  const isOnBoard = textileIdsOnBoard.has(textile.id);
+                  const isAdding = addingTextileId === textile.id;
+
+                  return (
+                    <div
+                      key={favorite.id}
+                      className={`flex gap-3 p-3 rounded-lg border transition-colors ${
+                        isOnBoard
+                          ? 'bg-muted/50 border-muted'
+                          : 'bg-background hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
+                        {textile.image_url ? (
+                          <img
+                            src={textile.image_url}
+                            alt={textile.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <Heart className="w-6 h-6" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">
+                          {textile.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {textile.source_platform}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {textile.price_value && (
+                            <span className="text-sm font-medium">
+                              {textile.price_value.toFixed(2)} {textile.price_currency || '€'}
+                            </span>
+                          )}
+                          {textile.material_type && (
+                            <span className="text-xs text-muted-foreground">
+                              • {textile.material_type}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center">
+                        {isOnBoard ? (
+                          <div className="flex items-center gap-1 text-xs text-green-600">
+                            <Check className="w-4 h-4" />
+                            <span>Ajouté</span>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAddTextile(favorite)}
+                            disabled={isAdding}
+                          >
+                            {isAdding ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Plus className="w-4 h-4 mr-1" />
+                                Ajouter
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Dialogs */}
       {crystallizingZone && (
         <CrystallizationDialog
           zone={crystallizingZone}
@@ -341,6 +857,27 @@ export function BoardCanvas() {
           onSuccess={() => setCrystallizingZone(null)}
         />
       )}
+
+      {/* Pattern Import Modal */}
+      <PatternImportModal
+        open={showPatternModal}
+        onClose={() => setShowPatternModal(false)}
+        context="board"
+        onAddToBoard={handleAddPatternCalculation}
+      />
+
+      {/* Palette Editor Modal */}
+      {editingPaletteId && (() => {
+        const element = elements.find(e => e.id === editingPaletteId);
+        if (!element || element.elementType !== 'palette') return null;
+        return (
+          <PaletteEditor
+            initialData={element.elementData as PaletteElementData}
+            onSave={(data) => handleSavePalette(editingPaletteId, data)}
+            onCancel={() => setEditingPaletteId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

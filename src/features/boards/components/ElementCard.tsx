@@ -1,11 +1,13 @@
 // src/features/boards/components/ElementCard.tsx
+// VERSION SPRINT 3 - Avec PaletteElement amélioré
 
 'use client';
 
-import { GripVertical } from 'lucide-react';
-import { ELEMENT_TYPE_LABELS } from '../domain/types';
+import { GripVertical, X } from 'lucide-react';
+import { ELEMENT_TYPE_LABELS, isPaletteElement } from '../domain/types';
 import { NoteEditor } from './NoteEditor';
-import type { BoardElement } from '../domain/types';
+import { PaletteElement } from './elements/PaletteElement';
+import type { BoardElement, PaletteElementData } from '../domain/types';
 
 interface ElementCardProps {
   element: BoardElement;
@@ -15,6 +17,8 @@ interface ElementCardProps {
   onDoubleClick: () => void;
   onSaveNote: (content: string) => void;
   onCancelEdit: () => void;
+  onDelete?: () => void;
+  onSavePalette?: (data: PaletteElementData) => void; // NEW: pour sauvegarder palette
 }
 
 export function ElementCard({
@@ -25,15 +29,38 @@ export function ElementCard({
   onDoubleClick,
   onSaveNote,
   onCancelEdit,
+  onDelete,
+  onSavePalette,
 }: ElementCardProps) {
   const width = element.width || 180;
   const height = element.height || 120;
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete?.();
+  };
+
+  // Rendu spécial pour palette en mode édition
+  const isPalette = element.elementType === 'palette';
+  const isNote = element.elementType === 'note';
+
   return (
     <div
-      className={`absolute bg-background border rounded-lg shadow-sm overflow-hidden transition-shadow select-none ${
-        isSelected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'
-      }`}
+      className={`
+        group
+        absolute
+        bg-white dark:bg-gray-900
+        border border-gray-200 dark:border-gray-700
+        rounded
+        overflow-visible
+        transition-all duration-150
+        select-none
+        ${isSelected
+          ? 'ring-1 ring-gray-400 dark:ring-gray-500 shadow-md'
+          : 'shadow-sm hover:shadow-md'
+        }
+      `}
       style={{
         left: element.positionX,
         top: element.positionY,
@@ -45,57 +72,98 @@ export function ElementCard({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      {isEditing && element.elementType === 'note' ? (
-        <NoteEditor
-          content={(element.elementData as any).content || ''}
-          color={(element.elementData as any).color || '#FEF3C7'}
-          onSave={onSaveNote}
-          onCancel={onCancelEdit}
-        />
-      ) : (
-        <>
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-60 transition-opacity">
-            <GripVertical className="w-4 h-4" />
-          </div>
-
-          <div className="p-3 h-full flex flex-col pt-5">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
-              {ELEMENT_TYPE_LABELS[element.elementType]}
-            </span>
-
-            <div className="flex-1 min-h-0 overflow-hidden">
-              {element.elementType === 'textile' && (
-                <TextilePreview data={element.elementData as any} />
-              )}
-              {element.elementType === 'note' && (
-                <NotePreview data={element.elementData as any} />
-              )}
-              {element.elementType === 'palette' && (
-                <PalettePreview data={element.elementData as any} />
-              )}
-              {element.elementType === 'calculation' && (
-                <CalculationPreview data={element.elementData as any} />
-              )}
-              {element.elementType === 'inspiration' && (
-                <InspirationPreview data={element.elementData as any} />
-              )}
-            </div>
-          </div>
-        </>
+      {/* Bouton × pour supprimer - visible au hover */}
+      {!isEditing && onDelete && (
+        <button
+          onClick={handleDelete}
+          className="
+            absolute -top-2 -right-2
+            w-5 h-5
+            bg-red-500 hover:bg-red-600
+            text-white
+            rounded-full
+            flex items-center justify-center
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-150
+            shadow-sm
+            z-20
+          "
+          title="Supprimer"
+        >
+          <X className="w-3 h-3" strokeWidth={2.5} />
+        </button>
       )}
+
+      <div className="overflow-hidden rounded h-full">
+        {/* Mode édition Note */}
+        {isEditing && isNote ? (
+          <NoteEditor
+            content={(element.elementData as any).content || ''}
+            color={(element.elementData as any).color || '#FEF3C7'}
+            onSave={onSaveNote}
+            onCancel={onCancelEdit}
+          />
+        ) : (
+          <>
+            {/* Grip handle - plus discret */}
+            <div className="
+              absolute top-1 left-1/2 -translate-x-1/2
+              opacity-20 group-hover:opacity-50
+              transition-opacity
+            ">
+              <GripVertical className="w-4 h-4 text-gray-400" />
+            </div>
+
+            <div className="p-3 h-full flex flex-col pt-5">
+              {/* Type label - sauf pour palette (a son propre header) */}
+              {!isPalette && (
+                <span className="
+                  text-[10px] uppercase tracking-wider
+                  text-gray-400 dark:text-gray-500
+                  mb-2
+                ">
+                  {ELEMENT_TYPE_LABELS[element.elementType]}
+                </span>
+              )}
+
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {element.elementType === 'textile' && (
+                  <TextilePreview data={element.elementData as any} />
+                )}
+                {element.elementType === 'note' && (
+                  <NotePreview data={element.elementData as any} />
+                )}
+                {element.elementType === 'palette' && isPaletteElement(element.elementData) && (
+                  <PaletteElement 
+                    data={element.elementData} 
+                    width={width - 24} // moins le padding
+                    height={height - 44} // moins le padding top
+                  />
+                )}
+                {element.elementType === 'calculation' && (
+                  <CalculationPreview data={element.elementData as any} />
+                )}
+                {element.elementType === 'inspiration' && (
+                  <InspirationPreview data={element.elementData as any} />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
 // ============================================
-// PREVIEWS
+// PREVIEWS - Style épuré
 // ============================================
 
 function TextilePreview({ data }: { data: any }) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (data.textileId) {
-      window.open(`/favorites/${data.textileId}`, '_blank');
+      window.open(`/textiles/${data.textileId}`, '_blank');
     }
   };
 
@@ -109,13 +177,17 @@ function TextilePreview({ data }: { data: any }) {
         <img
           src={data.snapshot.imageUrl}
           alt={data.snapshot?.name || 'Tissu'}
-          className="w-12 h-12 object-cover rounded"
+          className="w-12 h-12 object-cover rounded-sm"
           draggable={false}
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate">{data.snapshot?.name || 'Tissu'}</p>
-        <p className="text-xs text-muted-foreground">{data.snapshot?.price}€</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          {data.snapshot?.name || 'Tissu'}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {data.snapshot?.price}€
+        </p>
       </div>
     </div>
   );
@@ -124,7 +196,10 @@ function TextilePreview({ data }: { data: any }) {
 function NotePreview({ data }: { data: any }) {
   const bgColor = data.color || '#FEF3C7';
   return (
-    <div className="h-full rounded p-2 -m-1" style={{ backgroundColor: bgColor }}>
+    <div
+      className="h-full rounded-sm p-2 -m-1"
+      style={{ backgroundColor: bgColor }}
+    >
       <p className="text-sm line-clamp-4 text-gray-800">
         {data.content || 'Double-clic pour éditer...'}
       </p>
@@ -132,62 +207,47 @@ function NotePreview({ data }: { data: any }) {
   );
 }
 
-function PalettePreview({ data }: { data: any }) {
-  const colors = data.colors || [];
-  return (
-    <div>
-      {data.name && <p className="text-xs font-medium mb-2 truncate">{data.name}</p>}
-      <div className="flex gap-1 flex-wrap">
-        {colors.map((color: string, i: number) => (
-          <div
-            key={i}
-            className="w-8 h-8 rounded border border-gray-200"
-            style={{ backgroundColor: color }}
-            title={color}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function CalculationPreview({ data }: { data: any }) {
   // Support nouveau format (pattern import) et ancien format (journey)
   const hasYardageByWidth = data.yardageByWidth && Object.keys(data.yardageByWidth).length > 0;
-  
+
   if (hasYardageByWidth) {
     // Nouveau format - Pattern Import
     const sortedWidths = Object.entries(data.yardageByWidth as Record<number, number>)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
       .slice(0, 3); // Max 3 pour la preview
-    
+
     return (
       <div className="space-y-1">
-        <p className="text-sm font-medium truncate">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
           {data.patternName || data.summary || 'Calcul'}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           {data.selectedSize && `Taille ${data.selectedSize}`}
           {data.quantity > 1 && ` • ×${data.quantity}`}
         </p>
         <div className="space-y-0.5 mt-2">
           {sortedWidths.map(([width, yardage]) => (
             <div key={width} className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{width}cm</span>
-              <span className="font-mono">{(yardage as number).toFixed(2)}m</span>
+              <span className="text-gray-500 dark:text-gray-400">{width}cm</span>
+              <span className="font-mono text-gray-700 dark:text-gray-300">
+                {(yardage as number).toFixed(2)}m
+              </span>
             </div>
           ))}
         </div>
       </div>
     );
   }
-  
+
   // Ancien format - Journey
   return (
     <div>
-      <p className="text-sm font-medium">{data.summary || 'Calcul'}</p>
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        {data.summary || 'Calcul'}
+      </p>
       {data.result && (
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {data.result.recommended}m recommandés
         </p>
       )}
@@ -202,11 +262,13 @@ function InspirationPreview({ data }: { data: any }) {
         <img
           src={data.imageUrl}
           alt={data.caption || 'Inspiration'}
-          className="w-full h-full object-cover rounded"
+          className="w-full h-full object-cover rounded-sm"
           draggable={false}
         />
       ) : (
-        <p className="text-sm text-muted-foreground">{data.caption || 'Inspiration'}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {data.caption || 'Inspiration'}
+        </p>
       )}
     </div>
   );
