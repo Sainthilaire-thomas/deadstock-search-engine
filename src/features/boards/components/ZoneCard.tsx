@@ -1,9 +1,10 @@
 // src/features/boards/components/ZoneCard.tsx
+// VERSION ÉPURÉE - Sprint 1 avec bouton × au hover
 
 'use client';
 
 import { useState, useRef } from 'react';
-import { Move, Sparkles, ExternalLink } from 'lucide-react';
+import { GripVertical, Sparkles, ExternalLink, X } from 'lucide-react';
 import { isZoneCrystallized } from '../domain/types';
 import type { BoardZone } from '../domain/types';
 
@@ -13,24 +14,28 @@ interface ZoneCardProps {
   zone: BoardZone;
   isSelected: boolean;
   isEditing: boolean;
+  isVisible?: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
   onSaveName: (name: string) => void;
   onCancelEdit: () => void;
   onCrystallize: () => void;
+  onDelete?: () => void;
 }
 
 export function ZoneCard({
   zone,
   isSelected,
   isEditing,
+  isVisible = true,
   onMouseDown,
   onDoubleClick,
   onResizeStart,
   onSaveName,
   onCancelEdit,
   onCrystallize,
+  onDelete,
 }: ZoneCardProps) {
   const [editName, setEditName] = useState(zone.name);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,39 +56,79 @@ export function ZoneCard({
     onSaveName(editName);
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete?.();
+  };
+
+  // Mode Inspiration : zones invisibles (sauf si cristallisées)
+  // Mode Inspiration : zones invisibles avec animation (sauf si cristallisées)
+  const shouldShow = isVisible || isCrystallized;
+  
   return (
     <div
-      className={`absolute rounded-lg transition-shadow ${
-        isCrystallized
-          ? 'border-2 border-solid opacity-75'
-          : 'border-2 border-dashed'
-      } ${isSelected ? 'shadow-lg ring-2 ring-primary' : 'hover:shadow-md'}`}
+      className={`
+        group
+        absolute transition-all duration-300 ease-in-out
+        ${shouldShow 
+          ? 'opacity-100 scale-100' 
+          : 'opacity-0 scale-95 pointer-events-none'
+        }
+        ${isCrystallized
+          ? 'border border-solid border-gray-400 bg-gray-50/50 dark:bg-gray-800/30'
+          : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent'
+        }
+        ${isSelected 
+          ? 'shadow-md ring-1 ring-gray-400 dark:ring-gray-500' 
+          : 'hover:border-gray-400 dark:hover:border-gray-500'
+        }
+        rounded
+      `}
       style={{
         left: zone.positionX,
         top: zone.positionY,
         width: zone.width,
         height: zone.height,
-        borderColor: zone.color,
-        backgroundColor: isCrystallized ? `${zone.color}08` : `${zone.color}15`,
         zIndex: isSelected ? 5 : 1,
       }}
     >
-      {/* Zone header */}
-      <div
-        className="absolute top-0 left-0 right-0 px-3 py-1 flex items-center gap-2 rounded-t-md"
-        style={{
-          backgroundColor: zone.color,
-          cursor: isEditing ? 'text' : 'move',
-        }}
-        onMouseDown={isEditing ? undefined : onMouseDown}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          if (!isCrystallized) onDoubleClick();
-        }}
-      >
-        <Move className="w-3 h-3 text-white/70 shrink-0" />
+      {/* Bouton × pour supprimer - visible au hover, sauf si cristallisée */}
+      {!isCrystallized && onDelete && (
+        <button
+          onClick={handleDelete}
+          className="
+            absolute -top-2 -right-2
+            w-5 h-5
+            bg-red-500 hover:bg-red-600
+            text-white
+            rounded-full
+            flex items-center justify-center
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-150
+            shadow-sm
+            z-20
+          "
+          title="Supprimer la zone"
+        >
+          <X className="w-3 h-3" strokeWidth={2.5} />
+        </button>
+      )}
 
-        {isEditing && !isCrystallized ? (
+      {/* Header - positionné au-dessus de la zone */}
+      <div
+        className="
+          absolute -top-6 left-0 
+          flex items-center gap-1.5 
+          cursor-move
+          px-1
+        "
+        onMouseDown={onMouseDown}
+        onDoubleClick={onDoubleClick}
+      >
+        <GripVertical className="w-3 h-3 text-gray-400" />
+        
+        {isEditing ? (
           <input
             ref={inputRef}
             type="text"
@@ -91,43 +136,80 @@ export function ZoneCard({
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
-            className="flex-1 bg-white/20 text-white text-xs font-medium px-1 py-0.5 rounded outline-none focus:bg-white/30 placeholder:text-white/50"
-            placeholder="Nom de la zone"
+            className="
+              text-xs font-medium 
+              bg-white dark:bg-gray-800 
+              border border-gray-300 dark:border-gray-600 
+              rounded px-1.5 py-0.5 
+              focus:outline-none focus:ring-1 focus:ring-gray-400
+              w-32
+            "
             autoFocus
-            onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="text-xs font-medium text-white truncate flex-1">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-37.5">
             {zone.name}
           </span>
         )}
 
-        {/* Badge cristallisé */}
         {isCrystallized && (
-          <span className="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded">
+          <span className="
+            inline-flex items-center gap-1
+            text-[10px] 
+            bg-gray-200 dark:bg-gray-700 
+            text-gray-600 dark:text-gray-300
+            px-1.5 py-0.5 
+            rounded
+          ">
+            <Sparkles className="w-3 h-3" />
             Projet
           </span>
         )}
       </div>
 
-      {/* Bouton Cristalliser ou Voir projet */}
-      <div className="absolute bottom-2 right-2">
-        {isCrystallized ? (
-          
-          <a  href={`/journey/${zone.linkedProjectId}/idea`}
-            className="flex items-center gap-1 text-xs bg-background/90 hover:bg-background text-foreground px-2 py-1 rounded border border-border transition-colors"
+      {/* Zone content area - pour le drag */}
+      <div
+        className="absolute inset-0 cursor-move"
+        onMouseDown={onMouseDown}
+        onDoubleClick={onDoubleClick}
+      />
+
+      {/* Actions - en bas à droite */}
+      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+        {isCrystallized && zone.linkedProjectId ? (
+          <a
+            href={`/journey/projects/${zone.linkedProjectId}`}
+            className="
+              text-[10px] 
+              text-gray-500 hover:text-gray-700 
+              dark:text-gray-400 dark:hover:text-gray-200
+              flex items-center gap-1
+              px-1.5 py-0.5
+              rounded
+              hover:bg-gray-100 dark:hover:bg-gray-700
+              transition-colors
+            "
             onClick={(e) => e.stopPropagation()}
           >
-            <ExternalLink className="w-3 h-3" />
             Voir projet
+            <ExternalLink className="w-3 h-3" />
           </a>
-        ) : (
+        ) : !isCrystallized && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onCrystallize();
             }}
-            className="flex items-center gap-1 text-xs bg-primary/90 hover:bg-primary text-primary-foreground px-2 py-1 rounded transition-colors"
+            className="
+              text-[10px] 
+              text-gray-500 hover:text-gray-700 
+              dark:text-gray-400 dark:hover:text-gray-200
+              flex items-center gap-1
+              px-1.5 py-0.5
+              rounded
+              hover:bg-gray-100 dark:hover:bg-gray-700
+              transition-colors
+            "
           >
             <Sparkles className="w-3 h-3" />
             Cristalliser
@@ -135,52 +217,46 @@ export function ZoneCard({
         )}
       </div>
 
-      {/* Resize handles - uniquement si sélectionné, pas en édition et pas cristallisé */}
-      {isSelected && !isEditing && !isCrystallized && (
+      {/* Resize handles - plus discrets */}
+      {!isCrystallized && (
         <>
-          <ResizeHandle position="nw" onMouseDown={(e) => onResizeStart(e, 'nw')} />
-          <ResizeHandle position="ne" onMouseDown={(e) => onResizeStart(e, 'ne')} />
-          <ResizeHandle position="sw" onMouseDown={(e) => onResizeStart(e, 'sw')} />
-          <ResizeHandle position="se" onMouseDown={(e) => onResizeStart(e, 'se')} />
-          <ResizeHandle position="n" onMouseDown={(e) => onResizeStart(e, 'n')} />
-          <ResizeHandle position="s" onMouseDown={(e) => onResizeStart(e, 's')} />
-          <ResizeHandle position="e" onMouseDown={(e) => onResizeStart(e, 'e')} />
-          <ResizeHandle position="w" onMouseDown={(e) => onResizeStart(e, 'w')} />
+          {/* Corners */}
+          <div
+            className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'nw')}
+          />
+          <div
+            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'ne')}
+          />
+          <div
+            className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'sw')}
+          />
+          <div
+            className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'se')}
+          />
+
+          {/* Edges */}
+          <div
+            className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-gray-400 border border-white rounded-sm cursor-n-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'n')}
+          />
+          <div
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-gray-400 border border-white rounded-sm cursor-s-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 's')}
+          />
+          <div
+            className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-6 bg-gray-400 border border-white rounded-sm cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'w')}
+          />
+          <div
+            className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-6 bg-gray-400 border border-white rounded-sm cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => onResizeStart(e, 'e')}
+          />
         </>
       )}
     </div>
-  );
-}
-
-// ============================================
-// RESIZE HANDLE
-// ============================================
-
-interface ResizeHandleProps {
-  position: ResizeHandle;
-  onMouseDown: (e: React.MouseEvent) => void;
-}
-
-function ResizeHandle({ position, onMouseDown }: ResizeHandleProps) {
-  const positionStyles: Record<ResizeHandle, string> = {
-    nw: 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
-    ne: 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
-    sw: 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
-    se: 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
-    n: 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize',
-    s: 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize',
-    e: 'top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize',
-    w: 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize',
-  };
-
-  const isCorner = ['nw', 'ne', 'sw', 'se'].includes(position);
-
-  return (
-    <div
-      className={`absolute ${positionStyles[position]} ${
-        isCorner ? 'w-3 h-3' : 'w-2 h-2'
-      } bg-primary border-2 border-background rounded-full hover:scale-125 transition-transform z-10`}
-      onMouseDown={onMouseDown}
-    />
   );
 }

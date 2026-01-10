@@ -1,4 +1,5 @@
 // src/features/boards/context/BoardContext.tsx
+// VERSION ÉPURÉE - Sprint 1 avec viewMode
 
 'use client';
 
@@ -8,6 +9,7 @@ import React, {
   useReducer,
   useCallback,
   ReactNode,
+  useEffect,
 } from 'react';
 import type {
   BoardWithDetails,
@@ -40,6 +42,12 @@ import {
 } from '../actions/zoneActions';
 
 // ============================================
+// VIEW MODE TYPE
+// ============================================
+
+export type ViewMode = 'inspiration' | 'project';
+
+// ============================================
 // STATE TYPE
 // ============================================
 
@@ -52,6 +60,8 @@ interface BoardState {
   isDragging: boolean;
   isLoading: boolean;
   error: string | null;
+  // NEW: View mode
+  viewMode: ViewMode;
 }
 
 // ============================================
@@ -75,8 +85,8 @@ type BoardAction =
   | { type: 'SET_DRAGGING'; payload: boolean }
   | { type: 'UPDATE_BOARD_NAME'; payload: string }
   | { type: 'RESIZE_ZONE'; payload: { id: string; width: number; height: number } }
-  | { type: 'CRYSTALLIZE_ZONE'; payload: { id: string; projectId: string; crystallizedAt: Date } };
-  
+  | { type: 'CRYSTALLIZE_ZONE'; payload: { id: string; projectId: string; crystallizedAt: Date } }
+  | { type: 'SET_VIEW_MODE'; payload: ViewMode };
 
 // ============================================
 // REDUCER
@@ -158,7 +168,8 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
             : z
         ),
       };
-  case 'RESIZE_ZONE':
+
+    case 'RESIZE_ZONE':
       return {
         ...state,
         zones: state.zones.map((z) =>
@@ -167,19 +178,21 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
             : z
         ),
       };
-      case 'CRYSTALLIZE_ZONE':
+
+    case 'CRYSTALLIZE_ZONE':
       return {
         ...state,
         zones: state.zones.map((z) =>
           z.id === action.payload.id
-            ? { 
-                ...z, 
+            ? {
+                ...z,
                 crystallizedAt: action.payload.crystallizedAt,
                 linkedProjectId: action.payload.projectId,
               }
             : z
         ),
       };
+
     case 'REMOVE_ZONE':
       return {
         ...state,
@@ -212,6 +225,9 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
           : null,
       };
 
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload };
+
     default:
       return state;
   }
@@ -229,8 +245,9 @@ interface BoardContextValue extends BoardState {
   addElement: (input: Omit<CreateElementInput, 'boardId'>) => Promise<void>;
   updateElement: (id: string, input: UpdateElementInput) => Promise<void>;
   moveElement: (id: string, x: number, y: number) => Promise<void>;
+    moveElementLocal: (id: string, x: number, y: number) => void;      // ✅ NEW
+  saveElementPosition: (id: string, x: number, y: number) => Promise<void>; // ✅ NEW
   removeElement: (id: string) => Promise<void>;
-  
 
   // Quick add helpers
   addNote: (position?: { x: number; y: number }) => Promise<void>;
@@ -240,8 +257,12 @@ interface BoardContextValue extends BoardState {
   addZone: (name?: string, position?: { x: number; y: number }) => Promise<void>;
   updateZone: (id: string, input: UpdateZoneInput) => Promise<void>;
   moveZone: (id: string, x: number, y: number) => Promise<void>;
+  moveZoneLocal: (id: string, x: number, y: number) => void;    
+   saveZonePosition: (id: string, x: number, y: number) => Promise<void>; 
   removeZone: (id: string) => Promise<void>;
   resizeZone: (id: string, width: number, height: number) => Promise<void>;
+  resizeZoneLocal: (id: string, width: number, height: number) => void; // ✅ NEW
+  saveZoneSize: (id: string, width: number, height: number) => Promise<void>; // ✅ NEW
   crystallizeZone: (id: string, projectId: string) => void;
 
   // Selection
@@ -252,6 +273,10 @@ interface BoardContextValue extends BoardState {
 
   // Drag state
   setDragging: (isDragging: boolean) => void;
+
+  // NEW: View mode
+  setViewMode: (mode: ViewMode) => void;
+  toggleViewMode: () => void;
 }
 
 // ============================================
@@ -259,6 +284,12 @@ interface BoardContextValue extends BoardState {
 // ============================================
 
 const BoardContext = createContext<BoardContextValue | null>(null);
+
+// ============================================
+// LOCAL STORAGE KEY
+// ============================================
+
+const VIEW_MODE_STORAGE_KEY = 'deadstock-board-view-mode';
 
 // ============================================
 // PROVIDER
@@ -270,6 +301,13 @@ interface BoardProviderProps {
 }
 
 export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
+  // Get initial view mode from localStorage
+  const getInitialViewMode = (): ViewMode => {
+    if (typeof window === 'undefined') return 'inspiration';
+    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    return stored === 'project' ? 'project' : 'inspiration';
+  };
+
   const [state, dispatch] = useReducer(boardReducer, {
     board: initialBoard,
     elements: initialBoard.elements,
@@ -279,7 +317,16 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
     isDragging: false,
     isLoading: false,
     error: null,
+    viewMode: 'inspiration', // Default, will be updated by useEffect
   });
+
+  // Load view mode from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    if (stored === 'project') {
+      dispatch({ type: 'SET_VIEW_MODE', payload: 'project' });
+    }
+  }, []);
 
   const boardId = initialBoard.id;
 
@@ -288,9 +335,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
   // ============================================
 
   const updateBoardName = useCallback(async (name: string) => {
-    // Optimistic update
     dispatch({ type: 'UPDATE_BOARD_NAME', payload: name });
-
     const result = await updateBoardAction(boardId, { name });
     if (!result.success) {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
@@ -303,9 +348,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addElement = useCallback(async (input: Omit<CreateElementInput, 'boardId'>) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-
     const result = await addElementAction({ ...input, boardId });
-
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
@@ -315,24 +358,28 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const updateElement = useCallback(async (id: string, input: UpdateElementInput) => {
     const result = await updateElementAction(id, input);
-
     if (result.success && result.data) {
       dispatch({ type: 'UPDATE_ELEMENT', payload: result.data });
     }
   }, []);
 
   const moveElement = useCallback(async (id: string, x: number, y: number) => {
-    // Optimistic update for smooth dragging
     dispatch({ type: 'MOVE_ELEMENT', payload: { id, x, y } });
-
-    // Persist to database (fire and forget for performance)
     moveElementAction(id, { positionX: x, positionY: y });
   }, []);
 
-  const removeElement = useCallback(async (id: string) => {
-    // Optimistic update
-    dispatch({ type: 'REMOVE_ELEMENT', payload: id });
+  // ✅ NOUVEAU : moveElement LOCAL uniquement (pas de POST)
+const moveElementLocal = useCallback((id: string, x: number, y: number) => {
+  dispatch({ type: 'MOVE_ELEMENT', payload: { id, x, y } });
+}, []);
 
+// ✅ NOUVEAU : saveElementPosition (POST uniquement, pour mouseUp)
+const saveElementPosition = useCallback(async (id: string, x: number, y: number) => {
+  await moveElementAction(id, { positionX: x, positionY: y });
+}, []);
+
+  const removeElement = useCallback(async (id: string) => {
+    dispatch({ type: 'REMOVE_ELEMENT', payload: id });
     await removeElementAction(id);
   }, []);
 
@@ -342,9 +389,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addNote = useCallback(async (position?: { x: number; y: number }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-
     const result = await addNoteToBoard(boardId, '', position);
-
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
@@ -354,9 +399,7 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addPalette = useCallback(async (colors: string[], position?: { x: number; y: number }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-
     const result = await addPaletteToBoard(boardId, colors, undefined, position);
-
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ELEMENT', payload: result.data });
     } else {
@@ -370,11 +413,12 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const addZone = useCallback(async (name?: string, position?: { x: number; y: number }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-
     const result = await addZoneToBoard(boardId, name || 'Nouvelle zone', position);
-
     if (result.success && result.data) {
       dispatch({ type: 'ADD_ZONE', payload: result.data });
+      // Switch to project mode when adding a zone
+      dispatch({ type: 'SET_VIEW_MODE', payload: 'project' });
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, 'project');
     } else {
       dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
     }
@@ -382,39 +426,50 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
 
   const updateZoneHandler = useCallback(async (id: string, input: UpdateZoneInput) => {
     const result = await updateZoneAction(id, input);
-
     if (result.success && result.data) {
       dispatch({ type: 'UPDATE_ZONE', payload: result.data });
     }
   }, []);
 
   const moveZone = useCallback(async (id: string, x: number, y: number) => {
-    // Optimistic update for smooth dragging
     dispatch({ type: 'MOVE_ZONE', payload: { id, x, y } });
-
-    // Persist to database (fire and forget for performance)
     moveZoneAction(id, x, y);
   }, []);
 
-  const resizeZone = useCallback(async (id: string, width: number, height: number) => {
-    // Optimistic update for smooth resizing
-    dispatch({ type: 'RESIZE_ZONE', payload: { id, width, height } });
+  // ✅ NOUVEAU : moveZone LOCAL uniquement
+const moveZoneLocal = useCallback((id: string, x: number, y: number) => {
+  dispatch({ type: 'MOVE_ZONE', payload: { id, x, y } });
+}, []);
 
-    // Persist to database (fire and forget for performance)
+// ✅ NOUVEAU : saveZonePosition
+const saveZonePosition = useCallback(async (id: string, x: number, y: number) => {
+  await moveZoneAction(id, x, y);
+}, []);
+
+  const resizeZone = useCallback(async (id: string, width: number, height: number) => {
+    dispatch({ type: 'RESIZE_ZONE', payload: { id, width, height } });
     resizeZoneAction(id, width, height);
   }, []);
 
+  // ✅ NOUVEAU : resizeZone LOCAL uniquement
+const resizeZoneLocal = useCallback((id: string, width: number, height: number) => {
+  dispatch({ type: 'RESIZE_ZONE', payload: { id, width, height } });
+}, []);
+
+// ✅ NOUVEAU : saveZoneSize
+const saveZoneSize = useCallback(async (id: string, width: number, height: number) => {
+  await resizeZoneAction(id, width, height);
+}, []);
+
   const crystallizeZone = useCallback((id: string, projectId: string) => {
-    dispatch({ 
-      type: 'CRYSTALLIZE_ZONE', 
-      payload: { id, projectId, crystallizedAt: new Date() } 
+    dispatch({
+      type: 'CRYSTALLIZE_ZONE',
+      payload: { id, projectId, crystallizedAt: new Date() }
     });
   }, []);
 
   const removeZone = useCallback(async (id: string) => {
-    // Optimistic update
     dispatch({ type: 'REMOVE_ZONE', payload: id });
-
     await deleteZoneAction(id);
   }, []);
 
@@ -453,29 +508,52 @@ export function BoardProvider({ children, initialBoard }: BoardProviderProps) {
   }, []);
 
   // ============================================
+  // VIEW MODE
+  // ============================================
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    dispatch({ type: 'SET_VIEW_MODE', payload: mode });
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  }, []);
+
+  const toggleViewMode = useCallback(() => {
+    const newMode = state.viewMode === 'inspiration' ? 'project' : 'inspiration';
+    dispatch({ type: 'SET_VIEW_MODE', payload: newMode });
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode);
+  }, [state.viewMode]);
+
+  // ============================================
   // CONTEXT VALUE
   // ============================================
 
-  const value: BoardContextValue = {
+const value: BoardContextValue = {
     ...state,
     updateBoardName,
     addElement,
     updateElement,
     moveElement,
+    moveElementLocal,      // ✅ NEW
+    saveElementPosition,   // ✅ NEW
     removeElement,
     addNote,
     addPalette,
     addZone,
     updateZone: updateZoneHandler,
     moveZone,
+    moveZoneLocal,         // ✅ NEW
+    saveZonePosition,      // ✅ NEW
     removeZone,
     resizeZone,
+    resizeZoneLocal,       // ✅ NEW
+    saveZoneSize,          // ✅ NEW
     crystallizeZone,
     selectElements,
     clearSelection,
     toggleElementSelection,
     selectZone,
     setDragging,
+    setViewMode,
+    toggleViewMode,
   };
 
   return (

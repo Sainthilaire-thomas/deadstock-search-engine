@@ -32,7 +32,7 @@ export function SearchInterface({ initialData }: SearchInterfaceProps) {
       
       const sufficiency = isTextileSufficient(
         estimatedWidth,
-        textile.quantity_value,
+        textile.quantity_value ?? 0,
         filters.yardageFilter!.yardageByWidth
       );
 

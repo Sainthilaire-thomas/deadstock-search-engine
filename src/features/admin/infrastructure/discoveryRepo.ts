@@ -57,6 +57,7 @@ interface DbSiteProfile {
   estimated_available?: number;
   global_analysis?: any;
   extraction_patterns?: any;
+   sale_type_detection?: any;
 }
 
 interface DbSite {
@@ -412,6 +413,18 @@ toDomain(data: DbSiteProfile): SiteProfile {
         patterns: [],
         analyzedAt: new Date().toISOString(),
         productsAnalyzed: 0,
+      },
+       saleTypeDetection: data.sale_type_detection || {
+        dominantType: 'unknown',
+        confidence: 0,
+        evidence: {
+          hasMultipleVariants: false,
+          hasLengthInOptions: false,
+          hasCuttingOption: false,
+          priceVariation: 0,
+          sampleSize: 0,
+        },
+        detectedAt: new Date().toISOString(),
       },
     };
   },

@@ -1,38 +1,84 @@
 // src/app/(main)/layout.tsx
 
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { Sidebar } from '@/features/journey/components/Sidebar';
 import { MobileJourneyNav } from '@/features/journey/components/MobileJourneyNav';
 import { FavoritesCountBadge } from '@/features/favorites/components/FavoritesCountBadge';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { ImmersiveModeProvider, useImmersiveMode } from '@/features/boards/context/ImmersiveModeContext';
 import Link from 'next/link';
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className='min-h-screen bg-background'>
-      {/* Sidebar Desktop */}
-      <Sidebar />
+function MainLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isImmersive, exitImmersiveMode } = useImmersiveMode();
+  const pathname = usePathname();
 
-      {/* Main Content avec padding pour la sidebar */}
-      <div className='md:pl-60'>
-        {/* Header */}
-        <header className='sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60'>
-          <div className='container flex h-16 items-center justify-between'>
-            <div className='flex items-center gap-8'>
-              <Link href="/" className='font-bold text-xl'>Deadstock</Link>
-              <nav className='hidden md:flex items-center gap-4'>
-                <Link
-                  href="/admin"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Admin
-                </Link>
-              </nav>
+  // Détecter si on est sur une page board spécifique (pas la liste)
+  const isOnBoardPage = pathname?.match(/^\/boards\/[^/]+$/) !== null;
+
+  // Auto-exit du mode immersif quand on quitte un board
+  useEffect(() => {
+    if (!isOnBoardPage && isImmersive) {
+      exitImmersiveMode();
+    }
+  }, [isOnBoardPage, isImmersive, exitImmersiveMode]);
+
+  // Le mode immersif n'est actif QUE sur les pages board individuelles
+  const showImmersive = isImmersive && isOnBoardPage;
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Sidebar Desktop - Masquée en mode immersif */}
+      <div
+        className={`
+          transition-all duration-300 ease-in-out
+          ${showImmersive ? 'opacity-0 -translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}
+        `}
+      >
+        <Sidebar />
+      </div>
+
+      {/* Main Content - Pleine largeur en mode immersif */}
+      <div
+        className={`
+          transition-all duration-300 ease-in-out
+          ${showImmersive ? 'md:pl-0' : 'md:pl-60'}
+        `}
+      >
+        {/* Header - Simplifié en mode immersif */}
+        <header
+          className={`
+            sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur 
+            supports-backdrop-filter:bg-background/60
+            transition-all duration-300
+            ${showImmersive ? 'h-12' : 'h-16'}
+          `}
+        >
+          <div
+            className={`
+              container flex items-center justify-between
+              transition-all duration-300
+              ${showImmersive ? 'h-12' : 'h-16'}
+            `}
+          >
+            <div className="flex items-center gap-8">
+              <Link href="/" className={`font-bold transition-all ${showImmersive ? 'text-lg' : 'text-xl'}`}>
+                Deadstock
+              </Link>
+              {!showImmersive && (
+                <nav className="hidden md:flex items-center gap-4">
+                  <Link
+                    href="/admin"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Admin
+                  </Link>
+                </nav>
+              )}
             </div>
-            <div className='flex items-center gap-2'>
+            <div className="flex items-center gap-2">
               <FavoritesCountBadge />
               <ThemeToggle />
             </div>
@@ -40,11 +86,23 @@ export default function MainLayout({
         </header>
 
         {/* Main content */}
-        <main className='pb-16 md:pb-0'>{children}</main>
+        <main className="pb-16 md:pb-0">{children}</main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileJourneyNav />
+      {/* Mobile Bottom Navigation - Masquée en mode immersif */}
+      {!showImmersive && <MobileJourneyNav />}
     </div>
+  );
+}
+
+export default function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ImmersiveModeProvider>
+      <MainLayoutContent>{children}</MainLayoutContent>
+    </ImmersiveModeProvider>
   );
 }

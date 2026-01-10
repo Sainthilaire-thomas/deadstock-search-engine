@@ -1,6 +1,4 @@
-﻿Need to install the following packages:
-supabase@2.71.3
-Ok to proceed? (y) export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -774,6 +772,7 @@ export type Database = {
           recommendations: Json | null
           rediscovery_reason: string | null
           relevant_collections: number | null
+          sale_type_detection: Json | null
           sample_products: Json | null
           site_id: string
           total_collections: number | null
@@ -796,6 +795,7 @@ export type Database = {
           recommendations?: Json | null
           rediscovery_reason?: string | null
           relevant_collections?: number | null
+          sale_type_detection?: Json | null
           sample_products?: Json | null
           site_id: string
           total_collections?: number | null
@@ -818,6 +818,7 @@ export type Database = {
           recommendations?: Json | null
           rediscovery_reason?: string | null
           relevant_collections?: number | null
+          sale_type_detection?: Json | null
           sample_products?: Json | null
           site_id?: string
           total_collections?: number | null
@@ -1000,6 +1001,7 @@ export type Database = {
           pattern_confidence: number | null
           pattern_original: string | null
           price_currency: string | null
+          price_per_meter: number | null
           price_per_unit: number | null
           price_per_unit_label: string | null
           price_value: number | null
@@ -1009,6 +1011,7 @@ export type Database = {
           review_reasons: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
+          sale_type: string | null
           scraped_at: string
           search_vector: unknown
           site_id: string | null
@@ -1055,6 +1058,7 @@ export type Database = {
           pattern_confidence?: number | null
           pattern_original?: string | null
           price_currency?: string | null
+          price_per_meter?: number | null
           price_per_unit?: number | null
           price_per_unit_label?: string | null
           price_value?: number | null
@@ -1064,6 +1068,7 @@ export type Database = {
           review_reasons?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sale_type?: string | null
           scraped_at?: string
           search_vector?: unknown
           site_id?: string | null
@@ -1110,6 +1115,7 @@ export type Database = {
           pattern_confidence?: number | null
           pattern_original?: string | null
           price_currency?: string | null
+          price_per_meter?: number | null
           price_per_unit?: number | null
           price_per_unit_label?: string | null
           price_value?: number | null
@@ -1119,6 +1125,7 @@ export type Database = {
           review_reasons?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sale_type?: string | null
           scraped_at?: string
           search_vector?: unknown
           site_id?: string | null
@@ -1508,35 +1515,27 @@ export type Database = {
           additional_images: string[] | null
           available: boolean | null
           color: string | null
-          color_confidence: number | null
           created_at: string | null
-          data_quality_score: number | null
           description: string | null
           fiber: string | null
-          fiber_confidence: number | null
           id: string | null
           image_url: string | null
-          minimum_order_unit: string | null
-          minimum_order_value: number | null
           name: string | null
           pattern: string | null
-          pattern_confidence: number | null
+          price: number | null
           price_currency: string | null
-          price_per_unit: number | null
-          price_per_unit_label: string | null
-          price_value: number | null
+          price_per_meter: number | null
           quantity_unit: string | null
           quantity_value: number | null
-          scraped_at: string | null
+          sale_type: string | null
           site_id: string | null
+          site_name: string | null
+          site_url: string | null
           source_platform: string | null
           source_product_id: string | null
           source_url: string | null
-          supplier_location: string | null
-          supplier_name: string | null
           updated_at: string | null
           weave: string | null
-          weave_confidence: number | null
           weight_unit: string | null
           weight_value: number | null
           width_unit: string | null
@@ -1695,6 +1694,7 @@ export type Database = {
       }
     }
     Functions: {
+      analyze_nona_variants: { Args: { raw_data: Json }; Returns: Json }
       get_category_by_slug: { Args: { p_slug: string }; Returns: string }
       get_searchable_categories: {
         Args: never

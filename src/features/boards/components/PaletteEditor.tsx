@@ -1,11 +1,13 @@
 // src/features/boards/components/PaletteEditor.tsx
+// VERSION SPRINT 4 - Avec extraction couleurs depuis image
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
-import { X, Plus, Trash2, GripVertical, Check } from 'lucide-react';
+import { X, Plus, Check, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { extractColorsFromFile, extractColorsFromUrl } from '../utils/colorExtractor';
 import type { PaletteElementData } from '../domain/types';
 
 interface PaletteEditorProps {
@@ -23,6 +25,17 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
   );
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [currentColor, setCurrentColor] = useState(colors[0] || '#FF6B6B');
+  
+  // État pour l'extraction
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    initialData?.sourceImageUrl || null
+  );
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mettre à jour la couleur sélectionnée
   const handleColorChange = useCallback((newColor: string) => {
@@ -62,21 +75,85 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
     }
   }, [colors, selectedIndex]);
 
+  // Extraction depuis fichier
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    setExtractionError(null);
+
+    try {
+      // Créer preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Extraire les couleurs
+      const extractedColors = await extractColorsFromFile(file, 6);
+      setColors(extractedColors);
+      setSelectedIndex(0);
+      setCurrentColor(extractedColors[0]);
+      
+      // Mettre à jour le nom si vide
+      if (!name) {
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+        setName(`Palette - ${fileName}`);
+      }
+    } catch (error) {
+      setExtractionError(error instanceof Error ? error.message : 'Erreur d\'extraction');
+    } finally {
+      setIsExtracting(false);
+      // Reset input pour permettre de resélectionner le même fichier
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [name]);
+
+  // Extraction depuis URL
+  const handleUrlExtract = useCallback(async () => {
+    if (!imageUrl.trim()) return;
+
+    setIsExtracting(true);
+    setExtractionError(null);
+
+    try {
+      const extractedColors = await extractColorsFromUrl(imageUrl.trim(), 6);
+      setColors(extractedColors);
+      setSelectedIndex(0);
+      setCurrentColor(extractedColors[0]);
+      setPreviewImage(imageUrl.trim());
+      setShowUrlInput(false);
+      setImageUrl('');
+      
+      if (!name) {
+        setName('Palette extraite');
+      }
+    } catch (error) {
+      setExtractionError(error instanceof Error ? error.message : 'Erreur d\'extraction');
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [imageUrl, name]);
+
   // Sauvegarder
   const handleSave = useCallback(() => {
     onSave({
       name: name.trim() || 'Palette sans nom',
       colors,
-      source: initialData?.source || 'manual',
-      sourceImageUrl: initialData?.sourceImageUrl,
+      source: previewImage ? 'extracted' : 'manual',
+      sourceImageUrl: previewImage || undefined,
     });
-  }, [name, colors, initialData, onSave]);
+  }, [name, colors, previewImage, onSave]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {initialData ? 'Modifier la palette' : 'Nouvelle palette'}
           </h2>
@@ -88,8 +165,8 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
+        {/* Content - Scrollable */}
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Nom de la palette */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -105,6 +182,106 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
                        focus:ring-2 focus:ring-blue-500 focus:border-transparent
                        placeholder:text-gray-400"
             />
+          </div>
+
+          {/* Section Extraction */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Extraire depuis une image
+              </span>
+            </div>
+
+            {/* Preview image si extraite */}
+            {previewImage && (
+              <div className="mb-3 relative">
+                <img 
+                  src={previewImage} 
+                  alt="Source" 
+                  className="w-full h-24 object-cover rounded-md"
+                />
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="absolute top-1 right-1 w-6 h-6 bg-black/50 hover:bg-black/70 
+                           rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            )}
+
+            {/* Boutons d'extraction */}
+            <div className="flex gap-2">
+              {/* Upload fichier */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isExtracting}
+                className="flex-1"
+              >
+                {isExtracting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Upload image
+              </Button>
+
+              {/* URL */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowUrlInput(!showUrlInput)}
+                disabled={isExtracting}
+                className="flex-1"
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                Depuis URL
+              </Button>
+            </div>
+
+            {/* Input URL */}
+            {showUrlInput && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
+                           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                           focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleUrlExtract}
+                  disabled={!imageUrl.trim() || isExtracting}
+                >
+                  {isExtracting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'Extraire'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Erreur */}
+            {extractionError && (
+              <p className="mt-2 text-sm text-red-500">{extractionError}</p>
+            )}
           </div>
 
           {/* Liste des couleurs */}
@@ -167,7 +344,7 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
             <HexColorPicker 
               color={currentColor} 
               onChange={handleColorChange}
-              style={{ width: '100%', height: 180 }}
+              style={{ width: '100%', height: 160 }}
             />
             <div className="flex items-center gap-2 w-full">
               <div 
@@ -190,7 +367,7 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0">
           <Button variant="outline" onClick={onCancel}>
             Annuler
           </Button>

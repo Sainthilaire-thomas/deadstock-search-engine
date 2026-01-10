@@ -95,9 +95,7 @@ Peux-tu lire CONTEXT_SUMMARY.md et CURRENT_STATE.md et NEXT_STEPS me résumer o�
 
 ```
 Claude, fin de session.
-
 Peux-tu mettre à jour CURRENT_STATE.md, PROJECT_CONTEXT_COMPACT.md (en rajoutant ce qui est nouveau dans la session mais aussi ce que tu penses aurait du figurer en début de session et qui manquait), NEXT_STEPS.md 
-
 et créer la note de session ?
 ```
 
