@@ -33,6 +33,10 @@ import { PdfModal } from './PdfModal';
 import { PatternModal } from './PatternModal';
 import { SilhouetteModal } from './SilhouetteModal';
 
+//Sprint 7 imports
+import { ContextualSearchPanel } from './ContextualSearchPanel';
+import { useContextualSearchPanel } from '../context/ContextualSearchContext';
+
 import type { 
   BoardElement, 
   BoardZone, 
@@ -95,6 +99,7 @@ export function BoardCanvas() {
     addZone,
     addElement,
   } = useBoard();
+  const { state: searchState, closeSearch } = useContextualSearchPanel();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
@@ -1208,6 +1213,45 @@ const handleDoubleClick = (element: BoardElement) => {
             : undefined
         }
       />
+      
+{/* Contextual Search Panel - Sprint B2 */}
+<ContextualSearchPanel
+  isOpen={searchState.isOpen}
+  onClose={closeSearch}
+  initialConstraints={searchState.constraints ?? undefined}
+  boardId={boardId}
+  elementId={searchState.sourceElementId ?? undefined}
+  requiredMeters={searchState.requiredMeters}
+  onAddToBoard={async (textile) => {
+    const position = {
+      x: 100 + Math.random() * 200,
+      y: 100 + Math.random() * 200,
+    };
+
+    const elementData: TextileElementData = {
+      textileId: textile.id,
+      snapshot: {
+        name: textile.name,
+        source: textile.supplier_name || '',
+        price: textile.price_value || 0,
+        currency: textile.price_currency || 'EUR',
+        imageUrl: textile.image_url ?? null,
+        availableQuantity: textile.quantity_value || null,
+        material: textile.fiber || null,
+        color: textile.color || null,
+      },
+    };
+
+    await addElement({
+      elementType: 'textile',
+      elementData,
+      positionX: position.x,
+      positionY: position.y,
+    });
+
+    toast.success(`"${textile.name}" ajouté au board`);
+  }}
+/>
     </div>
   );
 }

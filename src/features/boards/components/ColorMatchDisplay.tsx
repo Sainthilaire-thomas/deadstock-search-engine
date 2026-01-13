@@ -1,5 +1,6 @@
 // src/features/boards/components/ColorMatchDisplay.tsx
-// Sprint B1 - Affichage des correspondances couleur avec distance LAB
+// Sprint B1 & B2 - Affichage des correspondances couleur avec distance LAB
+// Intégration avec recherche contextuelle
 
 'use client';
 
@@ -12,6 +13,15 @@ import {
   normalizeHex,
   type ColorMatch,
 } from '@/lib/color';
+
+// Optional context import - graceful degradation if not available
+let useColorSearch: (() => (hex: string, options?: { colorNames?: string[]; minConfidence?: number; elementId?: string; requiredMeters?: number }) => void) | null = null;
+try {
+  const contextModule = require('../context/ContextualSearchContext');
+  useColorSearch = contextModule.useColorSearch;
+} catch {
+  // Context not available, will use callback prop instead
+}
 
 // ============================================================================
 // Types
@@ -32,6 +42,12 @@ interface ColorMatchDisplayProps {
   compact?: boolean;
   /** Classe CSS additionnelle */
   className?: string;
+  /** ID de l'élément source (pour traçabilité) */
+  elementId?: string;
+  /** Métrage requis (depuis un élément calcul lié) */
+  requiredMeters?: number;
+  /** Utiliser le panneau de recherche contextuelle (si disponible) */
+  useContextualPanel?: boolean;
 }
 
 // ============================================================================
@@ -179,7 +195,21 @@ export function ColorMatchDisplay({
   showSearchButton = true,
   compact = false,
   className = '',
+  elementId,
+  requiredMeters,
+  useContextualPanel = true,
 }: ColorMatchDisplayProps) {
+  // Try to use contextual search if available and enabled
+  let openColorSearch: ((hex: string, options?: { colorNames?: string[]; minConfidence?: number; elementId?: string; requiredMeters?: number }) => void) | null = null;
+  
+  try {
+    if (useContextualPanel && useColorSearch) {
+      openColorSearch = useColorSearch();
+    }
+  } catch {
+    // Context not available in this render tree
+  }
+  
   // Normalize and validate hex
   const normalizedHex = useMemo(() => {
     if (!isValidHex(hex)) return null;
@@ -233,10 +263,25 @@ export function ColorMatchDisplay({
   }, []);
 
   const handleSearch = useCallback(() => {
-    if (onColorsSelected && selectedColors.size > 0) {
-      onColorsSelected(Array.from(selectedColors));
+    if (selectedColors.size === 0) return;
+    
+    const colors = Array.from(selectedColors);
+    
+    // Prefer contextual panel if available
+    if (openColorSearch && normalizedHex) {
+      openColorSearch(normalizedHex, {
+        colorNames: colors,
+        elementId,
+        requiredMeters,
+      });
+      return;
     }
-  }, [onColorsSelected, selectedColors]);
+    
+    // Fallback to callback prop
+    if (onColorsSelected) {
+      onColorsSelected(colors);
+    }
+  }, [onColorsSelected, selectedColors, openColorSearch, normalizedHex, elementId, requiredMeters]);
 
   // Invalid hex
   if (!normalizedHex) {
