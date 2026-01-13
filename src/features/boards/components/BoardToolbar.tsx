@@ -1,4 +1,5 @@
 // src/features/boards/components/BoardToolbar.tsx
+// Sprint 6: Boutons PDF, Pattern, Silhouette activés
 
 'use client';
 
@@ -135,48 +136,43 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
       <Divider />
 
       {/* Section: Médias */}
-     <ToolButton
-  icon={<Image className="w-5 h-5" strokeWidth={1.5} />}
-  tooltip="Image / Inspiration"
-  onClick={() => onAddElement('image')}
-/>
+      <ToolButton
+        icon={<Image className="w-5 h-5" strokeWidth={1.5} />}
+        tooltip="Image / Inspiration"
+        onClick={() => onAddElement('image')}
+      />
 
       <ToolButton
         icon={<Video className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="Vidéo"
         onClick={() => onAddElement('video')}
-        disabled // Sprint 5
       />
 
       <ToolButton
         icon={<Link className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="Lien web"
         onClick={() => onAddElement('link')}
-        disabled // Sprint 5
       />
 
       <Divider />
 
-      {/* Section: Documents */}
+      {/* Section: Documents - Sprint 6 ACTIVÉ */}
       <ToolButton
         icon={<FileText className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="PDF"
         onClick={() => onAddElement('pdf')}
-        disabled // Sprint 6
       />
 
       <ToolButton
         icon={<Scissors className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="Patron"
         onClick={() => onAddElement('pattern')}
-        disabled // Sprint 6
       />
 
       <ToolButton
         icon={<User className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="Silhouette"
         onClick={() => onAddElement('silhouette')}
-        disabled // Sprint 6
       />
 
       {/* Spacer */}
@@ -186,7 +182,7 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
 
       {/* Section: Vue et contrôles */}
       
-      {/* Mode Immersif - Nouveau ! */}
+      {/* Mode Immersif */}
       {immersiveMode && (
         <ToolButton
           icon={isImmersive

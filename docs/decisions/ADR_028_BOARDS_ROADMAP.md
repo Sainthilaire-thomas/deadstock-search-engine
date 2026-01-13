@@ -1,8 +1,8 @@
-# ADR-027 : Boards Module - Roadmap & Améliorations Futures
+﻿# ADR-028 : Boards Module - Roadmap & Améliorations Futures
 
-**Date** : 10 Janvier 2026  
-**Statut** : Accepté  
-**Contexte** : Consolidation des améliorations identifiées lors des Sprints 1-5  
+**Date** : 11 Janvier 2026
+**Statut** : Accepté
+**Contexte** : Consolidation des améliorations identifiées lors des Sprints 1-5
 **Impact** : Module Boards
 
 ---
@@ -32,13 +32,18 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | 4 | Upload fichier + URL pour extraction | ✅ |
 | 5 | ImageUploadModal (upload/URL) | ✅ |
 | 5 | ImageElement avec support CORS | ✅ |
-| 5 | Bouton Image activé dans toolbar | ✅ |
+| 5 | VideoModal + VideoElement (YouTube/Vimeo) | ✅ |
+| 5 | LinkModal + LinkElement (og:meta preview) | ✅ |
+| 5 | Boutons Image/Video/Link activés dans toolbar | ✅ |
+| 5 | Bouton "Ouvrir" au hover (video/link) | ✅ |
+| 5 | Migration DB types video/link | ✅ |
 
 ---
 
 ## 2. Sprints Planifiés
 
 ### Sprint 6 : Resize des Éléments (P1)
+
 **Effort estimé** : 3-4h
 
 - [ ] Poignées de resize sur éléments sélectionnés (8 directions)
@@ -49,6 +54,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 - [ ] Persistance width/height en base
 
 ### Sprint 7 : Multi-sélection & Alignement (P1)
+
 **Effort estimé** : 4-5h
 
 - [ ] Sélection multiple (Shift+clic, rectangle de sélection)
@@ -58,6 +64,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 - [ ] Suppression groupée
 
 ### Sprint 8 : Undo/Redo (P2)
+
 **Effort estimé** : 4h
 
 - [ ] Historique des actions (stack)
@@ -66,6 +73,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 - [ ] Limite d'historique (50 actions)
 
 ### Sprint 9 : Export/Import (P2)
+
 **Effort estimé** : 3h
 
 - [ ] Export board en PNG/PDF
@@ -74,6 +82,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 - [ ] Partage par lien (lecture seule)
 
 ### Sprint 10 : Collaboration (P3)
+
 **Effort estimé** : 8-10h
 
 - [ ] Curseurs multi-utilisateurs temps réel
@@ -108,7 +117,26 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Import multiple | P3 | 2h | Upload plusieurs images d'un coup |
 | Galerie inspirations | P3 | 4h | Bibliothèque d'images réutilisables |
 
-### 3.3 Éléments & Canvas
+### 3.3 Vidéos
+
+| Amélioration | Priorité | Effort | Description |
+|--------------|----------|--------|-------------|
+| Lecture inline | P2 | 2h | Lire vidéo directement dans le board (iframe embed) |
+| Support TikTok | P3 | 2h | Parser URLs TikTok en plus de YouTube/Vimeo |
+| Support Instagram Reels | P3 | 2h | Parser URLs Instagram |
+| Timestamps | P3 | 1h | Démarrer vidéo à un moment précis |
+| Thumbnails Vimeo | P3 | 2h | Récupérer thumbnails via API Vimeo |
+
+### 3.4 Liens Web
+
+| Amélioration | Priorité | Effort | Description |
+|--------------|----------|--------|-------------|
+| Cache métadonnées | P2 | 2h | Éviter re-fetch si lien déjà connu |
+| API interne og:meta | P2 | 3h | Remplacer microlink.io par API maison |
+| Catégorisation auto | P3 | 2h | Détecter type (article, shop, social...) |
+| Screenshots | P3 | 4h | Capture d'écran de la page au lieu d'og:image |
+
+### 3.5 Éléments & Canvas
 
 | Amélioration | Priorité | Effort | Description |
 |--------------|----------|--------|-------------|
@@ -121,7 +149,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Layers panel | P3 | 4h | Liste des éléments avec réorganisation z-index |
 | Templates | P3 | 4h | Boards pré-configurés par usage |
 
-### 3.4 Zones
+### 3.6 Zones
 
 | Amélioration | Priorité | Effort | Description |
 |--------------|----------|--------|-------------|
@@ -130,7 +158,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Zones imbriquées | P3 | 4h | Zone dans une zone |
 | Collapse/Expand | P3 | 2h | Réduire zone pour gagner de la place |
 
-### 3.5 Notes
+### 3.7 Notes
 
 | Amélioration | Priorité | Effort | Description |
 |--------------|----------|--------|-------------|
@@ -139,7 +167,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Mention @textile | P3 | 3h | Lier note à un textile du board |
 | Voice-to-text | P4 | 4h | Dictée vocale pour créer notes |
 
-### 3.6 Calculs
+### 3.8 Calculs
 
 | Amélioration | Priorité | Effort | Description |
 |--------------|----------|--------|-------------|
@@ -147,7 +175,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Recalcul auto | P2 | 2h | Mettre à jour si textile changé |
 | Comparaison | P3 | 3h | Comparer plusieurs calculs côte à côte |
 
-### 3.7 Performance
+### 3.9 Performance
 
 | Amélioration | Priorité | Effort | Description |
 |--------------|----------|--------|-------------|
@@ -161,6 +189,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 ## 4. Priorisation Recommandée
 
 ### Phase 1 - Essentiels (Sprints 6-7)
+
 1. ✅ Sprints 1-5 complets
 2. Sprint 6 : Resize éléments
 3. Sprint 7 : Multi-sélection + alignement
@@ -168,13 +197,16 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 5. Lien textile↔calcul
 
 ### Phase 2 - Productivité (Sprints 8-9)
+
 1. Sprint 8 : Undo/Redo
 2. Sprint 9 : Export/Import
 3. Snap to grid/elements
 4. Markdown notes
 5. Duplication/Copier-Coller
+6. Lecture vidéo inline
 
 ### Phase 3 - Avancé (Sprint 10+)
+
 1. Sprint 10 : Collaboration temps réel
 2. Supabase Storage pour images
 3. Templates boards
@@ -186,20 +218,29 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 ## 5. Décisions Techniques
 
 ### D1 : Stockage Images
+
 **Décision** : Migrer vers Supabase Storage en Phase 2
 **Justification** : Base64 fonctionne pour MVP mais ne scale pas (limite taille JSONB, performance)
 
 ### D2 : Collaboration
+
 **Décision** : Utiliser Supabase Realtime
 **Justification** : Déjà dans le stack, gère bien les conflits
 
 ### D3 : Export PDF
+
 **Décision** : Utiliser html2canvas + jsPDF
 **Justification** : Solutions éprouvées, pas de dépendance serveur
 
 ### D4 : Undo/Redo
+
 **Décision** : Command Pattern avec stack locale
 **Justification** : Simple, performant, pas besoin de persister l'historique
+
+### D5 : Lecture Vidéo Inline
+
+**Décision** : Utiliser iframe YouTube/Vimeo embed en mode plein écran de l'élément
+**Justification** : Pas besoin de player custom, gestion DRM par les plateformes
 
 ---
 
@@ -212,6 +253,7 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 | Taille max image | 5Mo base64 | 10Mo Storage | 20Mo Storage |
 | Actions undo | 0 | 50 | 50 |
 | Users simultanés | 1 | 1 | 5+ |
+| Types éléments | 7 | 7 | 10+ |
 
 ---
 
@@ -219,13 +261,13 @@ Ce document consolide toutes les améliorations futures identifiées pour le mod
 
 - Sprint 1-3 : Design épuré, palettes, notes
 - Sprint 4 : Color extraction (ColorThief)
-- Sprint 5 : Image upload/inspiration
+- Sprint 5 : Image, Video, Link elements
 - ADR-024 : Textile Standard System
 - GLOSSAIRE.md : Définitions Board, Zone, Élément
 
 ---
 
-**Status** : Accepté  
-**Prochaine action** : Sprint 6 - Resize des éléments  
-**Auteur** : Thomas  
-**Date** : 10 Janvier 2026
+**Status** : Accepté
+**Prochaine action** : Sprint 6 - Resize des éléments
+**Auteur** : Thomas
+**Date** : 11 Janvier 2026

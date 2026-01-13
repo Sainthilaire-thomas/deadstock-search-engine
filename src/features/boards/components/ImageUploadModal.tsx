@@ -1,6 +1,5 @@
 // src/features/boards/components/ImageUploadModal.tsx
-// Modal pour ajouter une image d'inspiration (upload ou URL)
-// Utilise InspirationElementData du domain
+// VERSION HARMONISÉE - Utilise InspirationElementData (standard DB)
 
 'use client';
 
@@ -18,8 +17,9 @@ interface ImageUploadModalProps {
 type InputMode = 'choice' | 'upload' | 'url';
 
 export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadModalProps) {
+  // ✅ Utilise les noms de champs standard DB
   const [mode, setMode] = useState<InputMode>(initialData?.imageUrl ? 'url' : 'choice');
-  const [url, setUrl] = useState(initialData?.imageUrl || '');
+  const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
   const [caption, setCaption] = useState(initialData?.caption || '');
   const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl || '');
   const [previewUrl, setPreviewUrl] = useState(initialData?.imageUrl || '');
@@ -54,7 +54,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         setPreviewUrl(dataUrl);
-        setUrl(dataUrl);
+        setImageUrl(dataUrl);
         setMode('upload');
         
         // Générer caption depuis nom fichier si vide
@@ -83,14 +83,14 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
 
   // Valider URL
   const handleUrlValidate = useCallback(() => {
-    if (!url.trim()) {
+    if (!imageUrl.trim()) {
       setError('Veuillez entrer une URL');
       return;
     }
 
     // Validation basique de l'URL
     try {
-      new URL(url.trim());
+      new URL(imageUrl.trim());
     } catch {
       setError('URL invalide');
       return;
@@ -102,16 +102,16 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     // Tester le chargement de l'image
     const img = new Image();
     img.onload = () => {
-      setPreviewUrl(url.trim());
-      setSourceUrl(url.trim()); // L'URL devient la source
+      setPreviewUrl(imageUrl.trim());
+      setSourceUrl(imageUrl.trim()); // L'URL devient la source
       setIsLoading(false);
     };
     img.onerror = () => {
       setError('Impossible de charger l\'image. Vérifiez l\'URL.');
       setIsLoading(false);
     };
-    img.src = url.trim();
-  }, [url]);
+    img.src = imageUrl.trim();
+  }, [imageUrl]);
 
   // Sauvegarder
   const handleSave = useCallback(() => {
@@ -120,6 +120,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       return;
     }
 
+    // ✅ Retourne InspirationElementData (standard DB)
     onSave({
       imageUrl: previewUrl,
       caption: caption.trim() || undefined,
@@ -227,8 +228,8 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://..."
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
                              bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
@@ -237,7 +238,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                   />
                   <Button
                     onClick={handleUrlValidate}
-                    disabled={!url.trim() || isLoading}
+                    disabled={!imageUrl.trim() || isLoading}
                   >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -257,7 +258,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                 <button
                   onClick={() => {
                     setPreviewUrl('');
-                    setUrl('');
+                    setImageUrl('');
                     setSourceUrl('');
                     setMode('choice');
                   }}

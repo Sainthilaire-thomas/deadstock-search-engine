@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+  // Sprint 6: Augmenter la limite pour upload PDF/images
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
 };
 
 export default nextConfig;

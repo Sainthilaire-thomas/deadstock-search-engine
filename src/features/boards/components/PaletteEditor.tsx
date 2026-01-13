@@ -1,13 +1,19 @@
 // src/features/boards/components/PaletteEditor.tsx
-// VERSION SPRINT 4 - Avec extraction couleurs depuis image
+// VERSION SPRINT 4 COMPLET - Avec extraction ET harmonies couleurs
 
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
-import { X, Plus, Check, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
+import { X, Plus, Check, Upload, Image as ImageIcon, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { extractColorsFromFile, extractColorsFromUrl } from '../utils/colorExtractor';
+import { 
+  extractColorsFromFile, 
+  extractColorsFromUrl,
+  generateHarmonies,
+  getTextColorForBackground,
+  type ColorHarmonies
+} from '../utils/colorExtractor';
 import type { PaletteElementData } from '../domain/types';
 
 interface PaletteEditorProps {
@@ -17,6 +23,15 @@ interface PaletteEditorProps {
 }
 
 const DEFAULT_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+
+// Noms des types d'harmonies en français
+const HARMONY_LABELS: Record<keyof Omit<ColorHarmonies, 'base'>, string> = {
+  complementary: 'Complémentaire',
+  analogous: 'Analogues',
+  triadic: 'Triadique',
+  splitComplementary: 'Split-complémentaire',
+  tetradic: 'Tétradique',
+};
 
 export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorProps) {
   const [name, setName] = useState(initialData?.name || '');
@@ -35,7 +50,19 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
     initialData?.sourceImageUrl || null
   );
   
+  // État pour les harmonies
+  const [showHarmonies, setShowHarmonies] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Calculer les harmonies pour la couleur sélectionnée
+  const harmonies = useMemo(() => {
+    try {
+      return generateHarmonies(currentColor);
+    } catch {
+      return null;
+    }
+  }, [currentColor]);
 
   // Mettre à jour la couleur sélectionnée
   const handleColorChange = useCallback((newColor: string) => {
@@ -64,6 +91,16 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
       setCurrentColor(newColor);
     }
   }, [colors.length]);
+
+  // Ajouter une couleur spécifique (depuis harmonies)
+  const handleAddSpecificColor = useCallback((color: string) => {
+    if (colors.length < 10 && !colors.includes(color)) {
+      setColors(prev => [...prev, color]);
+      // Sélectionner la nouvelle couleur
+      setSelectedIndex(colors.length);
+      setCurrentColor(color);
+    }
+  }, [colors]);
 
   // Supprimer une couleur
   const handleRemoveColor = useCallback((index: number) => {
@@ -148,6 +185,55 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
       sourceImageUrl: previewImage || undefined,
     });
   }, [name, colors, previewImage, onSave]);
+
+  // Composant pour afficher une couleur cliquable (harmonies)
+  const HarmonyColor = ({ color, label }: { color: string; label?: string }) => {
+    const isInPalette = colors.includes(color);
+    const textColor = getTextColorForBackground(color);
+    
+    return (
+      <button
+        onClick={() => !isInPalette && handleAddSpecificColor(color)}
+        disabled={isInPalette || colors.length >= 10}
+        className={`
+          relative group flex flex-col items-center
+          ${isInPalette ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+        title={isInPalette ? 'Déjà dans la palette' : `Ajouter ${color}`}
+      >
+        <div
+          className={`
+            w-8 h-8 rounded-md border border-gray-300 dark:border-gray-600 shadow-sm
+            transition-transform
+            ${!isInPalette && colors.length < 10 ? 'hover:scale-110' : ''}
+          `}
+          style={{ backgroundColor: color }}
+        >
+          {!isInPalette && colors.length < 10 && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Plus 
+                className="w-4 h-4" 
+                style={{ color: textColor === 'light' ? '#fff' : '#000' }}
+              />
+            </div>
+          )}
+          {isInPalette && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Check 
+                className="w-4 h-4" 
+                style={{ color: textColor === 'light' ? '#fff' : '#000' }}
+              />
+            </div>
+          )}
+        </div>
+        {label && (
+          <span className="text-[9px] text-gray-500 mt-0.5 truncate max-w-10">
+            {label}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -363,6 +449,94 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
                 />
               </div>
             </div>
+          </div>
+
+          {/* Section Harmonies */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowHarmonies(!showHarmonies)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800/50 
+                       hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-4 h-4 text-purple-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Générer des harmonies
+                </span>
+              </div>
+              <span className="text-xs text-gray-400">
+                {showHarmonies ? '▼' : '▶'}
+              </span>
+            </button>
+            
+            {showHarmonies && harmonies && (
+              <div className="p-3 space-y-3 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500">
+                  Cliquez sur une couleur pour l'ajouter à votre palette
+                </p>
+                
+                {/* Complémentaire */}
+                <div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                    {HARMONY_LABELS.complementary}
+                  </span>
+                  <div className="flex gap-2">
+                    <HarmonyColor color={currentColor} label="Base" />
+                    <span className="text-gray-300 self-center">→</span>
+                    <HarmonyColor color={harmonies.complementary} />
+                  </div>
+                </div>
+
+                {/* Analogues */}
+                <div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                    {HARMONY_LABELS.analogous}
+                  </span>
+                  <div className="flex gap-2">
+                    <HarmonyColor color={harmonies.analogous[0]} />
+                    <HarmonyColor color={currentColor} label="Base" />
+                    <HarmonyColor color={harmonies.analogous[1]} />
+                  </div>
+                </div>
+
+                {/* Triadique */}
+                <div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                    {HARMONY_LABELS.triadic}
+                  </span>
+                  <div className="flex gap-2">
+                    <HarmonyColor color={currentColor} label="Base" />
+                    <HarmonyColor color={harmonies.triadic[0]} />
+                    <HarmonyColor color={harmonies.triadic[1]} />
+                  </div>
+                </div>
+
+                {/* Split-complémentaire */}
+                <div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                    {HARMONY_LABELS.splitComplementary}
+                  </span>
+                  <div className="flex gap-2">
+                    <HarmonyColor color={currentColor} label="Base" />
+                    <HarmonyColor color={harmonies.splitComplementary[0]} />
+                    <HarmonyColor color={harmonies.splitComplementary[1]} />
+                  </div>
+                </div>
+
+                {/* Tétradique */}
+                <div>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                    {HARMONY_LABELS.tetradic}
+                  </span>
+                  <div className="flex gap-2">
+                    <HarmonyColor color={currentColor} label="Base" />
+                    <HarmonyColor color={harmonies.tetradic[0]} />
+                    <HarmonyColor color={harmonies.tetradic[1]} />
+                    <HarmonyColor color={harmonies.tetradic[2]} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

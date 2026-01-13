@@ -6,7 +6,8 @@
 
 export type BoardStatus = 'draft' | 'active' | 'archived';
 
-export type ElementType = 'textile' | 'palette' | 'inspiration' | 'calculation' | 'note';
+// UPDATED Sprint 5 - Ajout video et link
+export type ElementType = 'textile' | 'palette' | 'inspiration' | 'calculation' | 'note' | 'video' | 'link' | 'pdf' | 'pattern' | 'silhouette';
 
 export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
   textile: 'Tissu',
@@ -14,6 +15,11 @@ export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
   inspiration: 'Inspiration',
   calculation: 'Calcul',
   note: 'Note',
+  video: 'Vidéo',
+  link: 'Lien',
+  pdf: 'PDF',
+  pattern: 'Patron',
+  silhouette: 'Silhouette',
 };
 
 export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
@@ -85,12 +91,18 @@ export interface BoardElement {
 // ELEMENT DATA (polymorphe)
 // ============================================
 
+// UPDATED Sprint 5 - Ajout VideoElementData et LinkElementData
 export type ElementData =
   | TextileElementData
   | PaletteElementData
   | InspirationElementData
   | CalculationElementData
-  | NoteElementData;
+  | NoteElementData
+  | VideoElementData
+  | LinkElementData
+  | PdfElementData
+  | PatternElementData
+  | SilhouetteElementData;
 
 // Type: textile
 export interface TextileElementData {
@@ -166,6 +178,62 @@ export interface NoteElementData {
 }
 
 // ============================================
+// NEW Sprint 5 - Video & Link Element Data
+// ============================================
+
+// Type: video
+export interface VideoElementData {
+  url: string;
+  title?: string;
+  thumbnailUrl?: string;
+  platform: 'youtube' | 'vimeo' | 'unknown';
+  videoId?: string;
+}
+
+// Type: link
+export interface LinkElementData {
+  url: string;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  favicon?: string;
+  siteName?: string;
+}
+
+// ============================================
+// NEW Sprint 6 - PDF, Pattern, Silhouette Element Data
+// ============================================
+
+// Type: pdf
+export interface PdfElementData {
+  url: string;              // URL du fichier (Supabase Storage ou base64)
+  filename: string;         // Nom original du fichier
+  pageCount?: number;       // Nombre de pages (si détecté)
+  thumbnailUrl?: string;    // Image de la première page
+  fileSize?: number;        // Taille en bytes
+}
+
+// Type: pattern (patron de couture)
+export interface PatternElementData {
+  url: string;              // URL du fichier (PDF ou image)
+  name?: string;            // Nom du patron
+  brand?: string;           // Marque (Vogue, Burda, etc.)
+  fileType: 'pdf' | 'image';
+  pageCount?: number;       // Si PDF
+  thumbnailUrl?: string;    // Preview
+  garmentType?: string;     // Type de vêtement détecté
+  sizes?: string[];         // Tailles disponibles
+}
+
+// Type: silhouette (croquis de mode)
+export interface SilhouetteElementData {
+  url: string;              // URL de l'image
+  name?: string;            // Nom/description
+  source: 'upload' | 'library';
+  category?: string;        // Catégorie (femme, homme, enfant, etc.)
+}
+
+// ============================================
 // TYPE GUARDS
 // ============================================
 
@@ -178,7 +246,7 @@ export function isPaletteElement(data: ElementData): data is PaletteElementData 
 }
 
 export function isInspirationElement(data: ElementData): data is InspirationElementData {
-  return 'imageUrl' in data && !('textileId' in data);
+  return 'imageUrl' in data && !('textileId' in data) && !('platform' in data);
 }
 
 export function isCalculationElement(data: ElementData): data is CalculationElementData {
@@ -187,6 +255,31 @@ export function isCalculationElement(data: ElementData): data is CalculationElem
 
 export function isNoteElement(data: ElementData): data is NoteElementData {
   return 'content' in data && !('garmentType' in data);
+}
+
+// NEW Sprint 5
+export function isVideoElement(data: ElementData): data is VideoElementData {
+  return 'platform' in data && 'url' in data;
+}
+
+// NEW Sprint 5
+export function isLinkElement(data: ElementData): data is LinkElementData {
+  return 'url' in data && !('platform' in data) && !('imageUrl' in data && 'textileId' in data);
+}
+
+// NEW Sprint 6
+export function isPdfElement(data: ElementData): data is PdfElementData {
+  return 'filename' in data && 'url' in data && !('platform' in data) && !('fileType' in data);
+}
+
+// NEW Sprint 6
+export function isPatternElement(data: ElementData): data is PatternElementData {
+  return 'fileType' in data && 'url' in data;
+}
+
+// NEW Sprint 6
+export function isSilhouetteElement(data: ElementData): data is SilhouetteElementData {
+  return 'source' in data && (data as SilhouetteElementData).source !== undefined;
 }
 
 // ============================================

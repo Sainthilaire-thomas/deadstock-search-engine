@@ -1,15 +1,33 @@
-// src/features/boards/components/ElementCard.tsx
-// VERSION SPRINT 3 - Avec PaletteElement amélioré
+﻿// src/features/boards/components/ElementCard.tsx
+// VERSION HARMONISÉE - Sprint 5 + Sprint 6
+// Sprint 6: Ajout PDF, Pattern, Silhouette
 
 'use client';
+import React, { useState } from 'react';
 
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, X, ExternalLink, Play, Eye } from 'lucide-react';
 import { ELEMENT_TYPE_LABELS, isPaletteElement } from '../domain/types';
 import { NoteEditor } from './NoteEditor';
 import { PaletteElement } from './elements/PaletteElement';
 import { ImageElement } from './elements/ImageElement';
-import type { BoardElement, PaletteElementData, InspirationElementData } from '../domain/types';
+import { VideoElement } from './elements/VideoElement';
+import { LinkElement } from './elements/LinkElement';
 
+// Sprint 6 imports
+import { PdfElement } from './elements/PdfElement';
+import { PatternElement } from './elements/PatternElement';
+import { SilhouetteElement } from './elements/SilhouetteElement';
+
+import type {
+  BoardElement,
+  PaletteElementData,
+  InspirationElementData,
+  VideoElementData,
+  LinkElementData,
+  PdfElementData,
+  PatternElementData,
+  SilhouetteElementData,
+} from '../domain/types';
 
 interface ElementCardProps {
   element: BoardElement;
@@ -20,7 +38,7 @@ interface ElementCardProps {
   onSaveNote: (content: string) => void;
   onCancelEdit: () => void;
   onDelete?: () => void;
-  onSavePalette?: (data: PaletteElementData) => void; // NEW: pour sauvegarder palette
+  onSavePalette?: (data: PaletteElementData) => void;
 }
 
 export function ElementCard({
@@ -43,9 +61,70 @@ export function ElementCard({
     onDelete?.();
   };
 
-  // Rendu spécial pour palette en mode édition
+  // Types d'éléments - Sprint 5
   const isPalette = element.elementType === 'palette';
   const isNote = element.elementType === 'note';
+  const isInspiration = element.elementType === 'inspiration';
+  const isVideo = element.elementType === 'video';
+  const isLink = element.elementType === 'link';
+
+  // Types d'éléments - Sprint 6
+  const isPdf = element.elementType === 'pdf';
+  const isPattern = element.elementType === 'pattern';
+  const isSilhouette = element.elementType === 'silhouette';
+
+
+  // Éléments sans header (gèrent leur propre affichage)
+  const noHeader = isPalette || isInspiration || isVideo || isLink || isPdf || isPattern || isSilhouette;
+
+  // Helper pour ouvrir les data URLs (base64) ou URLs normales
+  const openDataUrlOrExternal = (url: string, mimeType: string) => {
+    if (url.startsWith('data:')) {
+      try {
+        const base64Data = url.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (error) {
+        console.error('Erreur ouverture data URL:', error);
+      }
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // Handler pour ouvrir le lien ou la vidéo
+  const handleOpenExternal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (isLink) {
+      const linkData = element.elementData as LinkElementData;
+      window.open(linkData.url, '_blank', 'noopener,noreferrer');
+    } else if (isVideo) {
+      const videoData = element.elementData as VideoElementData;
+      window.open(videoData.url, '_blank', 'noopener,noreferrer');
+    } else if (isPdf) {
+      const pdfData = element.elementData as PdfElementData;
+      openDataUrlOrExternal(pdfData.url, 'application/pdf');
+    } else if (isPattern) {
+      const patternData = element.elementData as PatternElementData;
+      if (patternData.url) {
+        openDataUrlOrExternal(patternData.url, patternData.fileType === 'pdf' ? 'application/pdf' : 'image/png');
+      }
+    } else if (isSilhouette) {
+      const silhouetteData = element.elementData as SilhouetteElementData;
+      if (silhouetteData.url) {
+        openDataUrlOrExternal(silhouetteData.url, 'image/png');
+      }
+    }
+  };
 
   return (
     <div
@@ -74,26 +153,51 @@ export function ElementCard({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      {/* Bouton × pour supprimer - visible au hover */}
-      {!isEditing && onDelete && (
-        <button
-          onClick={handleDelete}
-          className="
-            absolute -top-2 -right-2
-            w-5 h-5
-            bg-red-500 hover:bg-red-600
-            text-white
-            rounded-full
-            flex items-center justify-center
-            opacity-0 group-hover:opacity-100
-            transition-opacity duration-150
-            shadow-sm
-            z-20
-          "
-          title="Supprimer"
-        >
-          <X className="w-3 h-3" strokeWidth={2.5} />
-        </button>
+      {/* Boutons au hover - visible uniquement si pas en édition */}
+      {!isEditing && (
+        <div className="absolute -top-2 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
+         {/* Bouton Ouvrir - pour video, link, pdf, pattern, silhouette */}
+          {(isVideo || isLink || isPdf || isPattern || isSilhouette) && (
+            <button
+              onClick={handleOpenExternal}
+              className="
+                w-5 h-5
+                bg-blue-500 hover:bg-blue-600
+                text-white
+                rounded-full
+                flex items-center justify-center
+                shadow-sm
+              "
+             title={isVideo ? "Ouvrir la vidéo" : isLink ? "Ouvrir le lien" : isPdf ? "Ouvrir le PDF" : "Voir l'image"}
+            >
+              {isVideo ? (
+                <Play className="w-2.5 h-2.5 ml-0.5" fill="currentColor" />
+              ) : (isPattern || isSilhouette) ? (
+                <Eye className="w-2.5 h-2.5" strokeWidth={2.5} />
+              ) : (
+                <ExternalLink className="w-2.5 h-2.5" strokeWidth={2.5} />
+              )}
+            </button>
+          )}
+          
+          {/* Bouton Supprimer */}
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className="
+                w-5 h-5
+                bg-red-500 hover:bg-red-600
+                text-white
+                rounded-full
+                flex items-center justify-center
+                shadow-sm
+              "
+              title="Supprimer"
+            >
+              <X className="w-3 h-3" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
       )}
 
       <div className="overflow-hidden rounded h-full">
@@ -112,13 +216,14 @@ export function ElementCard({
               absolute top-1 left-1/2 -translate-x-1/2
               opacity-20 group-hover:opacity-50
               transition-opacity
+              z-10
             ">
               <GripVertical className="w-4 h-4 text-gray-400" />
             </div>
 
-            <div className="p-3 h-full flex flex-col pt-5">
-              {/* Type label - sauf pour palette (a son propre header) */}
-              {!isPalette && (
+            <div className={`h-full flex flex-col ${noHeader ? 'p-2' : 'p-3 pt-5'}`}>
+              {/* Type label - sauf pour les éléments qui gèrent leur propre header */}
+              {!noHeader && (
                 <span className="
                   text-[10px] uppercase tracking-wider
                   text-gray-400 dark:text-gray-500
@@ -132,26 +237,72 @@ export function ElementCard({
                 {element.elementType === 'textile' && (
                   <TextilePreview data={element.elementData as any} />
                 )}
+
                 {element.elementType === 'note' && (
                   <NotePreview data={element.elementData as any} />
                 )}
+
                 {element.elementType === 'palette' && isPaletteElement(element.elementData) && (
-                  <PaletteElement 
-                    data={element.elementData} 
-                    width={width - 24} // moins le padding
-                    height={height - 44} // moins le padding top
+                  <PaletteElement
+                    data={element.elementData}
+                    width={width - 16}
+                    height={height - 16}
                   />
                 )}
+
                 {element.elementType === 'calculation' && (
                   <CalculationPreview data={element.elementData as any} />
                 )}
-                {element.elementType === 'inspiration' && (
-  <ImageElement 
-    data={element.elementData as InspirationElementData} 
-    width={width - 24}
-    height={height - 44}
-  />
-)}
+
+                {isInspiration && (
+                  <ImageElement
+                    data={element.elementData as InspirationElementData}
+                    width={width - 16}
+                    height={height - 16}
+                  />
+                )}
+
+                {isVideo && (
+                  <VideoElement
+                    data={element.elementData as VideoElementData}
+                    width={width - 16}
+                    height={height - 16}
+                    isPreview={true}
+                  />
+                )}
+
+                {isLink && (
+                  <LinkElement
+                    data={element.elementData as LinkElementData}
+                    width={width - 16}
+                    height={height - 16}
+                  />
+                )}
+
+                {/* Sprint 6 Elements */}
+                {isPdf && (
+                  <PdfElement
+                    data={element.elementData as PdfElementData}
+                    width={width - 16}
+                    height={height - 16}
+                  />
+                )}
+
+                {isPattern && (
+                  <PatternElement
+                    data={element.elementData as PatternElementData}
+                    width={width - 16}
+                    height={height - 16}
+                  />
+                )}
+
+                {isSilhouette && (
+                  <SilhouetteElement
+                    data={element.elementData as SilhouetteElementData}
+                    width={width - 16}
+                    height={height - 16}
+                  />
+                )}
               </div>
             </div>
           </>
@@ -214,14 +365,12 @@ function NotePreview({ data }: { data: any }) {
 }
 
 function CalculationPreview({ data }: { data: any }) {
-  // Support nouveau format (pattern import) et ancien format (journey)
   const hasYardageByWidth = data.yardageByWidth && Object.keys(data.yardageByWidth).length > 0;
 
   if (hasYardageByWidth) {
-    // Nouveau format - Pattern Import
     const sortedWidths = Object.entries(data.yardageByWidth as Record<number, number>)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .slice(0, 3); // Max 3 pour la preview
+      .slice(0, 3);
 
     return (
       <div className="space-y-1">
@@ -246,7 +395,6 @@ function CalculationPreview({ data }: { data: any }) {
     );
   }
 
-  // Ancien format - Journey
   return (
     <div>
       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">

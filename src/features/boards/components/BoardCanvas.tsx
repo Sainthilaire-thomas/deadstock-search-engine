@@ -1,5 +1,6 @@
 ﻿// src/features/boards/components/BoardCanvas.tsx
-// VERSION SPRINT 3 - Avec PaletteEditor intégré
+// VERSION HARMONISÉE - Types unifiés avec InspirationElementData (standard DB)
+// SPRINT 6 INTÉGRÉ
 
 'use client';
 
@@ -21,8 +22,31 @@ import { CrystallizationDialog } from './CrystallizationDialog';
 import { PaletteEditor } from './PaletteEditor';
 import { PatternImportModal } from '@/features/pattern/components/PatternImportModal';
 import { getFavoritesAction } from '@/features/favorites/actions/favoriteActions';
+
+// Sprint 5 imports
 import { ImageUploadModal } from './ImageUploadModal';
-import type { BoardElement, BoardZone, CalculationElementData, TextileElementData, PaletteElementData, InspirationElementData } from '../domain/types';import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
+import { VideoModal } from './VideoModal';
+import { LinkModal } from './LinkModal';
+
+// Sprint 6 imports
+import { PdfModal } from './PdfModal';
+import { PatternModal } from './PatternModal';
+import { SilhouetteModal } from './SilhouetteModal';
+
+import type { 
+  BoardElement, 
+  BoardZone, 
+  CalculationElementData, 
+  TextileElementData, 
+  PaletteElementData, 
+  InspirationElementData,
+  VideoElementData,
+  LinkElementData,
+  PdfElementData, 
+  PatternElementData, 
+  SilhouetteElementData 
+} from '../domain/types';
+import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
 import type { FavoriteWithTextile } from '@/features/favorites/domain/types';
 
 // Constantes pour le resize
@@ -77,12 +101,26 @@ export function BoardCanvas() {
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
   const [crystallizingZone, setCrystallizingZone] = useState<BoardZone | null>(null);
-const [showImageModal, setShowImageModal] = useState(false);
-const [editingImageId, setEditingImageId] = useState<string | null>(null);
 
   // Modals/Sheets state
   const [showFavoritesSheet, setShowFavoritesSheet] = useState(false);
   const [showPatternModal, setShowPatternModal] = useState(false);
+  
+  // Sprint 5 modal states
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+
+// Sprint 6 modal states
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+  const [isSilhouetteModalOpen, setIsSilhouetteModalOpen] = useState(false);
+  const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
+  const [editingPatternId, setEditingPatternId] = useState<string | null>(null);
+  const [editingSilhouetteId, setEditingSilhouetteId] = useState<string | null>(null);
+
 
   // Favorites state
   const [favorites, setFavorites] = useState<FavoriteWithTextile[]>([]);
@@ -103,7 +141,6 @@ const [editingImageId, setEditingImageId] = useState<string | null>(null);
     y: number;
   } | null>(null);
 
-  // Ref pour éviter closure stale dans les event listeners
   const dragPositionRef = useRef(dragPosition);
   dragPositionRef.current = dragPosition;
 
@@ -115,7 +152,6 @@ const [editingImageId, setEditingImageId] = useState<string | null>(null);
     height: number;
   } | null>(null);
 
-  // Ref pour éviter closure stale dans les event listeners
   const resizeStateRef = useRef(resizeState);
   resizeStateRef.current = resizeState;
 
@@ -198,28 +234,23 @@ const [editingImageId, setEditingImageId] = useState<string | null>(null);
   // ============================================
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ne pas intercepter si on est en train d'éditer
-    if (editingElementId || editingZoneId || editingPaletteId || editingImageId) return;
+    if (editingElementId || editingZoneId || editingPaletteId) return;
 
-    // Ne pas intercepter si on est dans un input
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
 
-      // Supprimer les éléments sélectionnés
       if (selectedElementIds.length > 0) {
         selectedElementIds.forEach(id => removeElement(id));
       }
 
-      // Supprimer la zone sélectionnée
       if (selectedZoneId) {
         removeZone(selectedZoneId);
       }
     }
 
-    // Escape pour déselectionner et fermer les modals
     if (e.key === 'Escape') {
       clearSelection();
       setEditingElementId(null);
@@ -227,8 +258,18 @@ const [editingImageId, setEditingImageId] = useState<string | null>(null);
       setEditingPaletteId(null);
       setShowFavoritesSheet(false);
       setShowPatternModal(false);
-      setEditingImageId(null);
-setShowImageModal(false);
+      setShowImageModal(false);
+      setShowVideoModal(false);
+      setShowLinkModal(false);
+      setEditingVideoId(null);
+      setEditingLinkId(null);
+      // Sprint 6
+      setIsPdfModalOpen(false);
+      setIsPatternModalOpen(false);
+      setIsSilhouetteModalOpen(false);
+      setEditingPdfId(null);
+      setEditingPatternId(null);
+      setEditingSilhouetteId(null);
     }
   }, [selectedElementIds, selectedZoneId, editingElementId, editingZoneId, editingPaletteId, removeElement, removeZone, clearSelection]);
 
@@ -241,7 +282,6 @@ setShowImageModal(false);
   // DRAG REFS
   // ============================================
 
-  // Drag state for elements
   const elementDragRef = useRef<{
     elementId: string;
     startX: number;
@@ -250,7 +290,6 @@ setShowImageModal(false);
     elementStartY: number;
   } | null>(null);
 
-  // Drag state for zones
   const zoneDragRef = useRef<{
     zoneId: string;
     startX: number;
@@ -259,7 +298,6 @@ setShowImageModal(false);
     zoneStartY: number;
   } | null>(null);
 
-  // Resize state for zones
   const zoneResizeRef = useRef<{
     zoneId: string;
     handle: ResizeHandle;
@@ -286,7 +324,6 @@ setShowImageModal(false);
         await addNote(position);
         break;
       case 'palette':
-        // Ouvrir l'éditeur pour créer une nouvelle palette
         const defaultColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
         await addPalette(defaultColors, position);
         break;
@@ -299,15 +336,25 @@ setShowImageModal(false);
       case 'zone':
         await addZone('Nouvelle zone', position);
         break;
+      // Sprint 5
       case 'image':
-  setShowImageModal(true);
-  break;
+        setShowImageModal(true);
+        break;
       case 'video':
+        setShowVideoModal(true);
+        break;
       case 'link':
+        setShowLinkModal(true);
+        break;
+      // Sprint 6
       case 'pdf':
+        setIsPdfModalOpen(true);
+        break;
       case 'pattern':
+        setIsPatternModalOpen(true);
+        break;
       case 'silhouette':
-        console.log(`Type ${type} sera implémenté dans un prochain sprint`);
+        setIsSilhouetteModalOpen(true);
         break;
     }
   };
@@ -345,35 +392,182 @@ setShowImageModal(false);
     setShowPatternModal(false);
   };
 
-  const handleAddImage = async (data: InspirationElementData) => {
-  const position = {
-    x: 100 + Math.random() * 200,
-    y: 100 + Math.random() * 200,
+  // ============================================
+  // Sprint 5 - IMAGE/VIDEO/LINK HANDLERS
+  // ============================================
+
+  const handleSaveImage = (data: InspirationElementData) => {
+    const position = {
+      x: 100 + Math.random() * 200,
+      y: 100 + Math.random() * 200,
+    };
+
+    addElement({
+      elementType: 'inspiration',
+      elementData: data,
+      positionX: position.x,
+      positionY: position.y,
+      width: 200,
+      height: 200,
+    });
+
+    setShowImageModal(false);
+    toast.success('Image ajoutée');
   };
 
-  await addElement({
-    elementType: 'inspiration', // Utilise le type existant
-    elementData: data,
-    positionX: position.x,
-    positionY: position.y,
-    width: 200,
-    height: 180,
-  });
+  const handleSaveVideo = async (data: VideoElementData) => {
+    if (editingVideoId) {
+      await updateElement(editingVideoId, { elementData: data });
+      setEditingVideoId(null);
+      toast.success('Vidéo mise à jour');
+    } else {
+      const position = {
+        x: 100 + Math.random() * 200,
+        y: 100 + Math.random() * 200,
+      };
 
-  setShowImageModal(false);
-  toast.success('Image ajoutée au board');
-};
+      await addElement({
+        elementType: 'video',
+        elementData: data,
+        positionX: position.x,
+        positionY: position.y,
+        width: 280,
+        height: 180,
+      });
 
-const handleSaveImage = async (elementId: string, data: InspirationElementData) => {
-  const element = elements.find((e) => e.id === elementId);
-  if (element && element.elementType === 'inspiration') {
-    await updateElement(elementId, {
-      elementData: data,
-    });
-    toast.success('Image mise à jour');
-  }
-  setEditingImageId(null);
-};
+      toast.success('Vidéo ajoutée');
+    }
+
+    setShowVideoModal(false);
+  };
+
+  const handleSaveLink = async (data: LinkElementData) => {
+    if (editingLinkId) {
+      await updateElement(editingLinkId, { elementData: data });
+      setEditingLinkId(null);
+      toast.success('Lien mis à jour');
+    } else {
+      const position = {
+        x: 100 + Math.random() * 200,
+        y: 100 + Math.random() * 200,
+      };
+
+      await addElement({
+        elementType: 'link',
+        elementData: data,
+        positionX: position.x,
+        positionY: position.y,
+        width: 240,
+        height: data.imageUrl ? 200 : 80,
+      });
+
+      toast.success('Lien ajouté');
+    }
+
+    setShowLinkModal(false);
+  };
+
+  // ============================================
+  // Sprint 6 - PDF/PATTERN/SILHOUETTE HANDLERS
+  // ============================================
+
+ const handleSavePdf = async (data: PdfElementData) => {
+    try {
+      if (editingPdfId) {
+        // Mode édition
+        await updateElement(editingPdfId, { elementData: data });
+        setEditingPdfId(null);
+        toast.success('PDF mis à jour');
+      } else {
+        // Mode création
+        const position = {
+          x: 100 + Math.random() * 200,
+          y: 100 + Math.random() * 200,
+        };
+
+        await addElement({
+          elementType: 'pdf',
+          elementData: data,
+          positionX: position.x,
+          positionY: position.y,
+          width: 160,
+          height: 200,
+        });
+
+        toast.success('PDF ajouté');
+      }
+
+      setIsPdfModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du PDF:', error);
+      toast.error('Erreur lors de la sauvegarde du PDF');
+    }
+  };
+
+ const handleSavePattern = async (data: PatternElementData) => {
+    try {
+      if (editingPatternId) {
+        // Mode édition
+        await updateElement(editingPatternId, { elementData: data });
+        setEditingPatternId(null);
+        toast.success('Patron mis à jour');
+      } else {
+        // Mode création
+        const position = {
+          x: 100 + Math.random() * 200,
+          y: 100 + Math.random() * 200,
+        };
+
+        await addElement({
+          elementType: 'pattern',
+          elementData: data,
+          positionX: position.x,
+          positionY: position.y,
+          width: 140,
+          height: 180,
+        });
+
+        toast.success('Patron ajouté');
+      }
+
+      setIsPatternModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du patron:', error);
+      toast.error('Erreur lors de la sauvegarde du patron');
+    }
+  };
+const handleSaveSilhouette = async (data: SilhouetteElementData) => {
+    try {
+      if (editingSilhouetteId) {
+        // Mode édition
+        await updateElement(editingSilhouetteId, { elementData: data });
+        setEditingSilhouetteId(null);
+        toast.success('Silhouette mise à jour');
+      } else {
+        // Mode création
+        const position = {
+          x: 100 + Math.random() * 200,
+          y: 100 + Math.random() * 200,
+        };
+
+        await addElement({
+          elementType: 'silhouette',
+          elementData: data,
+          positionX: position.x,
+          positionY: position.y,
+          width: 120,
+          height: 160,
+        });
+
+        toast.success('Silhouette ajoutée');
+      }
+
+      setIsSilhouetteModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la silhouette:', error);
+      toast.error('Erreur lors de la sauvegarde de la silhouette');
+    }
+  };
 
   // ============================================
   // DELETE HANDLERS
@@ -400,13 +594,26 @@ const handleSaveImage = async (elementId: string, data: InspirationElementData) 
     }
   };
 
- const handleDoubleClick = (element: BoardElement) => {
+const handleDoubleClick = (element: BoardElement) => {
   if (element.elementType === 'note') {
     setEditingElementId(element.id);
   } else if (element.elementType === 'palette') {
     setEditingPaletteId(element.id);
-  } else if (element.elementType === 'inspiration') {
-    setEditingImageId(element.id);
+  } else if (element.elementType === 'video') {
+    setEditingVideoId(element.id);
+    setShowVideoModal(true);
+  } else if (element.elementType === 'link') {
+    setEditingLinkId(element.id);
+    setShowLinkModal(true);
+ } else if (element.elementType === 'pdf') {
+    setEditingPdfId(element.id);
+    setIsPdfModalOpen(true);
+  } else if (element.elementType === 'pattern') {
+    setEditingPatternId(element.id);
+    setIsPatternModalOpen(true);
+  } else if (element.elementType === 'silhouette') {
+    setEditingSilhouetteId(element.id);
+    setIsSilhouetteModalOpen(true);
   }
 };
 
@@ -917,26 +1124,90 @@ const handleSaveImage = async (elementId: string, data: InspirationElementData) 
         );
       })()}
 
-      {/* Image Upload Modal */}
-{showImageModal && (
-  <ImageUploadModal
-    onSave={handleAddImage}
-    onCancel={() => setShowImageModal(false)}
-  />
-)}
+      {/* Image Upload Modal - Sprint 5 */}
+      {showImageModal && (
+        <ImageUploadModal
+          onSave={handleSaveImage}
+          onCancel={() => setShowImageModal(false)}
+        />
+      )}
 
-{/* Image Edit Modal */}
-{editingImageId && (() => {
-  const element = elements.find(e => e.id === editingImageId);
-  if (!element || element.elementType !== 'inspiration') return null;
-  return (
-    <ImageUploadModal
-      initialData={element.elementData as InspirationElementData}
-      onSave={(data) => handleSaveImage(editingImageId, data)}
-      onCancel={() => setEditingImageId(null)}
-    />
-  );
-})()}
+      {/* Video Modal - Sprint 5 */}
+      <VideoModal
+        isOpen={showVideoModal}
+        onClose={() => {
+          setShowVideoModal(false);
+          setEditingVideoId(null);
+        }}
+        onSave={handleSaveVideo}
+        initialData={
+          editingVideoId
+            ? (elements.find(e => e.id === editingVideoId)?.elementData as VideoElementData)
+            : undefined
+        }
+      />
+
+      {/* Link Modal - Sprint 5 */}
+      <LinkModal
+        isOpen={showLinkModal}
+        onClose={() => {
+          setShowLinkModal(false);
+          setEditingLinkId(null);
+        }}
+        onSave={handleSaveLink}
+        initialData={
+          editingLinkId
+            ? (elements.find(e => e.id === editingLinkId)?.elementData as LinkElementData)
+            : undefined
+        }
+      />
+
+     
+
+   {/* PDF Modal - Sprint 6 */}
+      <PdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => {
+          setIsPdfModalOpen(false);
+          setEditingPdfId(null);
+        }}
+        onSave={handleSavePdf}
+        initialData={
+          editingPdfId
+            ? (elements.find(e => e.id === editingPdfId)?.elementData as PdfElementData)
+            : undefined
+        }
+      />
+
+      {/* Pattern Modal - Sprint 6 */}
+      <PatternModal
+        isOpen={isPatternModalOpen}
+        onClose={() => {
+          setIsPatternModalOpen(false);
+          setEditingPatternId(null);
+        }}
+        onSave={handleSavePattern}
+        initialData={
+          editingPatternId
+            ? (elements.find(e => e.id === editingPatternId)?.elementData as PatternElementData)
+            : undefined
+        }
+      />
+
+      {/* Silhouette Modal - Sprint 6 */}
+      <SilhouetteModal
+        isOpen={isSilhouetteModalOpen}
+        onClose={() => {
+          setIsSilhouetteModalOpen(false);
+          setEditingSilhouetteId(null);
+        }}
+        onSave={handleSaveSilhouette}
+        initialData={
+          editingSilhouetteId
+            ? (elements.find(e => e.id === editingSilhouetteId)?.elementData as SilhouetteElementData)
+            : undefined
+        }
+      />
     </div>
   );
 }
