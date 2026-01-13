@@ -62,6 +62,7 @@ export interface SearchConstraints {
   minConfidence?: number;
   fiber?: string;
   weave?: string;
+  pattern?: string;
   minQuantity?: number;
   includeCutToOrder?: boolean;
 }
@@ -139,6 +140,7 @@ export function useContextualSearch(): UseContextualSearchReturn {
           colorNames: constraints.colorNames,
           fiber: constraints.fiber,
           weave: constraints.weave,
+          pattern: constraints.pattern,
           minQuantity: constraints.minQuantity,
           includeCutToOrder: constraints.includeCutToOrder ?? true,
         },
@@ -215,6 +217,7 @@ export function useContextualSearch(): UseContextualSearchReturn {
           colorNames: constraints.colorNames,
           fiber: constraints.fiber,
           weave: constraints.weave,
+          pattern: constraints.pattern,
           minQuantity: constraints.minQuantity,
           includeCutToOrder: constraints.includeCutToOrder ?? true,
         },

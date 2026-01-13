@@ -32,8 +32,10 @@ const ContextualSearchRequestSchema = z.object({
     // Filtre fibre/matière
     fiber: z.string().optional(),
     
-    // Filtre weave
+      // Filtre weave
     weave: z.string().optional(),
+    // Filtre pattern/motif
+    pattern: z.string().optional(),
     
     // Quantité minimum en mètres
     minQuantity: z.number().positive().optional(),
@@ -210,9 +212,13 @@ export async function POST(request: NextRequest) {
       query = query.eq('fiber', constraints.fiber);
     }
     
-    // Filter by weave
+     // Filter by weave
     if (constraints.weave) {
       query = query.eq('weave', constraints.weave);
+    }
+    // Filter by pattern
+    if (constraints.pattern) {
+      query = query.eq('pattern', constraints.pattern);
     }
     
     // Filter by quantity (only for non cut_to_order if specified)

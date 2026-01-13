@@ -33,6 +33,7 @@ import {
 } from '../context/ContextualSearchContext';
 import { PriceDisplay } from '@/components/search/PriceDisplay';
 import { getColorLabelFr, type ColorName } from '@/lib/color';
+import { SearchFiltersCompact } from './SearchFiltersCompact';
 
 // ============================================================================
 // Types
@@ -246,28 +247,49 @@ export function ContextualSearchPanel({
     requiredMeters,
   } = useContextualSearchPanel();
   
-  const { state: searchState, search, loadMore, reset } = useContextualSearch();
-  const [hideInsufficient, setHideInsufficient] = useState(false);
+ const { state: searchState, search, loadMore, reset } = useContextualSearch();
   
-  // Build search constraints from aggregated constraints
-  const searchConstraints = useMemo(() => ({
-    hex: aggregatedConstraints.hex,
-    colorNames: aggregatedConstraints.colorNames,
-    minQuantity: aggregatedConstraints.minQuantity,
-    fiber: aggregatedConstraints.fiber,
-    weave: aggregatedConstraints.weave,
-  }), [aggregatedConstraints]);
+  const [hideInsufficient, setHideInsufficient] = useState(false);
+  const [additionalFilters, setAdditionalFilters] = useState<Record<string, string[]>>({});
 
-  // Search when constraints change
+  // Build search constraints from aggregated constraints + additional filters
+  const searchConstraints = useMemo(() => {
+    const baseColors = aggregatedConstraints.colorNames || [];
+    const additionalColors = additionalFilters.color || [];
+    const combinedColors = [...new Set([...baseColors, ...additionalColors])];
+
+    return {
+      hex: aggregatedConstraints.hex,
+      colorNames: combinedColors.length > 0 ? combinedColors : undefined,
+      minQuantity: aggregatedConstraints.minQuantity,
+      fiber: additionalFilters.fiber?.[0] || aggregatedConstraints.fiber,
+      weave: additionalFilters.weave?.[0] || aggregatedConstraints.weave,
+      pattern: additionalFilters.pattern?.[0],
+    };
+  }, [aggregatedConstraints, additionalFilters]);
+
+
+ // Search when constraints change
+ // Search when constraints change
+ // Reset when panel closes
   useEffect(() => {
-    if (panelState.isOpen && panelState.constraints.length > 0) {
-      search(searchConstraints, boardId);
-    }
-    
     if (!panelState.isOpen) {
       reset();
+      setAdditionalFilters({});
     }
-  }, [panelState.isOpen, panelState.constraints, searchConstraints, boardId, search, reset]);
+  }, [panelState.isOpen, reset]);
+
+  // Search when constraints or filters change
+  useEffect(() => {
+    if (!panelState.isOpen) return;
+    
+    const hasConstraints = panelState.constraints.length > 0;
+    const hasAdditionalFilters = Object.keys(additionalFilters).length > 0;
+    
+    if (hasConstraints || hasAdditionalFilters) {
+      search(searchConstraints, boardId);
+    }
+  }, [panelState.isOpen, panelState.constraints.length, searchConstraints, boardId, search]);
   
   // Filter results by sufficiency
   const displayedResults = useMemo(() => {
@@ -379,10 +401,20 @@ export function ContextualSearchPanel({
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Cliquez sur <Search className="w-3 h-3 inline" /> sur une palette ou un calcul
-              </p>
+                           </p>
             </div>
           )}
         </div>
+
+        {/* Additional Filters */}
+        <SearchFiltersCompact
+          selectedFilters={additionalFilters}
+          onFiltersChange={setAdditionalFilters}
+          disabled={searchState.isLoading}
+          constraintColors={aggregatedConstraints.colorNames}
+          constraintFiber={aggregatedConstraints.fiber}
+          constraintWeave={aggregatedConstraints.weave}
+        />
         
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
