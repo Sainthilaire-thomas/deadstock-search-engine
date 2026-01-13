@@ -17,7 +17,7 @@ import type { LAB } from './colorConversion';
 /**
  * Color names as stored in the database
  */
-export type ColorName = 
+export type ColorName =
   | 'red'
   | 'blue'
   | 'green'
@@ -27,13 +27,15 @@ export type ColorName =
   | 'purple'
   | 'brown'
   | 'beige'
-  | 'grey'
+  | 'gray'
   | 'black'
   | 'white'
   | 'burgundy'
   | 'navy'
   | 'teal'
-  | 'gold';
+  | 'gold'
+  | 'lilac'
+  | 'dark gray';
 
 /**
  * Database color with hex and pre-calculated LAB values
@@ -111,8 +113,8 @@ export const DATABASE_COLORS: Record<ColorName, DatabaseColor> = {
     lab: { L: 95.95, a: -1.85, b: 11.42 },
     labelFr: 'Beige',
   },
-  grey: {
-    name: 'grey',
+   gray: {
+    name: 'gray',
     hex: '#808080',
     lab: { L: 53.59, a: 0, b: 0 },
     labelFr: 'Gris',
@@ -152,6 +154,18 @@ export const DATABASE_COLORS: Record<ColorName, DatabaseColor> = {
     hex: '#FFD700',
     lab: { L: 86.93, a: -1.92, b: 87.14 },
     labelFr: 'Or',
+  },
+    lilac: {
+    name: 'lilac',
+    hex: '#C8A2C8',
+    lab: { L: 72.5, a: 20.5, b: -15.0 },
+    labelFr: 'Lilas',
+  },
+  'dark gray': {
+    name: 'dark gray',
+    hex: '#404040',
+    lab: { L: 27.0, a: 0, b: 0 },
+    labelFr: 'Gris foncé',
   },
 };
 

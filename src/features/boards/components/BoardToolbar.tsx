@@ -19,9 +19,10 @@ import {
   Square,
   Maximize2,
   Minimize2,
+  Search,
 } from 'lucide-react';
 import { useImmersiveModeOptional } from '@/features/boards/context/ImmersiveModeContext';
-
+import { useContextualSearchPanel } from '../context/ContextualSearchContext';
 // Types pour les outils
 export type ToolType =
   | 'image'
@@ -98,6 +99,9 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
   // Mode immersif (optionnel - peut être null si hors du provider)
   const immersiveMode = useImmersiveModeOptional();
   const isImmersive = immersiveMode?.isImmersive ?? false;
+// Recherche contextuelle
+  const contextualSearch = useContextualSearchPanel();
+  const hasActiveConstraints = contextualSearch.state.constraints.length > 0;
 
   return (
     <div className="
@@ -180,8 +184,27 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
 
       <Divider />
 
-      {/* Section: Vue et contrôles */}
-      
+     {/* Section: Vue et contrôles */}
+
+      {/* Recherche contextuelle - Sprint B3 */}
+      <div className="relative">
+        <ToolButton
+          icon={<Search className="w-5 h-5" strokeWidth={1.5} />}
+          tooltip={contextualSearch.state.isOpen ? 'Fermer recherche' : 'Recherche contextuelle'}
+          onClick={() => contextualSearch.state.isOpen ? contextualSearch.closePanel() : contextualSearch.openPanel()}
+          active={contextualSearch.state.isOpen}
+        />
+        {/* Badge contraintes actives */}
+        {hasActiveConstraints && !contextualSearch.state.isOpen && (
+          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+            <span className="text-[10px] font-bold text-white">
+              {contextualSearch.state.constraints.length}
+            </span>
+          </div>
+        )}
+      </div>
+
+    
       {/* Mode Immersif */}
       {immersiveMode && (
         <ToolButton

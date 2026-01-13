@@ -1,9 +1,10 @@
 ﻿// src/features/boards/components/ElementCard.tsx
-// VERSION HARMONISÉE - Sprint 5 + Sprint 6
-// Sprint 6: Ajout PDF, Pattern, Silhouette
+// VERSION HARMONISÉE - Sprint 5 + Sprint 6 + Sprint 7 (B3)
+// Sprint 7: Ajout bouton contrainte sur palette et calculation
 
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
+import { useState } from 'react';
 
 import { GripVertical, X, ExternalLink, Play, Eye } from 'lucide-react';
 import { ELEMENT_TYPE_LABELS, isPaletteElement } from '../domain/types';
@@ -18,6 +19,13 @@ import { PdfElement } from './elements/PdfElement';
 import { PatternElement } from './elements/PatternElement';
 import { SilhouetteElement } from './elements/SilhouetteElement';
 
+// Sprint 7 imports
+
+import { ConstraintToggleButton, ConstraintActiveBadge } from './ConstraintToggleButton';
+import { ColorPickerPopover } from './ColorPickerPopover';
+import { useContextualSearchPanel } from '../context/ContextualSearchContext';
+import { getMatchingColorNames } from '@/lib/color';
+
 import type {
   BoardElement,
   PaletteElementData,
@@ -27,6 +35,7 @@ import type {
   PdfElementData,
   PatternElementData,
   SilhouetteElementData,
+  CalculationElementData,
 } from '../domain/types';
 
 interface ElementCardProps {
@@ -55,6 +64,11 @@ export function ElementCard({
   const width = element.width || 180;
   const height = element.height || 120;
 
+  // Sprint 7 - Contexte de recherche
+  const { toggleConstraint } = useContextualSearchPanel();
+   // Sprint B3.5 - État pour le popover de sélection couleur
+  const [colorPickerAnchor, setColorPickerAnchor] = useState<{ x: number; y: number } | null>(null);
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -67,12 +81,15 @@ export function ElementCard({
   const isInspiration = element.elementType === 'inspiration';
   const isVideo = element.elementType === 'video';
   const isLink = element.elementType === 'link';
+  const isCalculation = element.elementType === 'calculation';
 
   // Types d'éléments - Sprint 6
   const isPdf = element.elementType === 'pdf';
   const isPattern = element.elementType === 'pattern';
   const isSilhouette = element.elementType === 'silhouette';
 
+  // Éléments avec bouton contrainte (Sprint 7)
+  const hasConstraintButton = isPalette || isCalculation;
 
   // Éléments sans header (gèrent leur propre affichage)
   const noHeader = isPalette || isInspiration || isVideo || isLink || isPdf || isPattern || isSilhouette;
@@ -126,6 +143,55 @@ export function ElementCard({
     }
   };
 
+ // Sprint B3.5 - Handler pour ouvrir le popover de sélection couleur
+  const handleActivatePaletteConstraint = (e: React.MouseEvent) => {
+    if (!isPalette) return;
+    const paletteData = element.elementData as PaletteElementData;
+    const colors = paletteData.colors || [];
+
+    if (colors.length === 0) return;
+
+    // Ouvrir le popover à la position du clic
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setColorPickerAnchor({
+      x: rect.right + 8,
+      y: rect.top,
+    });
+  };
+
+  // Sprint 7 - Handler pour activer une contrainte calcul
+   const handleActivateCalculationConstraint = (_e: React.MouseEvent) => {
+    if (!isCalculation) return;
+    const calcData = element.elementData as CalculationElementData;
+    
+    // Extraire le métrage depuis les données du calcul
+    let meters: number | undefined;
+    
+    // Format yardageByWidth (nouveau format)
+    if (calcData.yardageByWidth && Object.keys(calcData.yardageByWidth).length > 0) {
+      // Prendre le métrage pour la largeur la plus courante (140cm) ou la première disponible
+      const widths = Object.keys(calcData.yardageByWidth).map(Number).sort((a, b) => a - b);
+      const preferredWidth = widths.includes(140) ? 140 : widths[0];
+      meters = calcData.yardageByWidth[preferredWidth];
+    }
+    // Format result (legacy)
+    else if (calcData.result?.recommended) {
+      meters = calcData.result.recommended;
+    }
+    else if (calcData.result?.totalYardage) {
+      meters = calcData.result.totalYardage;
+    }
+    
+    if (!meters) return;
+    
+    toggleConstraint({
+      type: 'quantity',
+      sourceElementId: element.id,
+      sourceElementName: calcData.patternName || calcData.summary || 'Calcul',
+      meters,
+    });
+  };
+
   return (
     <div
       className={`
@@ -153,10 +219,26 @@ export function ElementCard({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
     >
+      {/* Badge contrainte active - Sprint 7 */}
+      {hasConstraintButton && (
+        <ConstraintActiveBadge elementId={element.id} position="top-left" />
+      )}
+
       {/* Boutons au hover - visible uniquement si pas en édition */}
       {!isEditing && (
         <div className="absolute -top-2 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
-         {/* Bouton Ouvrir - pour video, link, pdf, pattern, silhouette */}
+          {/* Bouton Contrainte - Sprint 7 */}
+         {hasConstraintButton && (
+  <ConstraintToggleButton
+    elementId={element.id}
+  onActivate={isPalette ? handleActivatePaletteConstraint : handleActivateCalculationConstraint}
+              position="inline"
+              size="sm"
+              className="w-5 h-5"
+            />
+          )}
+
+          {/* Bouton Ouvrir - pour video, link, pdf, pattern, silhouette */}
           {(isVideo || isLink || isPdf || isPattern || isSilhouette) && (
             <button
               onClick={handleOpenExternal}
@@ -168,7 +250,7 @@ export function ElementCard({
                 flex items-center justify-center
                 shadow-sm
               "
-             title={isVideo ? "Ouvrir la vidéo" : isLink ? "Ouvrir le lien" : isPdf ? "Ouvrir le PDF" : "Voir l'image"}
+              title={isVideo ? "Ouvrir la vidéo" : isLink ? "Ouvrir le lien" : isPdf ? "Ouvrir le PDF" : "Voir l'image"}
             >
               {isVideo ? (
                 <Play className="w-2.5 h-2.5 ml-0.5" fill="currentColor" />
@@ -296,7 +378,7 @@ export function ElementCard({
                   />
                 )}
 
-                {isSilhouette && (
+               {isSilhouette && (
                   <SilhouetteElement
                     data={element.elementData as SilhouetteElementData}
                     width={width - 16}
@@ -308,6 +390,17 @@ export function ElementCard({
           </>
         )}
       </div>
+
+      {/* Sprint B3.5 - Popover sélection couleur */}
+      {colorPickerAnchor && isPalette && (
+        <ColorPickerPopover
+          colors={(element.elementData as PaletteElementData).colors || []}
+          elementId={element.id}
+          paletteName={(element.elementData as PaletteElementData).name || 'Palette'}
+          anchorPosition={colorPickerAnchor}
+          onClose={() => setColorPickerAnchor(null)}
+        />
+      )}
     </div>
   );
 }

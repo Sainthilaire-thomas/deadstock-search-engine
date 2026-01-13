@@ -99,7 +99,11 @@ export function BoardCanvas() {
     addZone,
     addElement,
   } = useBoard();
-  const { state: searchState, closeSearch } = useContextualSearchPanel();
+  const { 
+  state: panelState, 
+  closePanel, 
+  closeAndReset,
+} = useContextualSearchPanel();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
@@ -858,7 +862,7 @@ const handleDoubleClick = (element: BoardElement) => {
       {/* Canvas principal */}
       <div
         ref={canvasRef}
-        className="flex-1 relative overflow-auto bg-gray-50 dark:bg-gray-900"
+        className="flex-1 relative overflow-auto bg-gray-100 dark:bg-gray-700"
         onClick={handleCanvasClick}
       >
         {isEmpty ? (
@@ -1216,12 +1220,9 @@ const handleDoubleClick = (element: BoardElement) => {
       
 {/* Contextual Search Panel - Sprint B2 */}
 <ContextualSearchPanel
-  isOpen={searchState.isOpen}
-  onClose={closeSearch}
-  initialConstraints={searchState.constraints ?? undefined}
+
   boardId={boardId}
-  elementId={searchState.sourceElementId ?? undefined}
-  requiredMeters={searchState.requiredMeters}
+ 
   onAddToBoard={async (textile) => {
     const position = {
       x: 100 + Math.random() * 200,

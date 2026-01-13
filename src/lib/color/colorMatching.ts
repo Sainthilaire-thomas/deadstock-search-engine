@@ -245,4 +245,61 @@ export function getConfidenceTextClass(confidence: number): string {
     case 'poor':
       return 'text-red-600';
   }
+
+
+
+}
+
+// ============================================================================
+// Matching against available colors only
+// ============================================================================
+
+/**
+ * Find matching colors from a restricted list of available colors
+ * 
+ * This is useful when you only want to match against colors that 
+ * actually exist in the database inventory.
+ * 
+ * @param inputHex - The color to match
+ * @param availableColors - List of color names that exist in DB
+ * @param options - Matching options
+ */
+export function findMatchingColorsFromAvailable(
+  inputHex: string,
+  availableColors: ColorName[],
+  options: ColorMatchingOptions = {}
+): ColorMatch[] {
+  const {
+    maxDistance = 50,
+    maxResults = 3,
+    minConfidence = 0,
+  } = options;
+
+  // Convert input to LAB
+  const inputLab = hexToLab(inputHex);
+
+  // Filter DATABASE_COLORS_LIST to only available colors
+  const availableDbColors = DATABASE_COLORS_LIST.filter(
+    dbColor => availableColors.includes(dbColor.name)
+  );
+
+  // Calculate distance to available database colors only
+  const matches: ColorMatch[] = availableDbColors
+    .map((dbColor: DatabaseColor) => {
+      const distance = labDistance(inputLab, dbColor.lab);
+      const confidence = distanceToConfidence(distance, maxDistance);
+
+      return {
+        color: dbColor.name,
+        referenceHex: dbColor.hex,
+        labelFr: dbColor.labelFr,
+        distance: Math.round(distance * 100) / 100,
+        confidence,
+      };
+    })
+    .filter(match => match.distance <= maxDistance && match.confidence >= minConfidence)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, maxResults);
+
+  return matches;
 }

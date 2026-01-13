@@ -1,4 +1,5 @@
 // src/components/search/PriceDisplay.tsx
+// Format unifié : Prix/m en premier pour comparaison facile
 
 'use client';
 
@@ -10,128 +11,163 @@ interface PriceDisplayProps {
   pricePerMeter: number | null;   // Prix au mètre (pour cut_to_order/hybrid)
   quantity: number | null;        // Longueur disponible
   currency?: string;
+  /** Mode compact pour les cartes de recherche contextuelle */
+  compact?: boolean;
 }
 
-export function PriceDisplay({ 
-  saleType, 
-  price, 
-  pricePerMeter, 
+export function PriceDisplay({
+  saleType,
+  price,
+  pricePerMeter,
   quantity,
-  currency = '€' 
+  currency = '€',
+  compact = false,
 }: PriceDisplayProps) {
   
+  // Calculer le prix au mètre si non fourni
+  const effectivePricePerMeter = 
+    pricePerMeter ?? 
+    (price && quantity && quantity > 0 ? price / quantity : null);
+
+  // Si pas de prix du tout
+  if (!effectivePricePerMeter && !price) {
+    return <span className="text-muted-foreground text-sm">Prix non disponible</span>;
+  }
+
+  // ============================================================================
+  // Format compact (pour recherche contextuelle)
+  // ============================================================================
+  if (compact) {
+    return (
+      <div className="space-y-0.5">
+        {/* Prix au mètre - toujours en premier et en gras */}
+        <div className="font-semibold text-foreground">
+          {effectivePricePerMeter?.toFixed(2)}{currency}/m
+        </div>
+        
+        {/* Info contextuelle */}
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          {saleType === 'cut_to_order' ? (
+            <>
+              <Scissors className="w-3 h-3" />
+              <span>Coupe à la demande</span>
+            </>
+          ) : saleType === 'fixed_length' && price && quantity ? (
+            <>
+              <Package className="w-3 h-3" />
+              <span>Coupon {quantity}m • {price.toFixed(0)}{currency}</span>
+            </>
+          ) : saleType === 'hybrid' && price && quantity ? (
+            <>
+              <Package className="w-3 h-3" />
+              <span>Coupon {quantity}m ou coupe</span>
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // Format standard (pour grille de recherche principale)
+  // ============================================================================
+
   // Hybrid : Afficher les 2 options
   if (saleType === 'hybrid' && price && pricePerMeter && quantity) {
     const couponPricePerMeter = price / quantity;
     const savings = ((pricePerMeter - couponPricePerMeter) / pricePerMeter * 100).toFixed(0);
-    
+
     return (
       <div className="space-y-2">
-        <div className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
-          <span>2 options d'achat</span>
+        {/* Prix au mètre principal */}
+        <div className="flex justify-between items-baseline">
+          <span className="text-muted-foreground">Prix</span>
+          <span className="font-bold text-lg text-foreground">
+            {couponPricePerMeter.toFixed(2)}{currency}/m
+          </span>
+        </div>
+
+        {/* Options */}
+        <div className="text-xs space-y-1">
+          <div className="flex items-center justify-between text-green-600 dark:text-green-400">
+            <span className="flex items-center gap-1">
+              <Package className="w-3 h-3" />
+              Coupon {quantity}m
+            </span>
+            <span>{price.toFixed(0)}{currency}</span>
+          </div>
+          
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Scissors className="w-3 h-3" />
+              À la coupe
+            </span>
+            <span>{pricePerMeter.toFixed(2)}{currency}/m</span>
+          </div>
+        </div>
+
+        {/* Économie */}
+        {Number(savings) > 0 && (
+          <div className="text-xs text-green-600 dark:text-green-400">
+            💰 -{savings}% en prenant le coupon
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fixed length : Coupon
+  if (saleType === 'fixed_length' && price && quantity) {
+    return (
+      <div className="space-y-1">
+        {/* Prix au mètre en premier */}
+        <div className="flex justify-between items-baseline">
+          <span className="text-muted-foreground">Prix</span>
+          <span className="font-bold text-lg text-foreground">
+            {effectivePricePerMeter?.toFixed(2)}{currency}/m
+          </span>
         </div>
         
-        {/* Option 1: Coupon fixe */}
-        <div className="flex items-center justify-between text-sm bg-green-50 dark:bg-green-950/30 rounded px-2 py-1">
-          <span className="flex items-center gap-1 text-green-700 dark:text-green-400">
+        {/* Détail coupon */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
             <Package className="w-3 h-3" />
             Coupon {quantity}m
           </span>
-          <div className="text-right">
-            <span className="font-semibold text-green-700 dark:text-green-400">
-              {price.toFixed(0)}{currency}
-            </span>
-            <span className="text-xs text-green-600 dark:text-green-500 ml-1">
-              ({couponPricePerMeter.toFixed(2)}{currency}/m)
-            </span>
-          </div>
+          <span>{price.toFixed(0)}{currency}</span>
         </div>
-        
-        {/* Option 2: À la coupe */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <Scissors className="w-3 h-3" />
-            À la coupe
-          </span>
-          <span className="font-medium">
-            {pricePerMeter.toFixed(2)}{currency}/m
-          </span>
-        </div>
-        
-        {/* Économie */}
-        {Number(savings) > 0 && (
-          <div className="text-xs text-green-600 dark:text-green-400 text-right">
-            💰 -{savings}% en coupon
-          </div>
-        )}
       </div>
     );
   }
-  
-  // Fixed length : Prix total + prix/m calculé
-  if (saleType === 'fixed_length' && price) {
-    const calculatedPricePerMeter = quantity && quantity > 0 ? price / quantity : null;
-    
-    return (
-      <div className="space-y-1">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Prix</span>
-          <span className="font-medium">
-            {price.toFixed(2)}{currency}
-          </span>
-        </div>
-        {calculatedPricePerMeter && (
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Coupon {quantity}m</span>
-            <span>({calculatedPricePerMeter.toFixed(2)}{currency}/m)</span>
-          </div>
-        )}
-      </div>
-    );
-  }
-  
+
   // Cut to order : Prix au mètre
   if (saleType === 'cut_to_order') {
+    return (
+      <div className="space-y-1">
+        <div className="flex justify-between items-baseline">
+          <span className="text-muted-foreground">Prix</span>
+          <span className="font-bold text-lg text-foreground">
+            {effectivePricePerMeter?.toFixed(2)}{currency}/m
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Scissors className="w-3 h-3" />
+          <span>Coupe à la demande</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback : Afficher ce qu'on a
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between items-center">
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <Scissors className="h-3 w-3" />
-          Prix
-        </span>
-        <span className="font-semibold text-foreground">
-          {pricePerMeter?.toFixed(2) || price?.toFixed(2)}{currency}/m
-        </span>
-      </div>
-      <div className="text-xs text-muted-foreground">
-        Vente au mètre • Coupe à la demande
-      </div>
+    <div className="flex justify-between items-baseline">
+      <span className="text-muted-foreground">Prix</span>
+      <span className="font-bold text-foreground">
+        {effectivePricePerMeter 
+          ? `${effectivePricePerMeter.toFixed(2)}${currency}/m`
+          : `${price?.toFixed(2)}${currency}`
+        }
+      </span>
     </div>
   );
-}
-  
-  // Fallback : Afficher ce qu'on a
-  if (pricePerMeter) {
-    return (
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Prix</span>
-        <span className="font-medium">
-          {pricePerMeter.toFixed(2)}{currency}/m
-        </span>
-      </div>
-    );
-  }
-  
-  if (price) {
-    return (
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Prix</span>
-        <span className="font-medium">
-          {price.toFixed(2)}{currency}
-        </span>
-      </div>
-    );
-  }
-  
-  return null;
 }

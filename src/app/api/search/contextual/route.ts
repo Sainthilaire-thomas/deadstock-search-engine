@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
         description: textile.description,
         image_url: textile.image_url,
         source_url: textile.source_url,
-        price_value: textile.price_value,
+        price_value: textile.price ? parseFloat(textile.price) : null,
         price_currency: textile.price_currency || 'EUR',
         price_per_meter: textile.price_per_meter,
         sale_type: textile.sale_type,
@@ -282,15 +282,9 @@ export async function POST(request: NextRequest) {
       };
     });
     
-    // 7. Filter by sufficiency if minQuantity is set (post-query for cut_to_order logic)
-    let filteredResults = results;
-    if (constraints.minQuantity && constraints.includeCutToOrder) {
-      // Keep sufficient OR cut_to_order
-      filteredResults = results.filter(r => 
-        r.sufficiency?.sufficient || r.sale_type === 'cut_to_order'
-      );
-    }
-    
+       // 7. Ne plus filtrer côté API - le filtrage se fait côté client
+    // avec la checkbox "Masquer insuffisants"
+    const filteredResults = results;
     // 8. Calculate aggregations
     const byColorMap = new Map<string, { count: number; totalMeters: number }>();
     let sufficientCount = 0;

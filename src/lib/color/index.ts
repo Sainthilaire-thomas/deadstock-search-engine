@@ -44,6 +44,7 @@ export {
   hexDistance,
   distanceToConfidence,
   findMatchingColors,
+  findMatchingColorsFromAvailable,
   findBestMatch,
   isColorSimilar,
   getMatchingColorNames,
