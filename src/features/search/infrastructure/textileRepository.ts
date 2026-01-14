@@ -3,6 +3,91 @@
 import { createClient } from '@/lib/supabase/client';
 import type { SearchFilters, Textile, AvailableFilters, FilterCategory } from '../domain/types';
 
+/**
+ * Type correspondant exactement à la vue matérialisée textiles_search
+ */
+interface TextileSearchRow {
+  id: string;
+  name: string | null;
+  description: string | null;
+  image_url: string | null;
+  additional_images: string[] | null;
+  source_url: string;
+  source_platform: string;
+  source_product_id: string | null;
+  price: number | null;  // La vue a "price", pas "price_value"
+  price_currency: string | null;
+  price_per_meter: number | null;
+  sale_type: string | null;
+  quantity_value: number | null;
+  quantity_unit: string | null;
+  width_value: number | null;
+  width_unit: string | null;
+  weight_value: number | null;
+  weight_unit: string | null;
+  available: boolean;
+  site_id: string | null;
+  site_name: string | null;
+  site_url: string | null;
+  created_at: string;
+  updated_at: string | null;
+  fiber: string | null;
+  color: string | null;
+  pattern: string | null;
+  weave: string | null;
+}
+
+/**
+ * Mapper une row de textiles_search vers le type Textile utilisé dans l'app
+ */
+function mapSearchRowToTextile(row: TextileSearchRow): Textile {
+  return {
+    id: row.id,
+    name: row.name ?? '',
+    description: row.description,
+    image_url: row.image_url,
+    additional_images: row.additional_images,
+    source_url: row.source_url,
+    source_platform: row.source_platform,
+    source_product_id: row.source_product_id,
+    site_id: row.site_id,
+    // Mapping price -> price_value pour compatibilité
+    price_value: row.price,
+    price_currency: row.price_currency ?? 'EUR',
+    price_per_unit: null,
+    price_per_unit_label: null,
+    price_per_meter: row.price_per_meter,
+    sale_type: row.sale_type as Textile['sale_type'],
+    quantity_value: row.quantity_value,
+    quantity_unit: row.quantity_unit,
+    minimum_order_value: null,
+    minimum_order_unit: null,
+    width_value: row.width_value,
+    width_unit: row.width_unit,
+    weight_value: row.weight_value,
+    weight_unit: row.weight_unit,
+    available: row.available,
+    supplier_name: row.site_name,
+    supplier_location: null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    scraped_at: null,
+    data_quality_score: null,
+    // Attributs normalisés
+    fiber: row.fiber,
+    color: row.color,
+    pattern: row.pattern,
+    weave: row.weave,
+    // Alias pour rétrocompatibilité
+    material_type: row.fiber,
+    // Confiances non disponibles dans la vue
+    fiber_confidence: null,
+    color_confidence: null,
+    pattern_confidence: null,
+    weave_confidence: null,
+  };
+}
+
 export const textileRepository = {
   async search(filters: SearchFilters): Promise<Textile[]> {
     const supabase = createClient();
@@ -42,12 +127,12 @@ export const textileRepository = {
       query = query.lte('quantity_value', filters.maxQuantity);
     }
 
-    // Filtres prix
+    // Filtres prix (utiliser "price" car c'est le nom dans la vue)
     if (filters.minPrice !== undefined) {
-      query = query.gte('price_value', filters.minPrice);
+      query = query.gte('price', filters.minPrice);
     }
     if (filters.maxPrice !== undefined) {
-      query = query.lte('price_value', filters.maxPrice);
+      query = query.lte('price', filters.maxPrice);
     }
 
     // Recherche texte (si keywords)
@@ -62,18 +147,16 @@ export const textileRepository = {
       throw error;
     }
 
-    // Mapper fiber vers material_type pour compatibilité avec le reste de l'app
-    return (data || []).map(textile => ({
-      ...textile,
-      material_type: textile.fiber,
-    }));
+    // Mapper les résultats vers le type Textile
+    return (data || []).map(row => mapSearchRowToTextile(row as TextileSearchRow));
   },
 
   async findById(id: string): Promise<Textile | null> {
     const supabase = createClient();
 
+    // Pour findById, on utilise aussi la vue pour avoir les attributs normalisés
     const { data, error } = await supabase
-      .from('textiles')
+      .from('textiles_search')
       .select('*')
       .eq('id', id)
       .single();
@@ -83,7 +166,7 @@ export const textileRepository = {
       return null;
     }
 
-    return data;
+    return mapSearchRowToTextile(data as TextileSearchRow);
   },
 
   async getAvailableFilters(): Promise<AvailableFilters> {
@@ -118,38 +201,19 @@ export const textileRepository = {
         categories.push({
           slug: cat.slug,
           name: cat.name,
-          displayOrder: cat.display_order,
+          displayOrder: cat.display_order ?? 0,  // Fallback si null
           values: uniqueValues,
         });
       }
     }
 
-    // 3. Récupérer le range de prix au mètre
-    const { data: priceData } = await supabase
-      .from('textiles_search')
-      .select('price_per_meter')
-      .not('price_per_meter', 'is', null)
-      .gt('price_per_meter', 0);
-
-    let priceRange: { min: number; max: number } | undefined;
-    if (priceData && priceData.length > 0) {
-      const prices = priceData.map(p => p.price_per_meter).filter((p): p is number => p !== null);
-      if (prices.length > 0) {
-        priceRange = {
-          min: Math.floor(Math.min(...prices)),
-          max: Math.ceil(Math.max(...prices)),
-        };
-      }
-    }
-
-    // 4. Legacy format pour rétrocompatibilité
+    // 3. Legacy format pour rétrocompatibilité
     const fiberCategory = categories.find(c => c.slug === 'fiber');
     const colorCategory = categories.find(c => c.slug === 'color');
     const patternCategory = categories.find(c => c.slug === 'pattern');
 
     return {
       categories,
-      priceRange,
       // Legacy
       materials: fiberCategory?.values || [],
       colors: colorCategory?.values || [],
