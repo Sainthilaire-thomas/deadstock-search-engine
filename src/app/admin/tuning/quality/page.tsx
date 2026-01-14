@@ -1,22 +1,22 @@
 // src/app/admin/tuning/quality/page.tsx
 
 import Link from 'next/link';
-import { ArrowLeft, BarChart, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, BarChart, TrendingUp, TrendingDown, Database } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAdminMetrics, getAllSites } from '@/features/admin/application/queries';
+import { getAdminMetrics, getAllSites, getCoverageBySource } from '@/features/admin/application/queries';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-// Récupérer les stats de couverture
+// Récupérer les stats de couverture globales
 async function getCoverageStats() {
   const supabase = createAdminClient();
-  
+
   const { data: textiles } = await supabase
-    .from('textiles')
-    .select('material_type, color, pattern, quantity_value, width_value');
+    .from('textiles_search')
+    .select('fiber, color, pattern, weave, quantity_value, width_value, price_per_meter');
 
   const total = textiles?.length || 0;
-  
+
   if (total === 0) {
     return {
       total: 0,
@@ -27,7 +27,7 @@ async function getCoverageStats() {
   return {
     total,
     coverage: {
-      material: Math.round((textiles!.filter(t => t.material_type).length / total) * 100),
+      material: Math.round((textiles!.filter(t => t.fiber).length / total) * 100),
       color: Math.round((textiles!.filter(t => t.color).length / total) * 100),
       pattern: Math.round((textiles!.filter(t => t.pattern).length / total) * 100),
       length: Math.round((textiles!.filter(t => t.quantity_value && t.quantity_value > 0).length / total) * 100),
@@ -61,12 +61,12 @@ function ProgressBar({ value, label, target }: { value: number; label: string; t
         </div>
       </div>
       <div className="h-3 bg-muted rounded-full overflow-hidden relative">
-        <div 
+        <div
           className={`h-full ${getColor(value)} transition-all`}
           style={{ width: `${value}%` }}
         />
         {target && (
-          <div 
+          <div
             className="absolute top-0 h-full w-0.5 bg-foreground/50"
             style={{ left: `${target}%` }}
           />
@@ -76,11 +76,41 @@ function ProgressBar({ value, label, target }: { value: number; label: string; t
   );
 }
 
+// Mini barre de progression pour le tableau
+function MiniProgressBar({ value }: { value: number }) {
+  const getColor = (v: number) => {
+    if (v >= 80) return 'bg-green-500';
+    if (v >= 50) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  const getTextColor = (v: number) => {
+    if (v >= 80) return 'text-green-600';
+    if (v >= 50) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-20">
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full ${getColor(value)} transition-all`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+      <span className={`text-xs font-medium w-8 text-right ${getTextColor(value)}`}>
+        {value}%
+      </span>
+    </div>
+  );
+}
+
 export default async function TuningQualityPage() {
-  const [stats, metrics, sites] = await Promise.all([
+  const [stats, metrics, sites, coverageBySource] = await Promise.all([
     getCoverageStats(),
     getAdminMetrics(),
     getAllSites(),
+    getCoverageBySource(),
   ]);
 
   // Cibles de qualité
@@ -178,38 +208,115 @@ export default async function TuningQualityPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart className="h-5 w-5" />
-            Couverture par Dimension
+            Couverture Globale par Dimension
           </CardTitle>
           <CardDescription>
             Pourcentage de textiles avec chaque attribut renseigné
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <ProgressBar 
-            label="Matière (fiber)" 
-            value={stats.coverage.material} 
+          <ProgressBar
+            label="Matière (fiber)"
+            value={stats.coverage.material}
             target={targets.material}
           />
-          <ProgressBar 
-            label="Couleur" 
-            value={stats.coverage.color} 
+          <ProgressBar
+            label="Couleur"
+            value={stats.coverage.color}
             target={targets.color}
           />
-          <ProgressBar 
-            label="Motif (pattern)" 
-            value={stats.coverage.pattern} 
+          <ProgressBar
+            label="Motif (pattern)"
+            value={stats.coverage.pattern}
             target={targets.pattern}
           />
-          <ProgressBar 
-            label="Longueur disponible" 
-            value={stats.coverage.length} 
+          <ProgressBar
+            label="Longueur disponible"
+            value={stats.coverage.length}
             target={targets.length}
           />
-          <ProgressBar 
-            label="Largeur (laize)" 
-            value={stats.coverage.width} 
+          <ProgressBar
+            label="Largeur (laize)"
+            value={stats.coverage.width}
             target={targets.width}
           />
+        </CardContent>
+      </Card>
+
+      {/* NEW: Coverage par source - Sprint A1 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Couverture par Source
+          </CardTitle>
+          <CardDescription>
+            Détail de la qualité des données par fournisseur
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-2 font-medium">Source</th>
+                  <th className="text-right py-3 px-2 font-medium">Textiles</th>
+                  <th className="py-3 px-2 font-medium">Matière</th>
+                  <th className="py-3 px-2 font-medium">Couleur</th>
+                  <th className="py-3 px-2 font-medium">Motif</th>
+                  <th className="py-3 px-2 font-medium">Tissage</th>
+                  <th className="py-3 px-2 font-medium">Largeur</th>
+                  <th className="py-3 px-2 font-medium">Quantité</th>
+                  <th className="py-3 px-2 font-medium">Prix/m</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverageBySource.map((source) => (
+                  <tr key={source.siteId} className="border-b hover:bg-muted/50">
+                    <td className="py-3 px-2">
+                      <Link 
+                        href={`/admin/sites/${source.siteId}`}
+                        className="font-medium hover:underline text-blue-600 dark:text-blue-400"
+                      >
+                        {source.siteName}
+                      </Link>
+                    </td>
+                    <td className="text-right py-3 px-2 font-mono">
+                      {source.total.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.fiber} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.color} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.pattern} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.weave} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.width} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.quantity} />
+                    </td>
+                    <td className="py-3 px-2">
+                      <MiniProgressBar value={source.coverage.price} />
+                    </td>
+                  </tr>
+                ))}
+                {coverageBySource.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-muted-foreground">
+                      Aucune donnée disponible
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 

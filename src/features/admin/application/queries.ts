@@ -163,3 +163,89 @@ export async function getSiteByIdServer(siteId: string) {
     textilesCount: textilesCount || 0,
   };
 }
+
+/**
+ * Get coverage statistics by source/site
+ * Server-side only
+ */
+export async function getCoverageBySource() {
+  const supabase = createAdminClient();
+
+  // Récupérer tous les textiles avec leur site_id et attributs
+  const { data: textiles, error } = await supabase
+    .from('textiles_search')
+    .select('site_id, fiber, color, pattern, weave, width_value, quantity_value, price_per_meter');
+
+  if (error) {
+    console.error('Error fetching coverage data:', error);
+    return [];
+  }
+
+  // Récupérer les infos des sites
+  const { data: sites } = await supabase
+    .from('sites')
+    .select('id, name');
+
+  const siteNameMap = new Map(sites?.map(s => [s.id, s.name]) || []);
+
+  // Grouper par site_id et calculer les stats
+  const bySource = new Map<string, {
+    siteId: string;
+    siteName: string;
+    total: number;
+    fiber: number;
+    color: number;
+    pattern: number;
+    weave: number;
+    width: number;
+    quantity: number;
+    price: number;
+  }>();
+
+  for (const t of textiles || []) {
+    const siteId = t.site_id || 'unknown';
+    const existing = bySource.get(siteId) || {
+      siteId,
+      siteName: siteNameMap.get(siteId) || 'Source inconnue',
+      total: 0,
+      fiber: 0,
+      color: 0,
+      pattern: 0,
+      weave: 0,
+      width: 0,
+      quantity: 0,
+      price: 0,
+    };
+
+    existing.total += 1;
+    if (t.fiber) existing.fiber += 1;
+    if (t.color) existing.color += 1;
+    if (t.pattern) existing.pattern += 1;
+    if (t.weave) existing.weave += 1;
+    if (t.width_value && t.width_value > 0) existing.width += 1;
+    if (t.quantity_value && t.quantity_value > 0) existing.quantity += 1;
+    if (t.price_per_meter && t.price_per_meter > 0) existing.price += 1;
+
+    bySource.set(siteId, existing);
+  }
+
+  // Convertir en array avec pourcentages
+  return Array.from(bySource.values())
+    .map(source => ({
+      siteId: source.siteId,
+      siteName: source.siteName,
+      total: source.total,
+      coverage: {
+        fiber: source.total > 0 ? Math.round((source.fiber / source.total) * 100) : 0,
+        color: source.total > 0 ? Math.round((source.color / source.total) * 100) : 0,
+        pattern: source.total > 0 ? Math.round((source.pattern / source.total) * 100) : 0,
+        weave: source.total > 0 ? Math.round((source.weave / source.total) * 100) : 0,
+        width: source.total > 0 ? Math.round((source.width / source.total) * 100) : 0,
+        quantity: source.total > 0 ? Math.round((source.quantity / source.total) * 100) : 0,
+        price: source.total > 0 ? Math.round((source.price / source.total) * 100) : 0,
+      },
+    }))
+    .sort((a, b) => b.total - a.total); // Tri par nombre de textiles décroissant
+}
+
+export type CoverageBySource = Awaited<ReturnType<typeof getCoverageBySource>>[number];
