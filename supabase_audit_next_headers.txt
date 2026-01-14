@@ -1,0 +1,2 @@
+﻿C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\favorites\utils\sessionManager.ts:8  import { cookies } from 'next/headers';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\lib\supabase\server.ts:3  import { cookies } from 'next/headers';

@@ -9,9 +9,13 @@ import { MobileJourneyNav } from '@/features/journey/components/MobileJourneyNav
 import { FavoritesCountBadge } from '@/features/favorites/components/FavoritesCountBadge';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ImmersiveModeProvider, useImmersiveMode } from '@/features/boards/context/ImmersiveModeContext';
+import { AuthProvider } from '@/features/auth/context/AuthContext';
+import { UserMenu } from '@/features/auth/components/UserMenu';
 import Link from 'next/link';
 
+
 function MainLayoutContent({ children }: { children: React.ReactNode }) {
+  
   const { isImmersive, exitImmersiveMode } = useImmersiveMode();
   const pathname = usePathname();
 
@@ -81,6 +85,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2">
               <FavoritesCountBadge />
               <ThemeToggle />
+              <UserMenu />
             </div>
           </div>
         </header>
@@ -101,8 +106,10 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ImmersiveModeProvider>
-      <MainLayoutContent>{children}</MainLayoutContent>
-    </ImmersiveModeProvider>
+    <AuthProvider>
+      <ImmersiveModeProvider>
+        <MainLayoutContent>{children}</MainLayoutContent>
+      </ImmersiveModeProvider>
+    </AuthProvider>
   );
 }

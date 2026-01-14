@@ -1,0 +1,6 @@
+﻿C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\(main)\textiles\[id]\page.tsx:1  import { createClient } from '@/lib/supabase/server';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\api\auth\callback\route.ts:3  import { createClient } from "@/lib/supabase/server";
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\api\colors\available\route.ts:5  import { createClient } from '@/lib/supabase/server';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\api\search\contextual\route.ts:6  import { createClient } from '@/lib/supabase/server';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\journey\infrastructure\projectsRepository.ts:5  import { createClient } from '@/lib/supabase/server';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\pattern\infrastructure\patternRepository.ts:8  import { createClient } from '@/lib/supabase/server';

@@ -2,8 +2,10 @@
 import { SearchInterface } from '@/components/search/SearchInterface';
 import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
 import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
+import { requireUser } from "@/lib/auth/requireUser";
 
 export default async function SearchPage() {
+  await requireUser();
   // Initial load: fetch all textiles and available filters
   const initialData = await searchTextiles();
   

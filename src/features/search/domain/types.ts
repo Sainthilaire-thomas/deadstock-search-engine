@@ -106,3 +106,26 @@ export interface AvailableFilters {
   colors: string[];
   patterns: string[];
 }
+
+/**
+ * Résultat issu de la vue textiles_search
+ * (subset du Textile complet)
+ */
+export type TextileSearchResult = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  fiber: string | null;
+  material_type?: string | null; // alias
+  color: string | null;
+  pattern: string | null;
+  quantity_value: number | null;
+  quantity_unit: string | null;
+  price_value: number | null;
+  price_currency: string | null;
+  price_per_meter?: number | null;
+  source_platform: string | null;
+  image_url: string | null;
+  additional_images: string[] | null;
+  created_at: string | null;
+};

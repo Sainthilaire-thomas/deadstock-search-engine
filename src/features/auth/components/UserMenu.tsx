@@ -1,0 +1,112 @@
+// src/features/auth/components/UserMenu.tsx
+"use client";
+
+import { LogOut, Settings, User, Crown } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+
+const roleBadgeVariant: Record<string, "default" | "secondary" | "outline"> = {
+  free: "outline",
+  premium: "secondary",
+  pro: "default",
+  admin: "default",
+};
+
+const roleLabel: Record<string, string> = {
+  free: "Free",
+  premium: "Premium",
+  pro: "Pro",
+  admin: "Admin",
+};
+
+export function UserMenu() {
+  const { profile, isLoading, isAuthenticated, signOut } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
+    );
+  }
+
+  if (!isAuthenticated || !profile) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => window.location.href = "/login"}>
+        Connexion
+      </Button>
+    );
+  }
+
+  const initials = profile.full_name
+    ? profile.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : profile.email[0].toUpperCase();
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = "/";
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.full_name || "Avatar"}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+              {initials}
+            </div>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">
+              {profile.full_name || "Utilisateur"}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {profile.email}
+            </p>
+            <div className="pt-1">
+              <Badge variant={roleBadgeVariant[profile.role] || "outline"}>
+                {profile.role === "pro" || profile.role === "premium" ? (
+                  <Crown className="mr-1 h-3 w-3" />
+                ) : null}
+                {roleLabel[profile.role] || profile.role}
+              </Badge>
+            </div>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => window.location.href = "/settings"}>
+          <Settings className="mr-2 h-4 w-4" />
+          Paramètres
+        </DropdownMenuItem>
+        {profile.role === "admin" && (
+          <DropdownMenuItem onClick={() => window.location.href = "/admin"}>
+            <User className="mr-2 h-4 w-4" />
+            Administration
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+          <LogOut className="mr-2 h-4 w-4" />
+          Déconnexion
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

@@ -1,0 +1,10 @@
+﻿C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\admin\dictionary\page.tsx:8  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\admin\discovery\[siteSlug]\page.tsx:9  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\admin\scraping\page.tsx:53  const supabase = (await import('@/lib/supabase/admin')).createAdminClient();
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\app\admin\tuning\quality\page.tsx:8  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\admin\application\actions.ts:9  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\admin\application\queries.ts:2  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\admin\services\scrapingService.ts:14  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\boards\infrastructure\boardsRepository.ts:3  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\boards\infrastructure\elementsRepository.ts:3  import { createAdminClient } from '@/lib/supabase/admin';
+C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\boards\infrastructure\zonesRepository.ts:3  import { createAdminClient } from '@/lib/supabase/admin';

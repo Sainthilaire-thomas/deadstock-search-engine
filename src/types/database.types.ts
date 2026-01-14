@@ -1303,27 +1303,39 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
+          live_searches_today: number
           role: string
+          searches_reset_at: string
+          searches_today: number
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          live_searches_today?: number
           role?: string
+          searches_reset_at?: string
+          searches_today?: number
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          live_searches_today?: number
           role?: string
+          searches_reset_at?: string
+          searches_today?: number
           updated_at?: string
         }
         Relationships: []
