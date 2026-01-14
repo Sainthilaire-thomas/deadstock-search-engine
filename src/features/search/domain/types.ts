@@ -93,8 +93,14 @@ export interface FilterCategory {
 }
 
 // Filtres disponibles (version dynamique)
+// Filtres disponibles (version dynamique)
 export interface AvailableFilters {
   categories: FilterCategory[];
+  // Range de prix au mètre pour le slider
+  priceRange?: {
+    min: number;
+    max: number;
+  };
   // Legacy (pour rétrocompatibilité)
   materials: string[];
   colors: string[];

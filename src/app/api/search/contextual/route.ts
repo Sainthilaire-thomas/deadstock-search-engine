@@ -34,12 +34,17 @@ const ContextualSearchRequestSchema = z.object({
     
       // Filtre weave
     weave: z.string().optional(),
-    // Filtre pattern/motif
+
+   // Filtre pattern/motif
     pattern: z.string().optional(),
-    
+
+    // Filtre prix au mètre
+    minPricePerMeter: z.number().nonnegative().optional(),
+    maxPricePerMeter: z.number().positive().optional(),
+
     // Quantité minimum en mètres
     minQuantity: z.number().positive().optional(),
-    
+
     // Inclure cut_to_order même sans quantité suffisante
     includeCutToOrder: z.boolean().optional().default(true),
   }),
@@ -79,6 +84,7 @@ interface TextileWithMatch {
   fiber: string | null;
   color: string | null;
   pattern: string | null;
+  
   weave: string | null;
   available: boolean;
   supplier_name: string | null;
@@ -220,7 +226,15 @@ export async function POST(request: NextRequest) {
     if (constraints.pattern) {
       query = query.eq('pattern', constraints.pattern);
     }
-    
+
+      // Filter by price per meter  <-- AJOUTER CES LIGNES
+    if (constraints.minPricePerMeter !== undefined) {
+      query = query.gte('price_per_meter', constraints.minPricePerMeter);
+    }
+    if (constraints.maxPricePerMeter !== undefined) {
+      query = query.lte('price_per_meter', constraints.maxPricePerMeter);
+    }
+
     // Filter by quantity (only for non cut_to_order if specified)
     // We'll filter cut_to_order separately to always include them
     if (constraints.minQuantity && !constraints.includeCutToOrder) {
@@ -277,6 +291,9 @@ export async function POST(request: NextRequest) {
         fiber: textile.fiber,
         color: textile.color,
         pattern: textile.pattern,
+         // Filtre prix au mètre
+    minPricePerMeter: z.number().positive().optional(),
+    maxPricePerMeter: z.number().positive().optional(),
         weave: textile.weave,
         available: textile.available,
         supplier_name: textile.supplier_name,

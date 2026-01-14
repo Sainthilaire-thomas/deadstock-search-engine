@@ -251,8 +251,9 @@ export function ContextualSearchPanel({
   
   const [hideInsufficient, setHideInsufficient] = useState(false);
   const [additionalFilters, setAdditionalFilters] = useState<Record<string, string[]>>({});
+ const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(null);
 
-  // Build search constraints from aggregated constraints + additional filters
+// Build search constraints from aggregated constraints + additional filters
   const searchConstraints = useMemo(() => {
     const baseColors = aggregatedConstraints.colorNames || [];
     const additionalColors = additionalFilters.color || [];
@@ -265,32 +266,37 @@ export function ContextualSearchPanel({
       fiber: additionalFilters.fiber?.[0] || aggregatedConstraints.fiber,
       weave: additionalFilters.weave?.[0] || aggregatedConstraints.weave,
       pattern: additionalFilters.pattern?.[0],
+      // Ajout prix
+      minPricePerMeter: priceRange?.min,
+      maxPricePerMeter: priceRange?.max,
     };
-  }, [aggregatedConstraints, additionalFilters]);
+  }, [aggregatedConstraints, additionalFilters, priceRange]);
 
 
  // Search when constraints change
  // Search when constraints change
  // Reset when panel closes
-  useEffect(() => {
+    useEffect(() => {
     if (!panelState.isOpen) {
       reset();
       setAdditionalFilters({});
+      setPriceRange(null);  // <-- AJOUTER
     }
   }, [panelState.isOpen, reset]);
 
   // Search when constraints or filters change
-  useEffect(() => {
+ useEffect(() => {
     if (!panelState.isOpen) return;
-    
+
     const hasConstraints = panelState.constraints.length > 0;
     const hasAdditionalFilters = Object.keys(additionalFilters).length > 0;
-    
-    if (hasConstraints || hasAdditionalFilters) {
+    const hasPriceFilter = priceRange !== null;  // <-- AJOUTER
+
+    if (hasConstraints || hasAdditionalFilters || hasPriceFilter) {  // <-- MODIFIER
       search(searchConstraints, boardId);
     }
-  }, [panelState.isOpen, panelState.constraints.length, searchConstraints, boardId, search]);
-  
+  }, [panelState.isOpen, panelState.constraints.length, searchConstraints, boardId, search, additionalFilters, priceRange]);
+
   // Filter results by sufficiency
   const displayedResults = useMemo(() => {
     if (hideInsufficient && requiredMeters) {
@@ -406,10 +412,12 @@ export function ContextualSearchPanel({
           )}
         </div>
 
-        {/* Additional Filters */}
+         {/* Additional Filters */}
         <SearchFiltersCompact
           selectedFilters={additionalFilters}
           onFiltersChange={setAdditionalFilters}
+          priceRange={priceRange}
+          onPriceRangeChange={setPriceRange}
           disabled={searchState.isLoading}
           constraintColors={aggregatedConstraints.colorNames}
           constraintFiber={aggregatedConstraints.fiber}

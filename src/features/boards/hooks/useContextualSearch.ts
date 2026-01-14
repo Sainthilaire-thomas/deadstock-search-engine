@@ -65,6 +65,9 @@ export interface SearchConstraints {
   pattern?: string;
   minQuantity?: number;
   includeCutToOrder?: boolean;
+  // Ajout filtre prix
+  minPricePerMeter?: number;
+  maxPricePerMeter?: number;
 }
 
 export interface UseContextualSearchReturn {
@@ -132,7 +135,7 @@ export function useContextualSearch(): UseContextualSearchReturn {
           boardId,
           elementId,
         },
-        constraints: {
+         constraints: {
           colors: constraints.hex ? {
             hex: constraints.hex,
             minConfidence: constraints.minConfidence ?? 20,
@@ -143,6 +146,9 @@ export function useContextualSearch(): UseContextualSearchReturn {
           pattern: constraints.pattern,
           minQuantity: constraints.minQuantity,
           includeCutToOrder: constraints.includeCutToOrder ?? true,
+          // Ajout prix
+          minPricePerMeter: constraints.minPricePerMeter,
+          maxPricePerMeter: constraints.maxPricePerMeter,
         },
         pagination: {
           limit: PAGE_SIZE,
@@ -220,6 +226,9 @@ export function useContextualSearch(): UseContextualSearchReturn {
           pattern: constraints.pattern,
           minQuantity: constraints.minQuantity,
           includeCutToOrder: constraints.includeCutToOrder ?? true,
+          // Ajout prix
+          minPricePerMeter: constraints.minPricePerMeter,
+          maxPricePerMeter: constraints.maxPricePerMeter,
         },
         pagination: {
           limit: PAGE_SIZE,

@@ -124,13 +124,32 @@ export const textileRepository = {
       }
     }
 
-    // 3. Legacy format pour rétrocompatibilité
+    // 3. Récupérer le range de prix au mètre
+    const { data: priceData } = await supabase
+      .from('textiles_search')
+      .select('price_per_meter')
+      .not('price_per_meter', 'is', null)
+      .gt('price_per_meter', 0);
+
+    let priceRange: { min: number; max: number } | undefined;
+    if (priceData && priceData.length > 0) {
+      const prices = priceData.map(p => p.price_per_meter).filter((p): p is number => p !== null);
+      if (prices.length > 0) {
+        priceRange = {
+          min: Math.floor(Math.min(...prices)),
+          max: Math.ceil(Math.max(...prices)),
+        };
+      }
+    }
+
+    // 4. Legacy format pour rétrocompatibilité
     const fiberCategory = categories.find(c => c.slug === 'fiber');
     const colorCategory = categories.find(c => c.slug === 'color');
     const patternCategory = categories.find(c => c.slug === 'pattern');
 
     return {
       categories,
+      priceRange,
       // Legacy
       materials: fiberCategory?.values || [],
       colors: colorCategory?.values || [],

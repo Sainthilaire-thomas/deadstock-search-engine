@@ -4,9 +4,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { HexColorPicker, HexColorInput } from 'react-colorful';
-import { X, Plus, Check, Upload, Image as ImageIcon, Loader2, Sparkles, Wand2, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { HexColorPicker, HexColorInput } from 'react-colorful';import { X, Plus, Check, Upload, Image as ImageIcon, Loader2, Sparkles, Wand2 } from 'lucide-react';import { Button } from '@/components/ui/button';
 import { 
   extractColorsFromFile, 
   extractColorsFromUrl,
@@ -14,7 +12,7 @@ import {
   getTextColorForBackground,
   type ColorHarmonies
 } from '../utils/colorExtractor';
-import { ColorMatchDisplay } from './ColorMatchDisplay';
+
 import type { PaletteElementData } from '../domain/types';
 
 interface PaletteEditorProps {
@@ -539,20 +537,7 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
               </div>
            )}
             
-            {/* Section Color Matching - Sprint B1/B2 */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
-              <div className="flex items-center gap-2 mb-3">
-                <Search className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Trouver des tissus
-                </span>
-              </div>
-              <ColorMatchDisplay
-                hex={currentColor}
-                onColorsSelected={(colors) => console.log('Search:', colors)}
-                compact
-              />
-            </div>
+            
           </div>
         </div>
 

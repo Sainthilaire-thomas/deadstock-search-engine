@@ -1,10 +1,12 @@
 // src/features/boards/components/SearchFiltersCompact.tsx
 // Sprint B3.6 - Filtres compacts pour le panel de recherche contextuelle
+// B3.7 - Ajout slider prix
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { getColorLabelFr, type ColorName } from '@/lib/color';
 
 // ============================================================================
@@ -19,6 +21,10 @@ interface FilterCategory {
 
 interface AvailableFilters {
   categories: FilterCategory[];
+  priceRange?: {
+    min: number;
+    max: number;
+  };
 }
 
 interface SearchFiltersCompactProps {
@@ -26,6 +32,10 @@ interface SearchFiltersCompactProps {
   selectedFilters: Record<string, string[]>;
   /** Callback quand les filtres changent */
   onFiltersChange: (filters: Record<string, string[]>) => void;
+  /** Filtre prix min/max (€/m) */
+  priceRange?: { min: number; max: number } | null;
+  /** Callback quand le prix change */
+  onPriceRangeChange?: (range: { min: number; max: number } | null) => void;
   /** Désactiver pendant le chargement */
   disabled?: boolean;
   /** Couleurs depuis les contraintes (pré-sélectionnées, verrouillées) */
@@ -67,6 +77,111 @@ const COLOR_SWATCHES: Record<string, string> = {
 };
 
 // ============================================================================
+// PriceRangeFilter Component
+// ============================================================================
+
+interface PriceRangeFilterProps {
+  availableRange: { min: number; max: number };
+  selectedRange: { min: number; max: number } | null;
+  onChange: (range: { min: number; max: number } | null) => void;
+}
+
+function PriceRangeFilter({ availableRange, selectedRange, onChange }: PriceRangeFilterProps) {
+  const [isExpanded, setIsExpanded] = useState(selectedRange !== null);
+  
+  // Valeurs locales pour le slider (évite les rerenders pendant le drag)
+  const [localValues, setLocalValues] = useState<[number, number]>([
+    selectedRange?.min ?? availableRange.min,
+    selectedRange?.max ?? availableRange.max,
+  ]);
+
+  // Sync quand selectedRange change de l'extérieur
+  useEffect(() => {
+    if (selectedRange) {
+      setLocalValues([selectedRange.min, selectedRange.max]);
+    } else {
+      setLocalValues([availableRange.min, availableRange.max]);
+    }
+  }, [selectedRange, availableRange]);
+
+  const hasSelection = selectedRange !== null && 
+    (selectedRange.min > availableRange.min || selectedRange.max < availableRange.max);
+
+  const handleSliderChange = (values: number[]) => {
+    setLocalValues([values[0], values[1]]);
+  };
+
+  const handleSliderCommit = (values: number[]) => {
+    const [min, max] = values;
+    // Si on est revenu aux bornes, c'est comme "pas de filtre"
+    if (min === availableRange.min && max === availableRange.max) {
+      onChange(null);
+    } else {
+      onChange({ min, max });
+    }
+  };
+
+  return (
+    <div className="border-b border-gray-200 dark:border-gray-700">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      >
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          Prix au mètre
+          {hasSelection && (
+            <span className="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded">
+              {localValues[0]}€ - {localValues[1]}€
+            </span>
+          )}
+        </span>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-2">
+          <div className="flex justify-between text-xs text-gray-500 mb-3">
+            <span>{localValues[0].toFixed(0)}€/m</span>
+            <span>{localValues[1].toFixed(0)}€/m</span>
+          </div>
+          
+          <Slider
+            value={localValues}
+            min={availableRange.min}
+            max={availableRange.max}
+            step={1}
+            onValueChange={handleSliderChange}
+            onValueCommit={handleSliderCommit}
+            className="w-full"
+          />
+          
+          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+            <span>Min: {availableRange.min}€</span>
+            <span>Max: {availableRange.max}€</span>
+          </div>
+
+          {hasSelection && (
+            <button
+              onClick={() => {
+                setLocalValues([availableRange.min, availableRange.max]);
+                onChange(null);
+              }}
+              className="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              Réinitialiser le prix
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // FilterSection Component
 // ============================================================================
 
@@ -81,11 +196,11 @@ interface FilterSectionProps {
   lockedValues?: string[];
 }
 
-function FilterSection({ 
-  title, 
-  slug, 
-  values, 
-  selectedValues, 
+function FilterSection({
+  title,
+  slug,
+  values,
+  selectedValues,
   onToggle,
   isColor = false,
   lockedValues = [],
@@ -163,6 +278,8 @@ function FilterSection({
 export function SearchFiltersCompact({
   selectedFilters,
   onFiltersChange,
+  priceRange,
+  onPriceRangeChange,
   disabled = false,
   constraintColors = [],
   constraintFiber,
@@ -184,7 +301,10 @@ export function SearchFiltersCompact({
         });
         if (response.ok) {
           const data = await response.json();
-          setAvailableFilters(data.filters);
+          setAvailableFilters({
+            categories: data.filters?.categories || [],
+            priceRange: data.filters?.priceRange || { min: 0, max: 100 },
+          });
         }
       } catch (error) {
         console.error('Failed to load filters:', error);
@@ -213,14 +333,19 @@ export function SearchFiltersCompact({
   };
 
   // Compter le nombre total de filtres actifs
-  const totalActiveFilters = Object.values(selectedFilters).reduce(
-    (sum, values) => sum + values.length,
-    0
-  );
+  const totalActiveFilters = useMemo(() => {
+    let count = Object.values(selectedFilters).reduce(
+      (sum, values) => sum + values.length,
+      0
+    );
+    if (priceRange) count += 1;
+    return count;
+  }, [selectedFilters, priceRange]);
 
   // Reset tous les filtres
   const handleReset = () => {
     onFiltersChange({});
+    onPriceRangeChange?.(null);
   };
 
   if (isLoading) {
@@ -254,7 +379,7 @@ export function SearchFiltersCompact({
             </span>
           )}
         </span>
-       <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {totalActiveFilters > 0 && (
             <span
               role="button"
@@ -278,6 +403,16 @@ export function SearchFiltersCompact({
       {/* Contenu */}
       {isExpanded && (
         <div className="border-t border-gray-200 dark:border-gray-700">
+          {/* Slider Prix */}
+          {availableFilters.priceRange && onPriceRangeChange && (
+            <PriceRangeFilter
+              availableRange={availableFilters.priceRange}
+              selectedRange={priceRange ?? null}
+              onChange={onPriceRangeChange}
+            />
+          )}
+
+          {/* Catégories de filtres */}
           {availableFilters.categories.map((category) => {
             // Déterminer les valeurs verrouillées selon la catégorie
             let lockedValues: string[] = [];
