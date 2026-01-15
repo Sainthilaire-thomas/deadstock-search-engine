@@ -105,7 +105,20 @@ export function BoardCanvas() {
   closeAndReset,
 } = useContextualSearchPanel();
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+   // Calculer les compteurs pour Journey
+  const elementCounts = {
+    conception: elements.filter(el => 
+      ['palette', 'pattern', 'silhouette', 'inspiration', 'pdf'].includes(el.elementType)
+    ).length,
+    preparation: elements.filter(el => 
+      ['calculation', 'textile', 'note'].includes(el.elementType)
+    ).length,
+    execution: elements.filter(el => 
+      ['video', 'link'].includes(el.elementType)
+    ).length,
+  };
+
+  const canvasRef = useRef<HTMLDivElement>(null); 
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
@@ -853,10 +866,11 @@ const handleDoubleClick = (element: BoardElement) => {
   return (
     <div className="flex h-full">
       {/* Toolbar gauche 48px */}
-      <BoardToolbar
+     <BoardToolbar
         onAddElement={handleAddElement}
         onToggleViewMode={toggleViewMode}
         viewMode={viewMode}
+        elementCounts={elementCounts}
       />
 
       {/* Canvas principal */}

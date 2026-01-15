@@ -1,184 +1,199 @@
 /**
- * Configuration des 9 étapes du parcours designer
+ * Configuration des 3 phases du parcours designer
+ * VERSION 2.0 - Journey comme vue alternative du Board
  */
 
 import {
   Lightbulb,
-  Palette,
-  PenTool,
   Calculator,
-  Search,
-  CheckCircle,
   ShoppingCart,
-  Factory,
-  Leaf,
-   Layout,
+  Palette,
+  Scissors,
+  User,
+  Image,
+  FileText,
+  PenTool,
+  Ruler,
+  Search,
+  StickyNote,
+  Video,
+  Link,
 } from "lucide-react";
-import type { DesignJourneyStep } from "../domain/types";
+import type { LucideIcon } from "lucide-react";
+import type { ElementType } from "@/features/boards/domain/types";
 
-/**
- * Les 9 étapes du parcours designer textile
- * 
- * MVP (Phase 1) : Étapes 1, 3, 4, 5, 6, 7
- * Phase 2+ : Étapes 2, 8, 9
- */
-export const DESIGNER_JOURNEY_STEPS: DesignJourneyStep[] = [
-  // ========================================
-  // PHASE CONCEPTION
-  // ========================================
-  {
-    id: "idea",
-    order: 1,
-    title: "Idée",
-    description: "Définir le concept de votre projet textile",
-    icon: Lightbulb,
-    path: "/projects/new",
-    phase: "conception",
-    availableInMVP: true,
-    emoji: "💡",
-  },
-  {
-    id: "inspiration",
-    order: 2,
-    title: "Inspiration",
-    description: "Créer des mood boards et palettes de couleurs",
+// ============================================
+// TYPES
+// ============================================
+
+export type PhaseId = "conception" | "preparation" | "execution";
+
+export interface ElementTypeConfig {
+  type: ElementType;
+  label: string;
+  labelPlural: string;
+  icon: LucideIcon;
+  emoji: string;
+}
+
+export interface JourneyPhase {
+  id: PhaseId;
+  title: string;
+  icon: LucideIcon;
+  emoji: string;
+  elementTypes: ElementTypeConfig[];
+}
+
+// ============================================
+// ELEMENT TYPE CONFIGURATIONS
+// ============================================
+
+export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
+  palette: {
+    type: "palette",
+    label: "Palette",
+    labelPlural: "Palettes",
     icon: Palette,
-    path: "/tools/mood-board",
-    phase: "conception",
-    availableInMVP: false, // Phase 2
     emoji: "🎨",
-  },  {
-    id: "boards",
-    order: 2.5, // Entre Inspiration (2) et Design (3)
-    title: "Boards",
-    description: "Organiser vos idées et inspirations",
-    icon: Layout,
-    path: "/boards",
-    phase: "conception",
-    availableInMVP: true,
-    emoji: "📋",
   },
-  {
-    id: "design",
-    order: 3,
-    title: "Design",
-    description: "Définir le patron et le type de vêtement",
-    icon: PenTool,
-    path: "/projects",
-    phase: "conception",
-    availableInMVP: true,
-    emoji: "✏️",
+  pattern: {
+    type: "pattern",
+    label: "Patron",
+    labelPlural: "Patrons",
+    icon: Scissors,
+    emoji: "✂️",
   },
-
-  // ========================================
-  // PHASE PRÉPARATION
-  // ========================================
-  {
-    id: "calculation",
-    order: 4,
-    title: "Calcul",
-    description: "Calculer le métrage de tissu nécessaire",
-    icon: Calculator,
-    path: "/tools/yardage-calculator",
-    phase: "preparation",
-    availableInMVP: true,
-    emoji: "📏",
+  silhouette: {
+    type: "silhouette",
+    label: "Silhouette",
+    labelPlural: "Silhouettes",
+    icon: User,
+    emoji: "👤",
   },
-  {
-    id: "sourcing",
-    order: 5,
-    title: "Sourcing",
-    description: "Rechercher des tissus deadstock adaptés",
+  inspiration: {
+    type: "inspiration",
+    label: "Inspiration",
+    labelPlural: "Inspirations",
+    icon: Image,
+    emoji: "📷",
+  },
+  pdf: {
+    type: "pdf",
+    label: "Document",
+    labelPlural: "Documents",
+    icon: FileText,
+    emoji: "📄",
+  },
+  calculation: {
+    type: "calculation",
+    label: "Calcul",
+    labelPlural: "Calculs",
+    icon: Ruler,
+    emoji: "📐",
+  },
+  textile: {
+    type: "textile",
+    label: "Tissu",
+    labelPlural: "Tissus",
     icon: Search,
-    path: "/search",
-    phase: "preparation",
-    availableInMVP: true,
-    emoji: "🔍",
+    emoji: "🧵",
   },
-  {
-    id: "validation",
-    order: 6,
-    title: "Validation",
-    description: "Vérifier les caractéristiques des textiles",
-    icon: CheckCircle,
-    path: "/favorites",
-    phase: "preparation",
-    availableInMVP: true,
-    emoji: "✅",
+  note: {
+    type: "note",
+    label: "Note",
+    labelPlural: "Notes",
+    icon: StickyNote,
+    emoji: "📝",
   },
+  video: {
+    type: "video",
+    label: "Vidéo",
+    labelPlural: "Vidéos",
+    icon: Video,
+    emoji: "🎬",
+  },
+  link: {
+    type: "link",
+    label: "Lien",
+    labelPlural: "Liens",
+    icon: Link,
+    emoji: "🔗",
+  },
+};
 
-  // ========================================
-  // PHASE EXÉCUTION
-  // ========================================
+// ============================================
+// JOURNEY PHASES (3 phases)
+// ============================================
+
+export const JOURNEY_PHASES: JourneyPhase[] = [
   {
-    id: "purchase",
-    order: 7,
-    title: "Achat",
-    description: "Commander les tissus sélectionnés",
+    id: "conception",
+    title: "Conception",
+    icon: Lightbulb,
+    emoji: "💡",
+    elementTypes: [
+      ELEMENT_TYPE_CONFIGS.palette,
+      ELEMENT_TYPE_CONFIGS.pattern,
+      ELEMENT_TYPE_CONFIGS.silhouette,
+      ELEMENT_TYPE_CONFIGS.inspiration,
+      ELEMENT_TYPE_CONFIGS.pdf,
+    ],
+  },
+  {
+    id: "preparation",
+    title: "Préparation",
+    icon: Calculator,
+    emoji: "📏",
+    elementTypes: [
+      ELEMENT_TYPE_CONFIGS.calculation,
+      ELEMENT_TYPE_CONFIGS.textile,
+      ELEMENT_TYPE_CONFIGS.note,
+    ],
+  },
+  {
+    id: "execution",
+    title: "Exécution",
     icon: ShoppingCart,
-    path: "/favorites", // Redirection vers sources externes
-    phase: "execution",
-    availableInMVP: true,
     emoji: "🛒",
-  },
-  {
-    id: "production",
-    order: 8,
-    title: "Production",
-    description: "Suivre l'avancement de la production",
-    icon: Factory,
-    path: "/projects/production",
-    phase: "execution",
-    availableInMVP: false, // Phase 4
-    emoji: "🏭",
-  },
-  {
-    id: "impact",
-    order: 9,
-    title: "Impact",
-    description: "Mesurer CO2 et eau économisés",
-    icon: Leaf,
-    path: "/projects/impact",
-    phase: "execution",
-    availableInMVP: false, // Phase 5
-    emoji: "🌱",
+    elementTypes: [
+      ELEMENT_TYPE_CONFIGS.video,
+      ELEMENT_TYPE_CONFIGS.link,
+    ],
   },
 ];
 
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 /**
- * Obtenir une étape par son ID
+ * Obtenir une phase par son ID
  */
-export function getStepById(stepId: string): DesignJourneyStep | undefined {
-  return DESIGNER_JOURNEY_STEPS.find((step) => step.id === stepId);
+export function getPhaseById(phaseId: PhaseId): JourneyPhase | undefined {
+  return JOURNEY_PHASES.find((phase) => phase.id === phaseId);
 }
 
 /**
- * Obtenir une étape par son path
+ * Obtenir la phase d'un type d'élément
  */
-export function getStepByPath(path: string): DesignJourneyStep | undefined {
-  return DESIGNER_JOURNEY_STEPS.find((step) => path.startsWith(step.path));
+export function getPhaseForElementType(elementType: ElementType): JourneyPhase | undefined {
+  return JOURNEY_PHASES.find((phase) =>
+    phase.elementTypes.some((et) => et.type === elementType)
+  );
 }
 
 /**
- * Obtenir toutes les étapes MVP
+ * Obtenir la config d'un type d'élément
  */
-export function getMVPSteps(): DesignJourneyStep[] {
-  return DESIGNER_JOURNEY_STEPS.filter((step) => step.availableInMVP);
-}
-
-/**
- * Obtenir les étapes par phase
- */
-export function getStepsByPhase(phase: DesignJourneyStep["phase"]): DesignJourneyStep[] {
-  return DESIGNER_JOURNEY_STEPS.filter((step) => step.phase === phase);
+export function getElementTypeConfig(elementType: ElementType): ElementTypeConfig {
+  return ELEMENT_TYPE_CONFIGS[elementType];
 }
 
 /**
  * Labels des phases pour UI
  */
-export const PHASE_LABELS: Record<DesignJourneyStep["phase"], string> = {
+export const PHASE_LABELS: Record<PhaseId, string> = {
   conception: "Conception",
   preparation: "Préparation",
   execution: "Exécution",
-  future: "Prochainement",
 };

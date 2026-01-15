@@ -4,12 +4,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Share, MoreHorizontal, Check, X } from 'lucide-react';
+import { ArrowLeft, Share, MoreHorizontal, Check, X,LayoutList } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useBoard } from '../context/BoardContext';
 
 export function BoardHeader() {
+  const params = useParams();
+  const boardId = params.boardId as string;
   const { board, elements, updateBoardName } = useBoard();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(board?.name || '');
@@ -80,13 +83,16 @@ export function BoardHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+        <Link href={`/boards/${boardId}/journey`}>
+          <Button variant="outline" size="sm">
+            <LayoutList className="w-4 h-4 mr-2" />
+            Journey
+          </Button>
+        </Link>
         <Button variant="outline" size="sm" disabled>
           <Share className="w-4 h-4 mr-2" />
           Partager
-        </Button>
-        <Button variant="ghost" size="icon">
-          <MoreHorizontal className="w-4 h-4" />
         </Button>
       </div>
     </header>
