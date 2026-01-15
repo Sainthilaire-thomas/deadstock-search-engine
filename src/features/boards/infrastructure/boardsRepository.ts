@@ -1,4 +1,4 @@
-// src/features/boards/infrastructure/boardsRepository.ts
+﻿// src/features/boards/infrastructure/boardsRepository.ts
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import type {
@@ -21,13 +21,13 @@ import {
 // LIST BOARDS
 // ============================================
 
-export async function listBoards(sessionId: string): Promise<Board[]> {
+export async function listBoards(userId: string): Promise<Board[]> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('boards')
     .select('*')
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -44,7 +44,7 @@ export async function listBoards(sessionId: string): Promise<Board[]> {
 
 export async function getBoard(
   boardId: string,
-  sessionId: string
+  userId: string
 ): Promise<BoardWithDetails | null> {
   const supabase = createAdminClient();
 
@@ -53,7 +53,7 @@ export async function getBoard(
     .from('boards')
     .select('*')
     .eq('id', boardId)
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .single();
 
   if (boardError || !boardData) {
@@ -106,14 +106,14 @@ export async function getBoard(
 
 export async function createBoard(
   input: CreateBoardInput,
-  sessionId: string
+  userId: string
 ): Promise<Board> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('boards')
     .insert({
-      session_id: sessionId,
+      user_id: userId,
       name: input.name || null,
       description: input.description || null,
       status: input.status || 'active',
@@ -136,7 +136,7 @@ export async function createBoard(
 export async function updateBoard(
   boardId: string,
   input: UpdateBoardInput,
-  sessionId: string
+  userId: string
 ): Promise<Board | null> {
   const supabase = createAdminClient();
 
@@ -149,7 +149,7 @@ export async function updateBoard(
     .from('boards')
     .update(updateData)
     .eq('id', boardId)
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .select()
     .single();
 
@@ -170,7 +170,7 @@ export async function updateBoard(
 
 export async function deleteBoard(
   boardId: string,
-  sessionId: string
+  userId: string
 ): Promise<boolean> {
   const supabase = createAdminClient();
 
@@ -178,7 +178,7 @@ export async function deleteBoard(
     .from('boards')
     .delete()
     .eq('id', boardId)
-    .eq('session_id', sessionId);
+    .eq('user_id', userId);
 
   if (error) {
     console.error('deleteBoard error:', error);
@@ -192,13 +192,13 @@ export async function deleteBoard(
 // GET BOARDS COUNT
 // ============================================
 
-export async function getBoardsCount(sessionId: string): Promise<number> {
+export async function getBoardsCount(userId: string): Promise<number> {
   const supabase = createAdminClient();
 
   const { count, error } = await supabase
     .from('boards')
     .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .neq('status', 'archived');
 
   if (error) {

@@ -189,7 +189,7 @@ function ColorWheel({
                     <Check className="w-3.5 h-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" strokeWidth={3} />
                   </div>
                 )}
-                <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-full px-1 min-w-[14px] text-center shadow border border-gray-200 dark:border-gray-700">
+                <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-full px-1 min-w-3.5 text-center shadow border border-gray-200 dark:border-gray-700">
                   {count}
                 </span>
               </button>
@@ -246,7 +246,7 @@ function ColorWheel({
                     />
                   </div>
                 )}
-                <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-full px-1 min-w-[14px] text-center shadow border border-gray-200 dark:border-gray-700">
+                <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-full px-1 min-w-3.5 text-center shadow border border-gray-200 dark:border-gray-700">
                   {count}
                 </span>
               </button>
@@ -376,7 +376,7 @@ export function ColorPickerPopover({
       {/* Popover */}
       <div
         ref={popoverRef}
-        className="fixed z-50 w-[300px] bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        className="fixed z-50 w-75 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
         style={popoverStyle}
       >
         {/* Header */}

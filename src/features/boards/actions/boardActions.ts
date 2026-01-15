@@ -1,10 +1,10 @@
-// src/features/boards/actions/boardActions.ts
+﻿// src/features/boards/actions/boardActions.ts
 
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { boardsRepository } from '../infrastructure/boardsRepository';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import type {
   Board,
   BoardWithDetails,
@@ -19,8 +19,8 @@ import type {
 
 export async function listBoardsAction(): Promise<ActionResult<Board[]>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const boards = await boardsRepository.listBoards(sessionId);
+    const userId = await requireUserId();
+    const boards = await boardsRepository.listBoards(userId);
     return { success: true, data: boards };
   } catch (error) {
     console.error('listBoardsAction error:', error);
@@ -36,8 +36,8 @@ export async function getBoardAction(
   boardId: string
 ): Promise<ActionResult<BoardWithDetails>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const board = await boardsRepository.getBoard(boardId, sessionId);
+    const userId = await requireUserId();
+    const board = await boardsRepository.getBoard(boardId, userId);
     
     if (!board) {
       return { success: false, error: 'Board introuvable' };
@@ -58,8 +58,8 @@ export async function createBoardAction(
   input: CreateBoardInput = {}
 ): Promise<ActionResult<Board>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const board = await boardsRepository.createBoard(input, sessionId);
+    const userId = await requireUserId();
+    const board = await boardsRepository.createBoard(input, userId);
     
     revalidatePath('/boards');
     
@@ -79,8 +79,8 @@ export async function updateBoardAction(
   input: UpdateBoardInput
 ): Promise<ActionResult<Board>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const board = await boardsRepository.updateBoard(boardId, input, sessionId);
+    const userId = await requireUserId();
+    const board = await boardsRepository.updateBoard(boardId, input, userId);
     
     if (!board) {
       return { success: false, error: 'Board introuvable' };
@@ -104,8 +104,8 @@ export async function deleteBoardAction(
   boardId: string
 ): Promise<ActionResult<void>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    await boardsRepository.deleteBoard(boardId, sessionId);
+    const userId = await requireUserId();
+    await boardsRepository.deleteBoard(boardId, userId);
     
     revalidatePath('/boards');
     
@@ -132,8 +132,8 @@ export async function archiveBoardAction(
 
 export async function getBoardsCountAction(): Promise<ActionResult<number>> {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const count = await boardsRepository.getBoardsCount(sessionId);
+    const userId = await requireUserId();
+    const count = await boardsRepository.getBoardsCount(userId);
     return { success: true, data: count };
   } catch (error) {
     console.error('getBoardsCountAction error:', error);
