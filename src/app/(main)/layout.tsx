@@ -34,23 +34,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar Desktop - Masquée en mode immersif */}
-      <div
-        className={`
-          transition-all duration-300 ease-in-out
-          ${showImmersive ? 'opacity-0 -translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}
-        `}
-      >
-        <Sidebar />
-      </div>
-
-      {/* Main Content - Pleine largeur en mode immersif */}
-      <div
-        className={`
-          transition-all duration-300 ease-in-out
-          ${showImmersive ? 'md:pl-0' : 'md:pl-60'}
-        `}
-      >
+       {/* Main Content */}
+      <div>
         {/* Header - Simplifié en mode immersif */}
         <header
           className={`
