@@ -1,12 +1,14 @@
 // src/features/boards/components/ImageUploadModal.tsx
-// VERSION HARMONISÉE - Utilise InspirationElementData (standard DB)
+// VERSION AVEC UNSPLASH - Utilise InspirationElementData (standard DB)
 
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { X, Upload, Link as LinkIcon, Loader2, AlertCircle } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Loader2, AlertCircle, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UnsplashImagePicker } from './UnsplashImagePicker';
 import type { InspirationElementData } from '../domain/types';
+import type { UnsplashPhoto } from '../services/unsplashService';
 
 interface ImageUploadModalProps {
   initialData?: InspirationElementData;
@@ -14,10 +16,9 @@ interface ImageUploadModalProps {
   onCancel: () => void;
 }
 
-type InputMode = 'choice' | 'upload' | 'url';
+type InputMode = 'choice' | 'upload' | 'url' | 'unsplash';
 
 export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadModalProps) {
-  // ✅ Utilise les noms de champs standard DB
   const [mode, setMode] = useState<InputMode>(initialData?.imageUrl ? 'url' : 'choice');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
   const [caption, setCaption] = useState(initialData?.caption || '');
@@ -25,7 +26,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
   const [previewUrl, setPreviewUrl] = useState(initialData?.imageUrl || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload fichier
@@ -33,13 +34,11 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Vérifier le type
     if (!file.type.startsWith('image/')) {
       setError('Le fichier doit être une image');
       return;
     }
 
-    // Vérifier la taille (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('L\'image ne doit pas dépasser 5 Mo');
       return;
@@ -49,20 +48,18 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     setError(null);
 
     try {
-      // Créer une URL data pour preview et stockage
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         setPreviewUrl(dataUrl);
         setImageUrl(dataUrl);
         setMode('upload');
-        
-        // Générer caption depuis nom fichier si vide
+
         if (!caption) {
           const fileName = file.name.replace(/\.[^/.]+$/, '');
           setCaption(fileName);
         }
-        
+
         setIsLoading(false);
       };
       reader.onerror = () => {
@@ -75,7 +72,6 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       setIsLoading(false);
     }
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -88,7 +84,6 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       return;
     }
 
-    // Validation basique de l'URL
     try {
       new URL(imageUrl.trim());
     } catch {
@@ -99,11 +94,10 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     setIsLoading(true);
     setError(null);
 
-    // Tester le chargement de l'image
     const img = new Image();
     img.onload = () => {
       setPreviewUrl(imageUrl.trim());
-      setSourceUrl(imageUrl.trim()); // L'URL devient la source
+      setSourceUrl(imageUrl.trim());
       setIsLoading(false);
     };
     img.onerror = () => {
@@ -113,6 +107,15 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     img.src = imageUrl.trim();
   }, [imageUrl]);
 
+  // Sélection Unsplash
+  const handleUnsplashSelect = useCallback((url: string, photo: UnsplashPhoto) => {
+    setPreviewUrl(url);
+    setImageUrl(url);
+    setSourceUrl(photo.links.html);
+    setCaption(photo.alt_description || '');
+    setMode('unsplash');
+  }, []);
+
   // Sauvegarder
   const handleSave = useCallback(() => {
     if (!previewUrl) {
@@ -120,7 +123,6 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       return;
     }
 
-    // ✅ Retourne InspirationElementData (standard DB)
     onSave({
       imageUrl: previewUrl,
       caption: caption.trim() || undefined,
@@ -136,9 +138,9 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {initialData ? 'Modifier l\'image' : 'Ajouter une inspiration'}
           </h2>
@@ -151,14 +153,14 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Choix initial */}
           {mode === 'choice' && (
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
                 Comment voulez-vous ajouter votre image ?
               </p>
-              
+
               {/* Upload */}
               <input
                 ref={fileInputRef}
@@ -170,11 +172,11 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 
+                className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300
                          dark:border-gray-600 rounded-lg hover:border-blue-400 hover:bg-blue-50/50
                          dark:hover:border-blue-500 dark:hover:bg-blue-900/20 transition-colors"
               >
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg 
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg
                               flex items-center justify-center">
                   <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
@@ -191,11 +193,11 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
               {/* URL */}
               <button
                 onClick={() => setMode('url')}
-                className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 
+                className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300
                          dark:border-gray-600 rounded-lg hover:border-purple-400 hover:bg-purple-50/50
                          dark:hover:border-purple-500 dark:hover:bg-purple-900/20 transition-colors"
               >
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg 
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg
                               flex items-center justify-center">
                   <LinkIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
@@ -204,7 +206,28 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                     Depuis une URL
                   </p>
                   <p className="text-sm text-gray-500">
-                    Pinterest, Unsplash, etc.
+                    Pinterest, etc.
+                  </p>
+                </div>
+              </button>
+
+              {/* Unsplash */}
+              <button
+                onClick={() => setMode('unsplash')}
+                className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300
+                         dark:border-gray-600 rounded-lg hover:border-emerald-400 hover:bg-emerald-50/50
+                         dark:hover:border-emerald-500 dark:hover:bg-emerald-900/20 transition-colors"
+              >
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg
+                              flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    Rechercher sur Unsplash
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Photos libres de droits
                   </p>
                 </div>
               </button>
@@ -220,7 +243,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
               >
                 ← Retour
               </button>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   URL de l'image
@@ -231,7 +254,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://..."
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                              bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
                              focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onKeyDown={(e) => e.key === 'Enter' && handleUrlValidate()}
@@ -251,22 +274,38 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
             </div>
           )}
 
+          {/* Mode Unsplash */}
+          {mode === 'unsplash' && !previewUrl && (
+            <div className="space-y-4">
+              <button
+                onClick={handleBack}
+                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              >
+                ← Retour
+              </button>
+
+              <UnsplashImagePicker
+                onSelectImage={handleUnsplashSelect}
+                isLoading={isLoading}
+              />
+            </div>
+          )}
+
           {/* Preview et édition */}
           {previewUrl && (
             <div className="space-y-4">
-              {mode !== 'choice' && (
-                <button
-                  onClick={() => {
-                    setPreviewUrl('');
-                    setImageUrl('');
-                    setSourceUrl('');
-                    setMode('choice');
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                >
-                  ← Changer d'image
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setPreviewUrl('');
+                  setImageUrl('');
+                  setSourceUrl('');
+                  setCaption('');
+                  setMode('choice');
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              >
+                ← Changer d'image
+              </button>
 
               {/* Image preview */}
               <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -287,13 +326,13 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Décrivez cette inspiration..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                            bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              {/* Source (si URL) */}
+              {/* Source (si URL ou Unsplash) */}
               {sourceUrl && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -303,7 +342,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
                     type="url"
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                              bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm
                              focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -314,7 +353,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
 
           {/* Erreur */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 
+            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20
                           border border-red-200 dark:border-red-800 rounded-lg">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -323,12 +362,12 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 
-                      bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700
+                      bg-gray-50 dark:bg-gray-800/50 shrink-0">
           <Button variant="outline" onClick={onCancel}>
             Annuler
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             disabled={!previewUrl || isLoading}
           >

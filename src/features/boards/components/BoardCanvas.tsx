@@ -1126,10 +1126,11 @@ const handleDoubleClick = (element: BoardElement) => {
         if (!element || element.elementType !== 'palette') return null;
         return (
           <PaletteEditor
-            initialData={element.elementData as PaletteElementData}
-            onSave={(data) => handleSavePalette(editingPaletteId, data)}
-            onCancel={() => setEditingPaletteId(null)}
-          />
+  initialData={element.elementData as PaletteElementData}
+  boardElements={elements}
+  onSave={(data) => handleSavePalette(editingPaletteId, data)}
+  onCancel={() => setEditingPaletteId(null)}
+/>
         );
       })()}
 

@@ -13,10 +13,11 @@ import {
   type ColorHarmonies
 } from '../utils/colorExtractor';
 
-import type { PaletteElementData } from '../domain/types';
+import type { PaletteElementData, BoardElement, InspirationElementData } from '../domain/types';
 
 interface PaletteEditorProps {
   initialData?: PaletteElementData;
+  boardElements?: BoardElement[];
   onSave: (data: PaletteElementData) => void;
   onCancel: () => void;
 }
@@ -32,7 +33,7 @@ const HARMONY_LABELS: Record<keyof Omit<ColorHarmonies, 'base'>, string> = {
   tetradic: 'Tétradique',
 };
 
-export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorProps) {
+export function PaletteEditor({ initialData, boardElements, onSave, onCancel }: PaletteEditorProps) {
   const [name, setName] = useState(initialData?.name || '');
   const [colors, setColors] = useState<string[]>(
     initialData?.colors?.length ? initialData.colors : DEFAULT_COLORS
@@ -53,6 +54,41 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
   const [showHarmonies, setShowHarmonies] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filtrer les images du board
+  const imageElements = useMemo(() => {
+    if (!boardElements) return [];
+    return boardElements.filter(
+      (el) => el.elementType === 'inspiration' && 
+              (el.elementData as InspirationElementData)?.imageUrl
+    );
+  }, [boardElements]);
+
+  // Handler extraction depuis image du board
+  const handleExtractFromBoardImage = useCallback(async (element: BoardElement) => {
+    const data = element.elementData as InspirationElementData;
+    if (!data?.imageUrl) return;
+
+    setIsExtracting(true);
+    setExtractionError(null);
+
+    try {
+      const extractedColors = await extractColorsFromUrl(data.imageUrl, 6);
+      setColors(extractedColors);
+      setSelectedIndex(0);
+      setCurrentColor(extractedColors[0]);
+      setPreviewImage(data.imageUrl);
+
+      if (!name && data.caption) {
+        setName(`Palette - ${data.caption}`);
+      }
+    } catch (error) {
+      setExtractionError(error instanceof Error ? error.message : 'Erreur d\'extraction');
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [name]);
+
 
   // Calculer les harmonies pour la couleur sélectionnée
   const harmonies = useMemo(() => {
@@ -268,6 +304,56 @@ export function PaletteEditor({ initialData, onSave, onCancel }: PaletteEditorPr
                        placeholder:text-gray-400"
             />
           </div>
+
+         {/* Section : Images du board */}
+          {imageElements.length > 0 && (
+            <>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <ImageIcon className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Extraire depuis une image du board
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {imageElements.map((element) => {
+                    const data = element.elementData as InspirationElementData;
+                    return (
+                      <button
+                        key={element.id}
+                        onClick={() => handleExtractFromBoardImage(element)}
+                        disabled={isExtracting}
+                        className="relative aspect-square rounded-md overflow-hidden group
+                                 hover:ring-2 hover:ring-blue-500 transition-all
+                                 disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        <img
+                          src={data.thumbnailUrl || data.imageUrl}
+                          alt={data.caption || 'Image'}
+                          className="w-full h-full object-cover"
+                        />
+                        {data.caption && (
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
+                            <span className="text-[9px] text-white truncate block">
+                              {data.caption}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Séparateur */}
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                <span>ou nouvelle image</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              </div>
+            </>
+          )}
 
           {/* Section Extraction */}
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
