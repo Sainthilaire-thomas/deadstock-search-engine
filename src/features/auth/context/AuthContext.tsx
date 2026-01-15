@@ -36,18 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const supabase = useMemo(() => createBrowserClient(), []);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+ const fetchProfile = useCallback(async (userId: string) => {
+    
     const { data, error } = await supabase
       .from("users")
       .select("id, email, full_name, role, searches_today, searches_reset_at, live_searches_today, avatar_url")
       .eq("id", userId)
       .single();
-
+    
     if (error) {
       console.error("Error fetching profile:", error);
       return null;
     }
-
     return data as UserProfile;
   }, [supabase]);
 
@@ -65,12 +65,14 @@ const handleSignOut = useCallback(async () => {
   setProfile(null);
 }, [supabase]);
 
-  useEffect(() => {
+useEffect(() => {
     // Récupérer la session initiale
     const initAuth = async () => {
+    
       setIsLoading(true);
-      
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+     
       
       if (currentUser) {
         setUser(currentUser);

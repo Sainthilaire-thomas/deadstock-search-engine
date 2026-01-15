@@ -29,7 +29,7 @@ async function onSubmit(e: React.FormEvent) {
     return;
   }
 
-  window.location.href = "/search";
+  window.location.href = "/boards";
 }
 
   async function onGoogle() {
