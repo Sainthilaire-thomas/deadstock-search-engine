@@ -1,18 +1,18 @@
 /**
  * Configuration des 3 phases du parcours designer
- * VERSION 2.0 - Journey comme vue alternative du Board
+ * VERSION 3.0 - Réorganisation : Mood → Conception → Exécution
  */
 
 import {
   Lightbulb,
-  Calculator,
-  ShoppingCart,
+  Sparkles,
+  PenTool,
+  Rocket,
   Palette,
   Scissors,
   User,
   Image,
   FileText,
-  PenTool,
   Ruler,
   Search,
   StickyNote,
@@ -26,7 +26,7 @@ import type { ElementType } from "@/features/boards/domain/types";
 // TYPES
 // ============================================
 
-export type PhaseId = "conception" | "preparation" | "execution";
+export type PhaseId = "mood" | "conception" | "execution";
 
 export interface ElementTypeConfig {
   type: ElementType;
@@ -49,19 +49,19 @@ export interface JourneyPhase {
 // ============================================
 
 export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
+  inspiration: {
+    type: "inspiration",
+    label: "Inspiration",
+    labelPlural: "Inspirations",
+    icon: Image,
+    emoji: "📷",
+  },
   palette: {
     type: "palette",
     label: "Palette",
     labelPlural: "Palettes",
     icon: Palette,
     emoji: "🎨",
-  },
-  pattern: {
-    type: "pattern",
-    label: "Patron",
-    labelPlural: "Patrons",
-    icon: Scissors,
-    emoji: "✂️",
   },
   silhouette: {
     type: "silhouette",
@@ -70,12 +70,19 @@ export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
     icon: User,
     emoji: "👤",
   },
-  inspiration: {
-    type: "inspiration",
-    label: "Inspiration",
-    labelPlural: "Inspirations",
-    icon: Image,
-    emoji: "📷",
+  video: {
+    type: "video",
+    label: "Vidéo",
+    labelPlural: "Vidéos",
+    icon: Video,
+    emoji: "🎬",
+  },
+  link: {
+    type: "link",
+    label: "Lien",
+    labelPlural: "Liens",
+    icon: Link,
+    emoji: "🔗",
   },
   pdf: {
     type: "pdf",
@@ -83,6 +90,13 @@ export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
     labelPlural: "Documents",
     icon: FileText,
     emoji: "📄",
+  },
+  pattern: {
+    type: "pattern",
+    label: "Patron",
+    labelPlural: "Patrons",
+    icon: Scissors,
+    emoji: "✂️",
   },
   calculation: {
     type: "calculation",
@@ -105,20 +119,6 @@ export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
     icon: StickyNote,
     emoji: "📝",
   },
-  video: {
-    type: "video",
-    label: "Vidéo",
-    labelPlural: "Vidéos",
-    icon: Video,
-    emoji: "🎬",
-  },
-  link: {
-    type: "link",
-    label: "Lien",
-    labelPlural: "Liens",
-    icon: Link,
-    emoji: "🔗",
-  },
 };
 
 // ============================================
@@ -127,37 +127,38 @@ export const ELEMENT_TYPE_CONFIGS: Record<ElementType, ElementTypeConfig> = {
 
 export const JOURNEY_PHASES: JourneyPhase[] = [
   {
-    id: "conception",
-    title: "Conception",
-    icon: Lightbulb,
-    emoji: "💡",
+    id: "mood",
+    title: "Mood",
+    icon: Sparkles,
+    emoji: "✨",
     elementTypes: [
-      ELEMENT_TYPE_CONFIGS.palette,
-      ELEMENT_TYPE_CONFIGS.pattern,
-      ELEMENT_TYPE_CONFIGS.silhouette,
       ELEMENT_TYPE_CONFIGS.inspiration,
+      ELEMENT_TYPE_CONFIGS.palette,
+      ELEMENT_TYPE_CONFIGS.silhouette,
+      ELEMENT_TYPE_CONFIGS.video,
+      ELEMENT_TYPE_CONFIGS.link,
       ELEMENT_TYPE_CONFIGS.pdf,
+      ELEMENT_TYPE_CONFIGS.note,
     ],
   },
   {
-    id: "preparation",
-    title: "Préparation",
-    icon: Calculator,
-    emoji: "📏",
+    id: "conception",
+    title: "Conception",
+    icon: PenTool,
+    emoji: "✏️",
     elementTypes: [
+      ELEMENT_TYPE_CONFIGS.pattern,
       ELEMENT_TYPE_CONFIGS.calculation,
       ELEMENT_TYPE_CONFIGS.textile,
-      ELEMENT_TYPE_CONFIGS.note,
     ],
   },
   {
     id: "execution",
     title: "Exécution",
-    icon: ShoppingCart,
-    emoji: "🛒",
+    icon: Rocket,
+    emoji: "🚀",
     elementTypes: [
-      ELEMENT_TYPE_CONFIGS.video,
-      ELEMENT_TYPE_CONFIGS.link,
+      // Les projets (zones cristallisées) sont gérés séparément dans JourneyNavigation
     ],
   },
 ];
@@ -193,7 +194,7 @@ export function getElementTypeConfig(elementType: ElementType): ElementTypeConfi
  * Labels des phases pour UI
  */
 export const PHASE_LABELS: Record<PhaseId, string> = {
+  mood: "Mood",
   conception: "Conception",
-  preparation: "Préparation",
   execution: "Exécution",
 };
