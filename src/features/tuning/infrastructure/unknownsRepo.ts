@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Infrastructure: Unknowns Repository
  * 
  * Accès aux données des unknown terms dans Supabase
  */
 
-import { createScraperClient } from '@/lib/supabase/client';
+import { createScraperClient } from '@/lib/supabase/scraper';
 import { UnknownTerm, UnknownTermStatus } from '../domain/UnknownTerm';
 import { Category, CategoryType } from '../domain/DictionaryMapping';
 
@@ -131,7 +131,7 @@ export const unknownsRepo = {
       p_term: term,
       p_category: category,
       p_context: enrichedContext,
-      p_source_platform: sourcePlatform || null
+      p_source_platform: sourcePlatform
     });
     
     if (error) {
@@ -168,7 +168,9 @@ export const unknownsRepo = {
     // Count par status
     const counts: Record<string, number> = {};
     data.forEach(row => {
-      counts[row.status] = (counts[row.status] || 0) + 1;
+      if (row.status) {
+        counts[row.status] = (counts[row.status] || 0) + 1;
+      }
     });
     
     return {

@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+﻿#!/usr/bin/env tsx
 
 /**
  * Scrape Site CLI
@@ -229,6 +229,7 @@ async function main() {
             productsFetched: 0,
             productsValid: 0,
             productsSkipped: 0,
+            productsSaved: 0,
             errorsCount: 1,
             products: [],
             errors: [{ collection: 'general', error: error.message }],

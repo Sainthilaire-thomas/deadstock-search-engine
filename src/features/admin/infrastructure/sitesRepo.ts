@@ -1,4 +1,4 @@
-// src/features/admin/infrastructure/sitesRepo.ts
+﻿// src/features/admin/infrastructure/sitesRepo.ts
 import { createClient } from '@/lib/supabase/client';
 import type { Site, SiteWithProfile } from '../domain/types';
 
@@ -135,7 +135,7 @@ export const sitesRepo = {
   /**
    * Get sites by status
    */
-  async getSitesByStatus(status: Site['status']): Promise<Site[]> {
+  async getSitesByStatus(status: NonNullable<Site['status']>): Promise<Site[]> {
     const supabase = createClient();
     
     const { data, error } = await supabase

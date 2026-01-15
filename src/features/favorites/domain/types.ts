@@ -6,7 +6,7 @@ export interface Favorite {
   id: string;
   session_id: string;
   textile_id: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 export interface FavoriteWithTextile extends Favorite {
