@@ -6,7 +6,7 @@
  */
 
 import { searchTextiles } from "@/features/search/application/searchTextiles";
-import { getOrCreateSessionId } from "@/features/favorites/utils/sessionManager";
+import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { getFavoritesBySession } from "@/features/favorites/infrastructure/favoritesRepository";
 import { JourneyClientWrapper } from "@/features/journey/components/JourneyClientWrapper";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
@@ -18,12 +18,13 @@ export default async function JourneyPage() {
   // Charger les favoris
   let initialFavorites: FavoriteWithTextile[] = [];
   try {
-    const sessionId = await getOrCreateSessionId();
-    initialFavorites = await getFavoritesBySession(sessionId);
+    const user = await getAuthUser();
+    if (user) {
+      initialFavorites = await getFavoritesBySession(user.id);
+    }
   } catch (error) {
     console.error("Could not load favorites:", error);
   }
-
   // Ajouter l'info isFavorite à chaque textile pour la recherche
   const favoriteIds = new Set(initialFavorites.map(f => f.textile_id));
   const textilesWithFavorites = initialSearchData.textiles.map(textile => ({

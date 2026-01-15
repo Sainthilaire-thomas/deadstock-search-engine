@@ -1,11 +1,11 @@
-// src/features/journey/actions/projectActions.ts
+﻿// src/features/journey/actions/projectActions.ts
 // Server Actions for project operations
 // Session 10 - 2026-01-03
 
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import {
   getProjectsBySession,
   getProjectById,
@@ -36,24 +36,24 @@ import type { ProjectListItem, UpdateProjectData } from '../infrastructure/proje
  * Get all projects for the current session
  */
 export async function getProjectsAction(): Promise<ProjectListItem[]> {
-  const sessionId = await getOrCreateSessionId();
-  return getProjectsBySession(sessionId);
+  const userId = await requireUserId();
+  return getProjectsBySession(userId);
 }
 
 /**
  * Get a single project by ID
  */
 export async function getProjectAction(projectId: string): Promise<Project | null> {
-  const sessionId = await getOrCreateSessionId();
-  return getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  return getProjectById(projectId, userId);
 }
 
 /**
  * Get projects count for current session
  */
 export async function getProjectsCountAction(): Promise<number> {
-  const sessionId = await getOrCreateSessionId();
-  return getProjectsCount(sessionId);
+  const userId = await requireUserId();
+  return getProjectsCount(userId);
 }
 
 // ============================================
@@ -70,11 +70,11 @@ export interface CreateProjectInput {
  * Create a new project
  */
 export async function createProjectAction(input: CreateProjectInput): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
   const project = await createProject({
     name: input.name,
-    sessionId,
+    userId,
     projectType: input.projectType,
     description: input.description,
   });
@@ -105,9 +105,9 @@ export async function updateProjectIdeaAction(
     constraints?: ProjectConstraints;
   }
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, data);
+  const project = await updateProject(projectId, userId, data);
   
   revalidatePath(`/journey/${projectId}`);
   revalidatePath('/journey');
@@ -126,9 +126,9 @@ export async function updateProjectInspirationAction(
     styleKeywords?: string[];
   }
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, data);
+  const project = await updateProject(projectId, userId, data);
   
   revalidatePath(`/journey/${projectId}/inspiration`);
   
@@ -142,9 +142,9 @@ export async function updateProjectGarmentsAction(
   projectId: string,
   garments: GarmentConfig[]
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, { garments });
+  const project = await updateProject(projectId, userId, { garments });
   
   revalidatePath(`/journey/${projectId}/design`);
   revalidatePath(`/journey/${projectId}/calculate`);
@@ -165,9 +165,9 @@ export async function updateProjectCalculationAction(
     yardageDetails?: YardageDetails;
   }
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, data);
+  const project = await updateProject(projectId, userId, data);
   
   revalidatePath(`/journey/${projectId}/calculate`);
   
@@ -181,9 +181,9 @@ export async function updateProjectTextilesAction(
   projectId: string,
   selectedTextiles: SelectedTextile[]
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, { selectedTextiles });
+  const project = await updateProject(projectId, userId, { selectedTextiles });
   
   revalidatePath(`/journey/${projectId}/sourcing`);
   revalidatePath(`/journey/${projectId}/validation`);
@@ -198,9 +198,9 @@ export async function updateProjectStepAction(
   projectId: string,
   currentStep: JourneyStep
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, { currentStep });
+  const project = await updateProject(projectId, userId, { currentStep });
   
   revalidatePath(`/journey/${projectId}`);
   
@@ -214,9 +214,9 @@ export async function updateProjectAction(
   projectId: string,
   updates: UpdateProjectData
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  const project = await updateProject(projectId, sessionId, updates);
+  const project = await updateProject(projectId, userId, updates);
   
   revalidatePath(`/journey/${projectId}`);
   revalidatePath('/journey');
@@ -232,9 +232,9 @@ export async function updateProjectAction(
  * Delete a project
  */
 export async function deleteProjectAction(projectId: string): Promise<void> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  await deleteProject(projectId, sessionId);
+  await deleteProject(projectId, userId);
   
   revalidatePath('/journey');
 }
@@ -250,8 +250,8 @@ export async function addMoodBoardItemAction(
   projectId: string,
   item: Omit<MoodBoardItem, 'id'>
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -264,7 +264,7 @@ export async function addMoodBoardItemAction(
   
   const updatedMoodBoard = [...project.moodBoard, newItem];
   
-  return updateProject(projectId, sessionId, { moodBoard: updatedMoodBoard });
+  return updateProject(projectId, userId, { moodBoard: updatedMoodBoard });
 }
 
 /**
@@ -275,8 +275,8 @@ export async function updateMoodBoardItemAction(
   itemId: string,
   updates: Partial<MoodBoardItem>
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -286,7 +286,7 @@ export async function updateMoodBoardItemAction(
     item.id === itemId ? { ...item, ...updates } : item
   );
   
-  return updateProject(projectId, sessionId, { moodBoard: updatedMoodBoard });
+  return updateProject(projectId, userId, { moodBoard: updatedMoodBoard });
 }
 
 /**
@@ -296,8 +296,8 @@ export async function removeMoodBoardItemAction(
   projectId: string,
   itemId: string
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -305,7 +305,7 @@ export async function removeMoodBoardItemAction(
   
   const updatedMoodBoard = project.moodBoard.filter(item => item.id !== itemId);
   
-  return updateProject(projectId, sessionId, { moodBoard: updatedMoodBoard });
+  return updateProject(projectId, userId, { moodBoard: updatedMoodBoard });
 }
 
 /**
@@ -315,9 +315,9 @@ export async function reorderMoodBoardAction(
   projectId: string,
   items: MoodBoardItem[]
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
+  const userId = await requireUserId();
   
-  return updateProject(projectId, sessionId, { moodBoard: items });
+  return updateProject(projectId, userId, { moodBoard: items });
 }
 
 // ============================================
@@ -331,8 +331,8 @@ export async function addGarmentAction(
   projectId: string,
   garment: Omit<GarmentConfig, 'id'>
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -345,7 +345,7 @@ export async function addGarmentAction(
   
   const updatedGarments = [...project.garments, newGarment];
   
-  const updated = await updateProject(projectId, sessionId, { garments: updatedGarments });
+  const updated = await updateProject(projectId, userId, { garments: updatedGarments });
   
   revalidatePath(`/journey/${projectId}/design`);
   revalidatePath(`/journey/${projectId}/calculate`);
@@ -361,8 +361,8 @@ export async function updateGarmentAction(
   garmentId: string,
   updates: Partial<GarmentConfig>
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -372,7 +372,7 @@ export async function updateGarmentAction(
     g.id === garmentId ? { ...g, ...updates } : g
   );
   
-  const updated = await updateProject(projectId, sessionId, { garments: updatedGarments });
+  const updated = await updateProject(projectId, userId, { garments: updatedGarments });
   
   revalidatePath(`/journey/${projectId}/design`);
   revalidatePath(`/journey/${projectId}/calculate`);
@@ -387,8 +387,8 @@ export async function removeGarmentAction(
   projectId: string,
   garmentId: string
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -396,7 +396,7 @@ export async function removeGarmentAction(
   
   const updatedGarments = project.garments.filter(g => g.id !== garmentId);
   
-  const updated = await updateProject(projectId, sessionId, { garments: updatedGarments });
+  const updated = await updateProject(projectId, userId, { garments: updatedGarments });
   
   revalidatePath(`/journey/${projectId}/design`);
   revalidatePath(`/journey/${projectId}/calculate`);
@@ -411,8 +411,8 @@ export async function duplicateGarmentAction(
   projectId: string,
   garmentId: string
 ): Promise<Project> {
-  const sessionId = await getOrCreateSessionId();
-  const project = await getProjectById(projectId, sessionId);
+  const userId = await requireUserId();
+  const project = await getProjectById(projectId, userId);
   
   if (!project) {
     throw new Error('Project not found');
@@ -434,7 +434,7 @@ export async function duplicateGarmentAction(
   
   const updatedGarments = [...project.garments, duplicatedGarment];
   
-  const updated = await updateProject(projectId, sessionId, { garments: updatedGarments });
+  const updated = await updateProject(projectId, userId, { garments: updatedGarments });
   
   revalidatePath(`/journey/${projectId}/design`);
   revalidatePath(`/journey/${projectId}/calculate`);

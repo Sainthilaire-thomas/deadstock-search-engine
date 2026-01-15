@@ -1,9 +1,9 @@
-// src/features/boards/actions/crystallizationActions.ts
+﻿// src/features/boards/actions/crystallizationActions.ts
 
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import { zonesRepository } from '../infrastructure/zonesRepository';
 import { elementsRepository } from '../infrastructure/elementsRepository';
 import { createProject as createProjectInDb } from '@/features/journey/infrastructure/projectsRepository';
@@ -39,7 +39,7 @@ export async function crystallizeZoneAction(
   input: CrystallizeZoneInput
 ): Promise<ActionResult<CrystallizeZoneResult>> {
   try {
-    const sessionId = await getOrCreateSessionId();
+    const userId = await requireUserId();
 
     // 1. Vérifier que la zone existe et n'est pas déjà cristallisée
     const zone = await zonesRepository.getZoneById(input.zoneId);
@@ -63,7 +63,7 @@ export async function crystallizeZoneAction(
     // 3. Créer le projet avec les données extraites
     const project = await createProjectInDb({
       name: input.projectName,
-      sessionId,
+      userId,
       projectType: input.projectType,
       description: `Créé depuis la zone "${zone.name}"`,
     });

@@ -1,11 +1,11 @@
-// src/features/boards/actions/zoneActions.ts
+﻿// src/features/boards/actions/zoneActions.ts
 
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { zonesRepository } from '../infrastructure/zonesRepository';
 import { boardsRepository } from '../infrastructure/boardsRepository';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import type {
   BoardZone,
   CreateZoneInput,
@@ -22,8 +22,8 @@ export async function createZoneAction(
 ): Promise<ActionResult<BoardZone>> {
   try {
     // Verify board ownership
-    const sessionId = await getOrCreateSessionId();
-    const board = await boardsRepository.getBoard(input.boardId, sessionId);
+    const userId = await requireUserId();
+    const board = await boardsRepository.getBoard(input.boardId, userId);
 
     if (!board) {
       return { success: false, error: 'Board introuvable' };

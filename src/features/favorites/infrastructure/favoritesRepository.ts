@@ -40,14 +40,14 @@ const TEXTILE_COLUMNS = `
 /**
  * Récupère tous les favoris d'une session avec les données des textiles
  */
-export async function getFavoritesBySession(sessionId: string): Promise<FavoriteWithTextile[]> {
+export async function getFavoritesBySession(userId: string): Promise<FavoriteWithTextile[]> {
   try {
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from('favorites')
-      .select(`id, session_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
-      .eq('session_id', sessionId)
+      .select(`id, user_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -75,7 +75,7 @@ export async function addFavorite(params: AddFavoriteParams): Promise<Favorite> 
   const { data, error } = await supabase
     .from('favorites')
     .insert({
-      session_id: params.session_id,
+      user_id: params.user_id,
       textile_id: params.textile_id,
     })
     .select()
@@ -98,7 +98,7 @@ export async function removeFavorite(params: RemoveFavoriteParams): Promise<void
   const { error } = await supabase
     .from('favorites')
     .delete()
-    .eq('session_id', params.session_id)
+    .eq('user_id', params.user_id)
     .eq('textile_id', params.textile_id);
 
   if (error) {
@@ -110,13 +110,13 @@ export async function removeFavorite(params: RemoveFavoriteParams): Promise<void
 /**
  * Vérifie si un textile est dans les favoris
  */
-export async function isFavorite(sessionId: string, textileId: string): Promise<IsFavoriteResult> {
+export async function isFavorite(userId: string, textileId: string): Promise<IsFavoriteResult> {
   const supabase = createClient();
 
   const { data, error } = await supabase
     .from('favorites')
     .select('id')
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .eq('textile_id', textileId)
     .maybeSingle();
 
@@ -134,13 +134,13 @@ export async function isFavorite(sessionId: string, textileId: string): Promise<
 /**
  * Compte le nombre de favoris d'une session
  */
-export async function getFavoritesCount(sessionId: string): Promise<number> {
+export async function getFavoritesCount(userId: string): Promise<number> {
   const supabase = createClient();
 
   const { count, error } = await supabase
     .from('favorites')
     .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId);
+    .eq('user_id', userId);
 
   if (error) {
     console.error('Error counting favorites:', error);
@@ -153,14 +153,14 @@ export async function getFavoritesCount(sessionId: string): Promise<number> {
 /**
  * Récupère un favori spécifique avec les données du textile
  */
-export async function getFavoriteById(favoriteId: string, sessionId: string): Promise<FavoriteWithTextile | null> {
+export async function getFavoriteById(favoriteId: string, userId: string): Promise<FavoriteWithTextile | null> {
   const supabase = createClient();
 
   const { data, error } = await supabase
     .from('favorites')
-    .select(`id, session_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
+    .select(`id, user_id, textile_id, created_at, textile:textiles(${TEXTILE_COLUMNS})`)
     .eq('id', favoriteId)
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {

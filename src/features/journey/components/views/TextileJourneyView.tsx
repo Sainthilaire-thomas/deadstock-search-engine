@@ -1,7 +1,7 @@
 "use client";
-
 import { useState } from "react";
 import { useBoard } from "@/features/boards/context/BoardContext";
+import { useFavorites } from "@/features/favorites/context/FavoritesContext";
 import { SearchInterface } from "@/components/search/SearchInterface";
 import { FavoritesGrid } from "@/features/favorites/components/FavoritesGrid";
 import { ELEMENT_TYPE_CONFIGS } from "@/features/journey/config/steps";
@@ -101,13 +101,34 @@ function CompareTabContent({ favorites }: { favorites: FavoriteWithTextile[] }) 
   );
 }
 
-export function TextileJourneyView({ 
+export function TextileJourneyView({
   initialSearchData,
-  initialFavorites 
+  initialFavorites
 }: TextileJourneyViewProps) {
   const { elements } = useBoard();
+  const { count: favoritesCount } = useFavorites();
   const [activeTab, setActiveTab] = useState<TabId>("board");
   const [favorites, setFavorites] = useState<FavoriteWithTextile[]>(initialFavorites);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
+
+  // Recharger les favoris quand on clique sur l'onglet Favoris
+  const handleTabChange = async (tabId: TabId) => {
+    setActiveTab(tabId);
+    if (tabId === "favorites") {
+      setIsLoadingFavorites(true);
+      try {
+        const { getFavoritesAction } = await import("@/features/favorites/actions/favoriteActions");
+        const result = await getFavoritesAction();
+        if (result.success && result.data) {
+          setFavorites(result.data);
+        }
+      } catch (error) {
+        console.error("Error reloading favorites:", error);
+      } finally {
+        setIsLoadingFavorites(false);
+      }
+    }
+  };
 
   // Filtrer les éléments textile du board
   const textileElements = elements.filter((el) => el.elementType === "textile");
@@ -116,9 +137,10 @@ export function TextileJourneyView({
   const tabs: Tab[] = [
     { id: "board", label: "Mes Tissus", badge: textileElements.length },
     { id: "search", label: "Recherche" },
-    { id: "favorites", label: "Favoris", badge: favorites.length || undefined },
+    { id: "favorites", label: "Favoris", badge: favoritesCount || undefined },
     { id: "compare", label: "Comparaison" },
   ];
+
 
   // Rendu du contenu selon le tab actif
   const renderTabContent = () => {
@@ -177,10 +199,10 @@ export function TextileJourneyView({
       {/* Tabs */}
       <div className="border-b border-border mb-6">
         <nav className="flex gap-1" aria-label="Tabs">
-          {tabs.map((tab) => (
+            {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`
                 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
                 ${activeTab === tab.id

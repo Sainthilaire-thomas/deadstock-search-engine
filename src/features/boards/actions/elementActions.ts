@@ -1,11 +1,11 @@
-// src/features/boards/actions/elementActions.ts
+﻿// src/features/boards/actions/elementActions.ts
 
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { elementsRepository } from '../infrastructure/elementsRepository';
 import { boardsRepository } from '../infrastructure/boardsRepository';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import type {
   BoardElement,
   CreateElementInput,
@@ -23,8 +23,8 @@ export async function addElementAction(
 ): Promise<ActionResult<BoardElement>> {
   try {
     // Verify board ownership
-    const sessionId = await getOrCreateSessionId();
-    const board = await boardsRepository.getBoard(input.boardId, sessionId);
+    const userId = await requireUserId();
+    const board = await boardsRepository.getBoard(input.boardId, userId);
     
     if (!board) {
       return { success: false, error: 'Board introuvable' };

@@ -4,7 +4,7 @@
 
 export interface Favorite {
   id: string;
-  session_id: string;
+  user_id: string | null;
   textile_id: string;
   created_at: string | null;
 }
@@ -34,15 +34,14 @@ export interface FavoriteWithTextile extends Favorite {
 }
 
 export interface AddFavoriteParams {
-  session_id: string;
+  user_id: string;
   textile_id: string;
 }
 
 export interface RemoveFavoriteParams {
-  session_id: string;
+  user_id: string;
   textile_id: string;
 }
-
 export interface IsFavoriteResult {
   isFavorite: boolean;
   favoriteId?: string;

@@ -1,4 +1,4 @@
-// src/features/journey/infrastructure/projectsRepository.ts
+﻿// src/features/journey/infrastructure/projectsRepository.ts
 // Repository for projects CRUD operations (server-side)
 // Session 10 - 2026-01-03
 
@@ -23,7 +23,7 @@ import type {
 
 export interface CreateProjectData {
   name: string;
-  sessionId: string;
+  userId: string;
   projectType?: ProjectType;
   description?: string;
 }
@@ -122,7 +122,6 @@ function mapRowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     userId: row.user_id ?? undefined,
-    sessionId: row.session_id ?? undefined,
     name: row.name,
     nameI18n: row.name_i18n ?? undefined,
     description: row.description ?? undefined,
@@ -179,14 +178,14 @@ function mapRowToListItem(row: ProjectRow): ProjectListItem {
 /**
  * Get all projects for a session
  */
-export async function getProjectsBySession(sessionId: string): Promise<ProjectListItem[]> {
+export async function getProjectsBySession(userId: string): Promise<ProjectListItem[]> {
   const supabase = await createClient();
   
   const { data, error } = await supabase
     .schema('deadstock')
     .from('projects')
     .select('*')
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
   
   if (error) {
@@ -202,7 +201,7 @@ export async function getProjectsBySession(sessionId: string): Promise<ProjectLi
  */
 export async function getProjectById(
   projectId: string,
-  sessionId: string
+  userId: string
 ): Promise<Project | null> {
   const supabase = await createClient();
   
@@ -211,7 +210,7 @@ export async function getProjectById(
     .from('projects')
     .select('*')
     .eq('id', projectId)
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .single();
   
   if (error) {
@@ -237,7 +236,7 @@ export async function createProject(data: CreateProjectData): Promise<Project> {
     .from('projects')
     .insert({
       name: data.name,
-      session_id: data.sessionId,
+      user_id: data.userId,
       project_type: data.projectType ?? 'single_piece',
       description: data.description ?? null,
       status: 'draft',
@@ -259,7 +258,7 @@ export async function createProject(data: CreateProjectData): Promise<Project> {
  */
 export async function updateProject(
   projectId: string,
-  sessionId: string,
+  userId: string,
   updates: UpdateProjectData
 ): Promise<Project> {
   const supabase = await createClient();
@@ -307,7 +306,7 @@ export async function updateProject(
     .from('projects')
     .update(dbUpdates)
     .eq('id', projectId)
-    .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .select()
     .single();
   
@@ -324,7 +323,7 @@ export async function updateProject(
  */
 export async function deleteProject(
   projectId: string,
-  sessionId: string
+  userId: string
 ): Promise<void> {
   const supabase = await createClient();
   
@@ -333,7 +332,7 @@ export async function deleteProject(
     .from('projects')
     .delete()
     .eq('id', projectId)
-    .eq('session_id', sessionId);
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error deleting project:', error);
@@ -346,7 +345,7 @@ export async function deleteProject(
  */
 export async function projectExists(
   projectId: string,
-  sessionId: string
+  userId: string
 ): Promise<boolean> {
   const supabase = await createClient();
   
@@ -355,7 +354,7 @@ export async function projectExists(
     .from('projects')
     .select('id', { count: 'exact', head: true })
     .eq('id', projectId)
-    .eq('session_id', sessionId);
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error checking project existence:', error);
@@ -368,14 +367,14 @@ export async function projectExists(
 /**
  * Get project count for a session
  */
-export async function getProjectsCount(sessionId: string): Promise<number> {
+export async function getProjectsCount(userId: string): Promise<number> {
   const supabase = await createClient();
   
   const { count, error } = await supabase
     .schema('deadstock')
     .from('projects')
     .select('id', { count: 'exact', head: true })
-    .eq('session_id', sessionId);
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error counting projects:', error);

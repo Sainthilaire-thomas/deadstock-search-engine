@@ -1,4 +1,4 @@
-// src/features/pattern/infrastructure/patternRepository.ts
+﻿// src/features/pattern/infrastructure/patternRepository.ts
 
 /**
  * Repository pour les patrons importés
@@ -68,13 +68,13 @@ export const patternRepository = {
   /**
    * Get all patterns for a session
    */
-  async getBySession(sessionId: string): Promise<ImportedPattern[]> {
+  async getBySession(userId: string): Promise<ImportedPattern[]> {
     const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('imported_patterns')
       .select('*')
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -88,14 +88,14 @@ export const patternRepository = {
   /**
    * Get a single pattern by ID
    */
-  async getById(id: string, sessionId: string): Promise<ImportedPattern | null> {
+  async getById(id: string, userId: string): Promise<ImportedPattern | null> {
     const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('imported_patterns')
       .select('*')
       .eq('id', id)
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .single();
     
     if (error) {
@@ -141,7 +141,7 @@ export const patternRepository = {
    */
   async updateAnalysis(
     id: string, 
-    sessionId: string,
+    userId: string,
     analysisResult: PatternAnalysisResult
   ): Promise<ImportedPattern | null> {
     const supabase = await createClient();
@@ -154,7 +154,7 @@ export const patternRepository = {
         confidence: analysisResult.confidence,
       })
       .eq('id', id)
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .select()
       .single();
     
@@ -169,14 +169,14 @@ export const patternRepository = {
   /**
    * Delete a pattern
    */
-  async delete(id: string, sessionId: string): Promise<boolean> {
+  async delete(id: string, userId: string): Promise<boolean> {
     const supabase = await createClient();
     
     const { error } = await supabase
       .from('imported_patterns')
       .delete()
       .eq('id', id)
-      .eq('session_id', sessionId);
+      .eq('user_id', userId);
     
     if (error) {
       console.error('Error deleting pattern:', error);
@@ -189,13 +189,13 @@ export const patternRepository = {
   /**
    * Count patterns for a session
    */
-  async countBySession(sessionId: string): Promise<number> {
+  async countBySession(userId: string): Promise<number> {
     const supabase = await createClient();
     
     const { count, error } = await supabase
       .from('imported_patterns')
       .select('*', { count: 'exact', head: true })
-      .eq('session_id', sessionId);
+      .eq('user_id', userId);
     
     if (error) {
       console.error('Error counting patterns:', error);

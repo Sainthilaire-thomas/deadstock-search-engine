@@ -7,7 +7,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getOrCreateSessionId } from '../utils/sessionManager';
+import { requireUserId } from '@/lib/auth/getAuthUser';
 import {
   addFavorite as addFavoriteRepo,
   removeFavorite as removeFavoriteRepo,
@@ -21,15 +21,15 @@ import {
  */
 export async function addFavoriteAction(textileId: string) {
   try {
-    const sessionId = await getOrCreateSessionId();
+    const userId = await requireUserId();
     
     // Vérifier si déjà en favori
-    const { isFavorite } = await isFavoriteRepo(sessionId, textileId);
+    const { isFavorite } = await isFavoriteRepo(userId, textileId);
     if (isFavorite) {
       return { success: true, message: 'Already in favorites' };
     }
 
-    await addFavoriteRepo({ session_id: sessionId, textile_id: textileId });
+    await addFavoriteRepo({ user_id: userId, textile_id: textileId });
     
     // Revalider les pages concernées
     revalidatePath('/favorites');
@@ -47,9 +47,9 @@ export async function addFavoriteAction(textileId: string) {
  */
 export async function removeFavoriteAction(textileId: string) {
   try {
-    const sessionId = await getOrCreateSessionId();
+    const userId = await requireUserId();
     
-    await removeFavoriteRepo({ session_id: sessionId, textile_id: textileId });
+    await removeFavoriteRepo({ user_id: userId, textile_id: textileId });
     
     // Revalider les pages concernées
     revalidatePath('/favorites');
@@ -68,8 +68,8 @@ export async function removeFavoriteAction(textileId: string) {
  */
 export async function getFavoritesAction() {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const favorites = await getFavoritesBySession(sessionId);
+    const userId = await requireUserId();
+    const favorites = await getFavoritesBySession(userId);
     
     return { success: true, data: favorites };
   } catch (error) {
@@ -83,8 +83,8 @@ export async function getFavoritesAction() {
  */
 export async function checkIsFavoriteAction(textileId: string) {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const result = await isFavoriteRepo(sessionId, textileId);
+    const userId = await requireUserId();
+    const result = await isFavoriteRepo(userId, textileId);
     
     return { success: true, ...result };
   } catch (error) {
@@ -98,8 +98,8 @@ export async function checkIsFavoriteAction(textileId: string) {
  */
 export async function getFavoritesCountAction() {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const count = await getFavoritesCountRepo(sessionId);
+    const userId = await requireUserId();
+    const count = await getFavoritesCountRepo(userId);
     
     return { success: true, count };
   } catch (error) {
@@ -113,16 +113,16 @@ export async function getFavoritesCountAction() {
  */
 export async function toggleFavoriteAction(textileId: string) {
   try {
-    const sessionId = await getOrCreateSessionId();
-    const { isFavorite } = await isFavoriteRepo(sessionId, textileId);
+    const userId = await requireUserId();
+    const { isFavorite } = await isFavoriteRepo(userId, textileId);
     
     if (isFavorite) {
-      await removeFavoriteRepo({ session_id: sessionId, textile_id: textileId });
+      await removeFavoriteRepo({ user_id: userId, textile_id: textileId });
       revalidatePath('/favorites');
       revalidatePath('/search');
       return { success: true, action: 'removed', message: 'Removed from favorites' };
     } else {
-      await addFavoriteRepo({ session_id: sessionId, textile_id: textileId });
+      await addFavoriteRepo({ user_id: userId, textile_id: textileId });
       revalidatePath('/favorites');
       revalidatePath('/search');
       return { success: true, action: 'added', message: 'Added to favorites' };

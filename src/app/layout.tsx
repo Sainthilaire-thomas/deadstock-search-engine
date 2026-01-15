@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { FavoritesProvider } from '@/features/favorites/context/FavoritesContext';
-import { getOrCreateSessionId } from '@/features/favorites/utils/sessionManager';
+import { getAuthUser } from '@/lib/auth/getAuthUser';
 import { getFavoritesBySession } from '@/features/favorites/infrastructure/favoritesRepository';
 import { Toaster } from 'sonner';
 
@@ -18,16 +18,17 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Charger les favoris initiaux côté serveur
+ // Charger les favoris initiaux côté serveur
   let initialFavoriteIds: string[] = [];
   try {
-    const sessionId = await getOrCreateSessionId();
-    const favorites = await getFavoritesBySession(sessionId);
-    initialFavoriteIds = favorites.map(f => f.textile_id);
+    const user = await getAuthUser();
+    if (user) {
+      const favorites = await getFavoritesBySession(user.id);
+      initialFavoriteIds = favorites.map(f => f.textile_id);
+    }
   } catch (error) {
     console.error('Error loading initial favorites:', error);
   }
-
   return (
     <html lang='fr' suppressHydrationWarning>
       <body>
