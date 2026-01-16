@@ -4,6 +4,7 @@ import { useBoard } from "@/features/boards/context/BoardContext";
 import { useFavorites } from "@/features/favorites/context/FavoritesContext";
 import { SearchInterface } from "@/components/search/SearchInterface";
 import { FavoritesGrid } from "@/features/favorites/components/FavoritesGrid";
+import { getFavoritesAction } from "@/features/favorites/actions/favoriteActions";
 import { ELEMENT_TYPE_CONFIGS } from "@/features/journey/config/steps";
 import type { BoardElement } from "@/features/boards/domain/types";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
@@ -111,13 +112,12 @@ export function TextileJourneyView({
   const [favorites, setFavorites] = useState<FavoriteWithTextile[]>(initialFavorites);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
 
-  // Recharger les favoris quand on clique sur l'onglet Favoris
+ // Recharger les favoris quand on clique sur l'onglet Favoris
   const handleTabChange = async (tabId: TabId) => {
     setActiveTab(tabId);
     if (tabId === "favorites") {
       setIsLoadingFavorites(true);
       try {
-        const { getFavoritesAction } = await import("@/features/favorites/actions/favoriteActions");
         const result = await getFavoritesAction();
         if (result.success && result.data) {
           setFavorites(result.data);
