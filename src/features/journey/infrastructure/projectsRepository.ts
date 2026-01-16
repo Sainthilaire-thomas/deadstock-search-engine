@@ -15,6 +15,7 @@ import type {
   YardageDetails,
   SelectedTextile,
   ProjectConstraints,
+  ProjectSnapshot,
 } from '../domain/types';
 
 // ============================================
@@ -26,6 +27,8 @@ export interface CreateProjectData {
   userId: string;
   projectType?: ProjectType;
   description?: string;
+  sourceBoardId?: string;
+  sourceZoneId?: string;
 }
 
 export interface UpdateProjectData {
@@ -61,10 +64,16 @@ export interface UpdateProjectData {
   budgetMax?: number;
   currency?: string;
   
-  // Constraints
+   // Constraints
   constraints?: ProjectConstraints;
-}
 
+  // Order tracking (Sprint C3)
+  orderedAt?: Date;
+  shippedAt?: Date;
+  receivedAt?: Date;
+  completedAt?: Date;
+  snapshot?: ProjectSnapshot;
+}
 export interface ProjectListItem {
   id: string;
   name: string;
@@ -109,7 +118,17 @@ interface ProjectRow {
   budget_min: number | null;
   budget_max: number | null;
   currency: string | null;
-  constraints: ProjectConstraints | null;
+    constraints: ProjectConstraints | null;
+  // Crystallization (Sprint C1-C2)
+  source_board_id: string | null;
+  source_zone_id: string | null;
+  // Order tracking (Sprint C3)
+  ordered_at: string | null;
+  shipped_at: string | null;
+  received_at: string | null;
+  completed_at: string | null;
+  snapshot: ProjectSnapshot | null;
+  // Metadata
   created_at: string;
   updated_at: string;
 }
@@ -151,7 +170,17 @@ function mapRowToProject(row: ProjectRow): Project {
     budgetMin: row.budget_min ?? undefined,
     budgetMax: row.budget_max ?? undefined,
     currency: row.currency ?? 'EUR',
-    constraints: row.constraints ?? {},
+   constraints: row.constraints ?? {},
+    // Crystallization (Sprint C1-C2)
+    sourceBoardId: row.source_board_id ?? undefined,
+    sourceZoneId: row.source_zone_id ?? undefined,
+    // Order tracking (Sprint C3)
+    orderedAt: row.ordered_at ?? undefined,
+    shippedAt: row.shipped_at ?? undefined,
+    receivedAt: row.received_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    snapshot: row.snapshot ?? undefined,
+    // Metadata
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -234,13 +263,15 @@ export async function createProject(data: CreateProjectData): Promise<Project> {
   const { data: created, error } = await supabase
     .schema('deadstock')
     .from('projects')
-    .insert({
+      .insert({
       name: data.name,
       user_id: data.userId,
       project_type: data.projectType ?? 'single_piece',
       description: data.description ?? null,
       status: 'draft',
       current_step: 'idea',
+      source_board_id: data.sourceBoardId ?? null,
+      source_zone_id: data.sourceZoneId ?? null,
     })
     .select()
     .single();
@@ -298,9 +329,16 @@ export async function updateProject(
   if (updates.budgetMax !== undefined) dbUpdates.budget_max = updates.budgetMax;
   if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
   
-  // Constraints
+// Constraints
   if (updates.constraints !== undefined) dbUpdates.constraints = updates.constraints;
-  
+
+  // Order tracking (Sprint C3)
+  if (updates.orderedAt !== undefined) dbUpdates.ordered_at = updates.orderedAt.toISOString();
+  if (updates.shippedAt !== undefined) dbUpdates.shipped_at = updates.shippedAt.toISOString();
+  if (updates.receivedAt !== undefined) dbUpdates.received_at = updates.receivedAt.toISOString();
+  if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt.toISOString();
+  if (updates.snapshot !== undefined) dbUpdates.snapshot = updates.snapshot;
+
   const { data: updated, error } = await supabase
     .schema('deadstock')
     .from('projects')

@@ -10,7 +10,15 @@ import { LucideIcon } from 'lucide-react';
 
 export type ProjectType = 'single_piece' | 'collection' | 'prototype';
 
-export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
+export type ProjectStatus = 
+  | 'draft' 
+  | 'in_progress' 
+  | 'ordered' 
+  | 'shipped' 
+  | 'received' 
+  | 'in_production' 
+  | 'completed' 
+  | 'archived';
 
 export type JourneyStep = 
   | 'idea' 
@@ -53,6 +61,62 @@ export type GarmentType =
   | 'bowtie';
 
 export type GarmentCategory = 'tops' | 'bottoms' | 'dresses' | 'outerwear' | 'accessories';
+
+// ============================================
+// ORDER & SNAPSHOT TYPES (Sprint C3)
+// ============================================
+
+export interface ProjectSnapshot {
+  textiles: SnapshotTextile[];
+  calculations: SnapshotCalculation[];
+  palettes: SnapshotPalette[];
+  orderDetails: OrderDetails;
+  totals: OrderTotals;
+  capturedAt: string; // ISO date
+}
+
+export interface SnapshotTextile {
+  textileId: string;
+  name: string;
+  source: string;
+  sourceUrl?: string;
+  pricePerMeter: number;
+  imageUrl?: string;
+  quantityOrdered: number;
+  subtotal: number;
+  attributes?: {
+    fiber?: string;
+    color?: string;
+    width?: number;
+  };
+}
+
+export interface SnapshotCalculation {
+  garmentType: string;
+  size: string;
+  totalMeters: number;
+  fabricWidth?: number;
+}
+
+export interface SnapshotPalette {
+  colors: string[];
+}
+
+export interface OrderDetails {
+  supplier: string;
+  orderReference?: string;
+  orderDate: string;
+  estimatedDelivery?: string;
+  notes?: string;
+}
+
+export interface OrderTotals {
+  fabricCost: number;
+  shipping?: number;
+  total: number;
+}
+
+
 
 // ============================================
 // MOOD BOARD TYPES
@@ -262,9 +326,20 @@ export interface Project {
   budgetMax?: number;
   currency: string;
   
-  // Constraints
+ // Constraints
   constraints: ProjectConstraints;
-  
+
+  // Crystallization (Sprint C1-C2)
+  sourceBoardId?: string;
+  sourceZoneId?: string;
+
+  // Order tracking (Sprint C3)
+  orderedAt?: Date | string;
+  shippedAt?: Date | string;
+  receivedAt?: Date | string;
+  completedAt?: Date | string;
+  snapshot?: ProjectSnapshot;
+
   // Metadata
   createdAt: Date | string;
   updatedAt: Date | string;

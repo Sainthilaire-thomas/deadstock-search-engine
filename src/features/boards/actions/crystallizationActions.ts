@@ -60,12 +60,14 @@ export async function crystallizeZoneAction(
       return { success: false, error: 'La zone ne contient aucun élément' };
     }
 
-    // 3. Créer le projet avec les données extraites
+       // 3. Créer le projet avec les données extraites
     const project = await createProjectInDb({
       name: input.projectName,
       userId,
       projectType: input.projectType,
       description: `Créé depuis la zone "${zone.name}"`,
+      sourceBoardId: input.boardId,
+      sourceZoneId: input.zoneId,
     });
 
     // 4. Marquer la zone comme cristallisée

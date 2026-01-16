@@ -10,6 +10,8 @@ import { getElementsInZone } from "@/features/boards/utils/zoneUtils";
 import type { ElementType, BoardElement } from "@/features/boards/domain/types";
 import type { SearchResult } from "@/features/search/domain/types";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
+import { OrderForm } from "./OrderForm";
+import { ShoppingCart } from "lucide-react";
 
 interface JourneyClientWrapperProps {
   initialSearchData: SearchResult;
@@ -140,6 +142,7 @@ export function JourneyClientWrapper({
 
   const { elements, zones } = useBoard();
 const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
 
   // Filtrer les éléments selon le type sélectionné
   const filteredElements = useMemo(() => {
@@ -283,20 +286,36 @@ const zoneElements = useMemo(() => {
               </h2>
               
               {selectedZone ? (
-                zoneElements.length > 0 ? (
-                  <div className="space-y-2">
-                    {zoneElements.map((element) => (
-                      <ElementListItem key={element.id} element={element} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                    <p>Aucun élément dans cette zone</p>
-                    <p className="text-sm mt-1">
-                      Ajoutez des éléments dans la zone sur le Board
-                    </p>
-                  </div>
-                )
+                <>
+                  {zoneElements.length > 0 ? (
+                    <div className="space-y-2">
+                      {zoneElements.map((element) => (
+                        <ElementListItem key={element.id} element={element} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                      <p>Aucun élément dans cette zone</p>
+                      <p className="text-sm mt-1">
+                        Ajoutez des éléments dans la zone sur le Board
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bouton Passer commande */}
+                  {selectedZone.linkedProjectId && (
+                    <div className="mt-6 pt-4 border-t">
+                      <button
+                        onClick={() => setIsOrderFormOpen(true)}
+                        className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        Passer commande
+                      </button>
+                    </div>
+                  )}
+                </>
+              
               ) : (
                 <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
                   <p>← Cliquez sur un projet pour voir son contenu</p>
@@ -341,15 +360,27 @@ const zoneElements = useMemo(() => {
     );
   };
 
-  return (
+ return (
     <div className="flex h-screen bg-background">
       {/* Sidebar Navigation */}
       <JourneyNavigation />
-
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         {renderContent()}
       </main>
+
+      {/* Order Form Modal */}
+      {isOrderFormOpen && selectedZone?.linkedProjectId && (
+        <OrderForm
+          projectId={selectedZone.linkedProjectId}
+          zoneElements={zoneElements}
+          onCancel={() => setIsOrderFormOpen(false)}
+          onSuccess={() => {
+            setIsOrderFormOpen(false);
+            setSelectedZoneId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

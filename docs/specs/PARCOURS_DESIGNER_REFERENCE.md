@@ -1,7 +1,10 @@
+
 # Parcours Designer : De l'Exploration à la Production
 
-**Version** : 1.0  
-**Date** : 16 Janvier 2026  
+**Version** : 1.0
+
+**Date** : 16 Janvier 2026
+
 **Statut** : Document de référence fonctionnelle
 
 ---
@@ -18,9 +21,9 @@ Ce document décrit le parcours complet d'un designer utilisant Deadstock Search
 
 L'application offre **deux façons de voir les mêmes éléments** :
 
-| Vue | Description | Usage |
-|-----|-------------|-------|
-| **Board** | Vue spatiale, globale | Organiser visuellement, explorer, créer |
+| Vue               | Description                  | Usage                                                 |
+| ----------------- | ---------------------------- | ----------------------------------------------------- |
+| **Board**   | Vue spatiale, globale        | Organiser visuellement, explorer, créer              |
 | **Journey** | Vue séquentielle, par phase | Suivre l'avancement, gérer les projets par maturité |
 
 ```
@@ -77,40 +80,40 @@ Le designer explore librement, sans engagement. Il cherche des tissus, crée des
 
 ### 3.2 Actions Possibles
 
-| Action | Description |
-|--------|-------------|
-| Rechercher des tissus | Via la recherche principale ou contextuelle |
-| Ajouter aux favoris | Sauvegarder des tissus intéressants |
-| Créer un board | Espace de travail visuel |
-| Ajouter des éléments | Tissus, palettes, notes, inspirations, calculs |
-| Créer des zones | Regrouper des éléments par thème (Veste, Chemise...) |
-| Organiser | Déplacer, redimensionner, renommer |
-| Supprimer | Retirer ce qui ne convient plus |
+| Action                 | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| Rechercher des tissus  | Via la recherche principale ou contextuelle             |
+| Ajouter aux favoris    | Sauvegarder des tissus intéressants                    |
+| Créer un board        | Espace de travail visuel                                |
+| Ajouter des éléments | Tissus, palettes, notes, inspirations, calculs          |
+| Créer des zones       | Regrouper des éléments par thème (Veste, Chemise...) |
+| Organiser              | Déplacer, redimensionner, renommer                     |
+| Supprimer              | Retirer ce qui ne convient plus                         |
 
 ### 3.3 Éléments Disponibles
 
-| Type | Description | Données |
-|------|-------------|---------|
-| `textile` | Tissu depuis favoris ou recherche | Référence, source, prix, image |
-| `palette` | Palette de couleurs | Couleurs hex, noms |
-| `note` | Note textuelle | Contenu texte |
-| `inspiration` | Image d'inspiration | Image, source, description |
-| `calculation` | Calcul de métrage | Type vêtement, taille, métrage |
-| `pattern` | Patron PDF | Fichier, pièces, métrage |
-| `silhouette` | Silhouette/croquis | Image, notes |
-| `video` | Vidéo référence | URL, description |
-| `link` | Lien externe | URL, titre, description |
-| `pdf` | Document PDF | Fichier, description |
+| Type            | Description                       | Données                         |
+| --------------- | --------------------------------- | -------------------------------- |
+| `textile`     | Tissu depuis favoris ou recherche | Référence, source, prix, image |
+| `palette`     | Palette de couleurs               | Couleurs hex, noms               |
+| `note`        | Note textuelle                    | Contenu texte                    |
+| `inspiration` | Image d'inspiration               | Image, source, description       |
+| `calculation` | Calcul de métrage                | Type vêtement, taille, métrage |
+| `pattern`     | Patron PDF                        | Fichier, pièces, métrage       |
+| `silhouette`  | Silhouette/croquis                | Image, notes                     |
+| `video`       | Vidéo référence                | URL, description                 |
+| `link`        | Lien externe                      | URL, titre, description          |
+| `pdf`         | Document PDF                      | Fichier, description             |
 
 ### 3.4 État des Zones
 
-- **Zone active** : Bordure pointillée, fond coloré 15%
-- Peut contenir 0 ou plusieurs éléments
-- Entièrement modifiable (déplacer, redimensionner, renommer, supprimer)
+* **Zone active** : Bordure pointillée, fond coloré 15%
+* Peut contenir 0 ou plusieurs éléments
+* Entièrement modifiable (déplacer, redimensionner, renommer, supprimer)
 
 ### 3.5 Sortie de Phase
 
-Le designer peut rester indéfiniment en exploration. Quand il a une direction claire pour une zone, il peut la **cristalliser**.
+Le designer peut rester indéfiniment en exploration. Quand il a une direction claire pour une zone, il peut la  **cristalliser** .
 
 ---
 
@@ -118,7 +121,7 @@ Le designer peut rester indéfiniment en exploration. Quand il a une direction c
 
 ### 4.1 Description
 
-Le designer a une intention : "Cette zone va devenir un vêtement réel". Il cristallise la zone, ce qui crée un **Projet en mode Brouillon**. 
+Le designer a une intention : "Cette zone va devenir un vêtement réel". Il cristallise la zone, ce qui crée un  **Projet en mode Brouillon** .
 
 **Important** : Le projet brouillon n'est PAS une copie figée. C'est un **marqueur** qui "regarde" la zone en temps réel.
 
@@ -164,16 +167,16 @@ PROJET (en base de données)
 
 #### Sur le Board
 
-| Action | Possible ? | Effet sur le Projet |
-|--------|------------|---------------------|
-| Déplacer la zone | ✅ | Les éléments contenus suivent |
-| Redimensionner la zone | ✅ | Éléments qui sortent sont "détachés" |
-| Renommer la zone | ✅ | Aucun (nom du projet indépendant) |
-| Ajouter un élément dans la zone | ✅ | Automatiquement rattaché au projet |
-| Retirer un élément de la zone | ✅ | Automatiquement détaché du projet |
-| Modifier un élément | ✅ | Le projet voit la modification |
-| Supprimer un élément | ✅ | Disparaît du projet |
-| Supprimer la zone | ⚠️ | Demande confirmation, supprime le projet |
+| Action                            | Possible ? | Effet sur le Projet                      |
+| --------------------------------- | ---------- | ---------------------------------------- |
+| Déplacer la zone                 | ✅         | Les éléments contenus suivent          |
+| Redimensionner la zone            | ✅         | Éléments qui sortent sont "détachés" |
+| Renommer la zone                  | ✅         | Aucun (nom du projet indépendant)       |
+| Ajouter un élément dans la zone | ✅         | Automatiquement rattaché au projet      |
+| Retirer un élément de la zone   | ✅         | Automatiquement détaché du projet      |
+| Modifier un élément             | ✅         | Le projet voit la modification           |
+| Supprimer un élément            | ✅         | Disparaît du projet                     |
+| Supprimer la zone                 | ⚠️       | Demande confirmation, supprime le projet |
 
 #### Lecture du Projet
 
@@ -246,7 +249,7 @@ Le projet "Veste Lin" voit automatiquement :
 
 ### 4.7 Sortie de Phase
 
-Quand le designer est prêt, il **passe commande**. C'est le seul moment où les données sont figées.
+Quand le designer est prêt, il  **passe commande** . C'est le seul moment où les données sont figées.
 
 ---
 
@@ -358,13 +361,13 @@ Clic "Commander" sur la zone ou dans le projet
 
 #### Sur le Board
 
-| Action | Possible ? | Détail |
-|--------|------------|--------|
-| Déplacer la zone | ✅ Oui | Zone seule (éléments figés à l'intérieur) |
-| Redimensionner la zone | ❌ Non | Taille figée |
-| Modifier les éléments | ❌ Non | Contenu figé |
-| Supprimer la zone | ⚠️ Avec warning | Projet conservé, zone disparaît du board |
-| Mode réduit | ✅ Oui | Toggle pour minimiser l'espace occupé |
+| Action                  | Possible ?        | Détail                                        |
+| ----------------------- | ----------------- | ---------------------------------------------- |
+| Déplacer la zone       | ✅ Oui            | Zone seule (éléments figés à l'intérieur) |
+| Redimensionner la zone  | ❌ Non            | Taille figée                                  |
+| Modifier les éléments | ❌ Non            | Contenu figé                                  |
+| Supprimer la zone       | ⚠️ Avec warning | Projet conservé, zone disparaît du board     |
+| Mode réduit            | ✅ Oui            | Toggle pour minimiser l'espace occupé         |
 
 #### Mode Réduit (Toggle)
 
@@ -377,25 +380,26 @@ MODE NORMAL                          MODE RÉDUIT
 ┌─────────────────────────────┐      ┌─────────────────────┐
 │ 🔒 Veste        ✓ Commandé │      │ 🔒 Veste ✓ 58€  [↗]│
 ├─────────────────────────────┤      └─────────────────────┘
-│                             │      
+│                             │    
 │   🧵 Tissu laine gris      │      (Clic sur [↗] = agrandir)
-│   📊 2.8m                  │      
-│   💰 58.40€                │      
-│                             │      
-│   Commandé le 20/01/2026   │      
-│                             │      
-├─────────────────────────────┤      
-│  [Voir projet]         [▼] │      
-└─────────────────────────────┘      
+│   📊 2.8m                  │    
+│   💰 58.40€                │    
+│                             │    
+│   Commandé le 20/01/2026   │    
+│                             │    
+├─────────────────────────────┤    
+│  [Voir projet]         [▼] │    
+└─────────────────────────────┘    
 
 [▼] = Réduire    [↗] = Agrandir
 ```
 
 **Avantages du mode réduit :**
-- Libère de l'espace pour les projets actifs
-- Garde une trace visuelle des projets commandés
-- Accès rapide aux infos essentielles (nom, statut, montant)
-- Un clic pour voir le détail si besoin
+
+* Libère de l'espace pour les projets actifs
+* Garde une trace visuelle des projets commandés
+* Accès rapide aux infos essentielles (nom, statut, montant)
+* Un clic pour voir le détail si besoin
 
 #### Visuel de la Zone Commandée
 
@@ -420,7 +424,7 @@ Style : Bordure solide, fond grisé, badge "Commandé", cadenas
 
 #### Lecture du Projet
 
-Après commande, le projet lit le **snapshot figé**, plus la zone :
+Après commande, le projet lit le  **snapshot figé** , plus la zone :
 
 ```
 Affichage Projet "Veste Lin"
@@ -443,7 +447,7 @@ Quand le designer reçoit le tissu, il passe en phase Production.
 
 ### 6.1 Description
 
-Le tissu est reçu. Le designer peut maintenant produire le vêtement. Cette phase est principalement du **suivi** et de la **documentation**.
+Le tissu est reçu. Le designer peut maintenant produire le vêtement. Cette phase est principalement du **suivi** et de la  **documentation** .
 
 ### 6.2 Étapes
 
@@ -457,16 +461,16 @@ COMMANDÉ ──► EN ATTENTE ──► EXPÉDIÉ ──► REÇU ──► EN 
 
 ### 6.3 Actions Disponibles
 
-| Action | Description |
-|--------|-------------|
-| Marquer "Expédié" | Le fournisseur a envoyé |
-| Ajouter tracking | Numéro de suivi colis |
-| Marquer "Reçu" | Tissu en main |
-| Ajouter photos | Photos du tissu reçu |
-| Marquer "En production" | Confection commencée |
-| Ajouter notes | Journal de production |
-| Marquer "Terminé" | Vêtement fini |
-| Ajouter photos finales | Photos du vêtement |
+| Action                  | Description              |
+| ----------------------- | ------------------------ |
+| Marquer "Expédié"     | Le fournisseur a envoyé |
+| Ajouter tracking        | Numéro de suivi colis   |
+| Marquer "Reçu"         | Tissu en main            |
+| Ajouter photos          | Photos du tissu reçu    |
+| Marquer "En production" | Confection commencée    |
+| Ajouter notes           | Journal de production    |
+| Marquer "Terminé"      | Vêtement fini           |
+| Ajouter photos finales  | Photos du vêtement      |
 
 ### 6.4 Timeline du Projet
 
@@ -574,19 +578,20 @@ Board "Collection AH26"
 **Principe** : Une fois commandé, le projet est figé DANS L'APPLICATION.
 
 Si dans la réalité le designer annule sa commande ou la modifie :
-- Il peut ajouter une note explicative
-- Il peut créer un nouveau projet (re-cristalliser)
-- L'ancien projet reste en historique (ou peut être archivé)
+
+* Il peut ajouter une note explicative
+* Il peut créer un nouveau projet (re-cristalliser)
+* L'ancien projet reste en historique (ou peut être archivé)
 
 **Pas de "dé-cristallisation"** : trop complexe, risque de perte de données.
 
 ### 7.5 Suppression
 
-| Élément | Brouillon | Commandé |
-|---------|-----------|----------|
-| Supprimer un élément de la zone | ✅ Disparaît du projet | ❌ Impossible |
-| Supprimer la zone | ⚠️ Supprime le projet (confirmation) | ⚠️ Zone supprimable, projet conservé |
-| Supprimer le projet | ✅ Zone redevient "active" | ⚠️ Avec confirmation (données perdues) |
+| Élément                         | Brouillon                              | Commandé                                 |
+| --------------------------------- | -------------------------------------- | ----------------------------------------- |
+| Supprimer un élément de la zone | ✅ Disparaît du projet                | ❌ Impossible                             |
+| Supprimer la zone                 | ⚠️ Supprime le projet (confirmation) | ⚠️ Zone supprimable, projet conservé   |
+| Supprimer le projet               | ✅ Zone redevient "active"             | ⚠️ Avec confirmation (données perdues) |
 
 ---
 
@@ -594,23 +599,23 @@ Si dans la réalité le designer annule sa commande ou la modifie :
 
 ### 8.1 États du Projet
 
-| État | Code | Description | Modifiable ? |
-|------|------|-------------|--------------|
-| Brouillon | `draft` | Intention, données live | ✅ Oui (via board) |
-| Commandé | `ordered` | Commande passée, snapshot figé | ❌ Non |
-| Expédié | `shipped` | En cours de livraison | ❌ Non |
-| Reçu | `received` | Tissu en main | ❌ Non |
-| En production | `in_production` | Confection en cours | ❌ Non |
-| Terminé | `completed` | Vêtement fini | ❌ Non |
-| Archivé | `archived` | Projet clôturé | ❌ Non |
+| État         | Code              | Description                      | Modifiable ?       |
+| ------------- | ----------------- | -------------------------------- | ------------------ |
+| Brouillon     | `draft`         | Intention, données live         | ✅ Oui (via board) |
+| Commandé     | `ordered`       | Commande passée, snapshot figé | ❌ Non             |
+| Expédié     | `shipped`       | En cours de livraison            | ❌ Non             |
+| Reçu         | `received`      | Tissu en main                    | ❌ Non             |
+| En production | `in_production` | Confection en cours              | ❌ Non             |
+| Terminé      | `completed`     | Vêtement fini                   | ❌ Non             |
+| Archivé      | `archived`      | Projet clôturé                 | ❌ Non             |
 
 ### 8.2 États de la Zone
 
-| État | Visuel | Déplaçable | Redimensionnable | Éléments modifiables | Mode réduit |
-|------|--------|------------|------------------|---------------------|-------------|
-| Active | Bordure pointillée | ✅ Seule | ✅ | ✅ | ❌ |
-| Cristallisée (brouillon) | Bordure solide + badge | ✅ Avec éléments | ✅ | ✅ | ❌ |
-| Cristallisée (commandée) | Bordure solide + 🔒 | ✅ Seule | ❌ | ❌ | ✅ |
+| État                      | Visuel                 | Déplaçable       | Redimensionnable | Éléments modifiables | Mode réduit |
+| -------------------------- | ---------------------- | ------------------ | ---------------- | ---------------------- | ------------ |
+| Active                     | Bordure pointillée    | ✅ Seule           | ✅               | ✅                     | ❌           |
+| Cristallisée (brouillon)  | Bordure solide + badge | ✅ Avec éléments | ✅               | ✅                     | ❌           |
+| Cristallisée (commandée) | Bordure solide + 🔒    | ✅ Seule           | ❌               | ❌                     | ✅           |
 
 ---
 
@@ -742,9 +747,9 @@ Si dans la réalité le designer annule sa commande ou la modifie :
 
 La vue Journey offre une **navigation séquentielle** des projets, organisée par phase de maturité. Elle complète la vue Board (spatiale) en permettant au designer de :
 
-- Voir tous ses projets regroupés par statut
-- Suivre l'avancement global de sa production
-- Accéder rapidement aux projets nécessitant une action
+* Voir tous ses projets regroupés par statut
+* Suivre l'avancement global de sa production
+* Accéder rapidement aux projets nécessitant une action
 
 ### 10.2 Organisation
 
@@ -773,17 +778,18 @@ La vue Journey offre une **navigation séquentielle** des projets, organisée pa
 
 ### 10.3 Colonnes / Filtres
 
-| Filtre | Statuts inclus | Description |
-|--------|----------------|-------------|
-| **Brouillons** | `draft` | Projets en cours de définition |
-| **Commandés** | `ordered`, `shipped` | Commandes passées, en attente |
-| **Reçus** | `received`, `in_production` | Tissu en main, production possible |
-| **Terminés** | `completed` | Projets finalisés |
-| **Archivés** | `archived` | Projets clôturés (masqués par défaut) |
+| Filtre               | Statuts inclus                 | Description                               |
+| -------------------- | ------------------------------ | ----------------------------------------- |
+| **Brouillons** | `draft`                      | Projets en cours de définition           |
+| **Commandés** | `ordered`,`shipped`        | Commandes passées, en attente            |
+| **Reçus**     | `received`,`in_production` | Tissu en main, production possible        |
+| **Terminés**  | `completed`                  | Projets finalisés                        |
+| **Archivés**  | `archived`                   | Projets clôturés (masqués par défaut) |
 
 ### 10.4 Informations Affichées par Statut
 
 #### Brouillon
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ 📋 Chemise lin                                  │
@@ -795,6 +801,7 @@ La vue Journey offre une **navigation séquentielle** des projets, organisée pa
 ```
 
 #### Commandé
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ 📦 Veste laine                     ⏳ En attente│
@@ -805,6 +812,7 @@ La vue Journey offre une **navigation séquentielle** des projets, organisée pa
 ```
 
 #### Reçu
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ ✓ Manteau cachemire               🧵 En prod.  │
@@ -816,15 +824,15 @@ La vue Journey offre une **navigation séquentielle** des projets, organisée pa
 
 ### 10.5 Actions depuis Journey
 
-| Action | Disponible pour | Effet |
-|--------|-----------------|-------|
-| Voir projet | Tous | Ouvre la page détail du projet |
-| Voir sur board | Tous | Navigue vers le board, sélectionne la zone |
-| Commander | Brouillons | Ouvre le formulaire de commande |
-| Marquer expédié | Commandés | Change statut → `shipped` |
-| Marquer reçu | Commandés/Expédiés | Change statut → `received` |
-| Marquer terminé | Reçus/En prod | Change statut → `completed` |
-| Archiver | Terminés | Change statut → `archived` |
+| Action            | Disponible pour       | Effet                                       |
+| ----------------- | --------------------- | ------------------------------------------- |
+| Voir projet       | Tous                  | Ouvre la page détail du projet             |
+| Voir sur board    | Tous                  | Navigue vers le board, sélectionne la zone |
+| Commander         | Brouillons            | Ouvre le formulaire de commande             |
+| Marquer expédié | Commandés            | Change statut →`shipped`                 |
+| Marquer reçu     | Commandés/Expédiés | Change statut →`received`                |
+| Marquer terminé  | Reçus/En prod        | Change statut →`completed`               |
+| Archiver          | Terminés             | Change statut →`archived`                |
 
 ### 10.6 Lien Board ↔ Journey
 
@@ -847,16 +855,16 @@ Archiver projet              →      Zone peut être supprimée/masquée
 
 ## 11. Glossaire
 
-| Terme | Définition |
-|-------|------------|
-| **Board** | Espace de travail visuel où le designer organise ses idées |
-| **Zone** | Rectangle sur le board regroupant des éléments par thème |
-| **Élément** | Objet sur le board (textile, palette, calcul, note...) |
-| **Cristallisation** | Action de transformer une zone en projet (intention) |
-| **Projet** | Entité représentant une intention de création |
-| **Brouillon** | État du projet avant commande (données live) |
-| **Snapshot** | Copie figée des données au moment de la commande |
-| **Commandé** | État du projet après passage de commande (figé) |
+| Terme                     | Définition                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| **Board**           | Espace de travail visuel où le designer organise ses idées |
+| **Zone**            | Rectangle sur le board regroupant des éléments par thème  |
+| **Élément**       | Objet sur le board (textile, palette, calcul, note...)       |
+| **Cristallisation** | Action de transformer une zone en projet (intention)         |
+| **Projet**          | Entité représentant une intention de création             |
+| **Brouillon**       | État du projet avant commande (données live)               |
+| **Snapshot**        | Copie figée des données au moment de la commande           |
+| **Commandé**       | État du projet après passage de commande (figé)           |
 
 ---
 
@@ -871,5 +879,6 @@ Archiver projet              →      Zone peut être supprimée/masquée
 
 ---
 
-**Document de référence pour les spécifications techniques.**  
+**Document de référence pour les spécifications techniques.**
+
 **Toute modification de ce parcours doit être validée avant implémentation.**
