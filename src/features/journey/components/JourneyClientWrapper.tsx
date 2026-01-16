@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useBoard } from "@/features/boards/context/BoardContext";
 import { JourneyNavigation } from "@/features/journey/components/JourneyNavigation";
 import { TextileJourneyView } from "@/features/journey/components/views/TextileJourneyView";
 import { ELEMENT_TYPE_CONFIGS, JOURNEY_PHASES } from "@/features/journey/config/steps";
+import { getElementsInZone } from "@/features/boards/utils/zoneUtils";
 import type { ElementType, BoardElement } from "@/features/boards/domain/types";
 import type { SearchResult } from "@/features/search/domain/types";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
@@ -98,9 +99,22 @@ function ElementListItem({ element }: { element: BoardElement }) {
 }
 
 // Composant pour les zones cristallisées
-function CrystallizedZoneItem({ zone }: { zone: { id: string; name: string; crystallizedAt: Date | null } }) {
+function CrystallizedZoneItem({ 
+  zone, 
+  isSelected,
+  onClick 
+}: { 
+  zone: { id: string; name: string; crystallizedAt: Date | null };
+  isSelected?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors cursor-pointer">
+    <div 
+      className={`flex items-center gap-3 rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+        isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+      }`}
+      onClick={onClick}
+    >
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
         <span className="text-lg">⚡</span>
       </div>
@@ -110,6 +124,9 @@ function CrystallizedZoneItem({ zone }: { zone: { id: string; name: string; crys
           Cristallisé le {zone.crystallizedAt?.toLocaleDateString("fr-FR")}
         </p>
       </div>
+      {isSelected && (
+        <span className="text-xs text-primary font-medium">Sélectionné</span>
+      )}
     </div>
   );
 }
@@ -122,6 +139,7 @@ export function JourneyClientWrapper({
   const selectedType = searchParams.get("type");
 
   const { elements, zones } = useBoard();
+const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // Filtrer les éléments selon le type sélectionné
   const filteredElements = useMemo(() => {
@@ -138,6 +156,18 @@ export function JourneyClientWrapper({
     }
     return zones.filter((z) => z.crystallizedAt !== null);
   }, [zones, selectedType]);
+
+  // Éléments de la zone cristallisée sélectionnée
+const selectedZone = useMemo(() => {
+  if (!selectedZoneId) return null;
+  return zones.find(z => z.id === selectedZoneId) || null;
+}, [zones, selectedZoneId]);
+
+const zoneElements = useMemo(() => {
+  if (!selectedZone) return [];
+  return getElementsInZone(elements, selectedZone);
+}, [elements, selectedZone]);
+
 
   // Obtenir le titre de la section
   const getSectionTitle = (): string => {
@@ -205,7 +235,7 @@ export function JourneyClientWrapper({
       return renderDefaultContent();
     }
 
-    // Zones cristallisées
+   // Zones cristallisées
     if (selectedType === "zones") {
       return (
         <div className="p-6">
@@ -218,21 +248,62 @@ export function JourneyClientWrapper({
             </p>
           </div>
 
-          {crystallizedZones.length > 0 ? (
-            <div className="space-y-2">
-              {crystallizedZones.map((zone) => (
-                <CrystallizedZoneItem key={zone.id} zone={zone} />
-              ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Liste des projets */}
+            <div>
+              <h2 className="text-sm font-medium text-muted-foreground mb-3">Projets</h2>
+              {crystallizedZones.length > 0 ? (
+                <div className="space-y-2">
+                  {crystallizedZones.map((zone) => (
+                    <CrystallizedZoneItem 
+                      key={zone.id} 
+                      zone={zone}
+                      isSelected={selectedZoneId === zone.id}
+                      onClick={() => setSelectedZoneId(
+                        selectedZoneId === zone.id ? null : zone.id
+                      )}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-4xl mb-3">⚡</div>
+                  <p>Aucune zone cristallisée</p>
+                  <p className="text-sm mt-1">
+                    Cristallisez une zone depuis le Board pour la voir ici
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="text-4xl mb-3">⚡</div>
-              <p>Aucune zone cristallisée</p>
-              <p className="text-sm mt-1">
-                Cristallisez une zone depuis le Board pour la voir ici
-              </p>
+
+            {/* Contenu du projet sélectionné */}
+            <div>
+              <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                {selectedZone ? `Contenu de "${selectedZone.name}"` : 'Sélectionnez un projet'}
+              </h2>
+              
+              {selectedZone ? (
+                zoneElements.length > 0 ? (
+                  <div className="space-y-2">
+                    {zoneElements.map((element) => (
+                      <ElementListItem key={element.id} element={element} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                    <p>Aucun élément dans cette zone</p>
+                    <p className="text-sm mt-1">
+                      Ajoutez des éléments dans la zone sur le Board
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  <p>← Cliquez sur un projet pour voir son contenu</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       );
     }
