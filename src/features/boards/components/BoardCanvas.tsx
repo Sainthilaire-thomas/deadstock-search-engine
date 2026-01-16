@@ -24,6 +24,8 @@ import {
   type ResizeHandle,
 } from './canvas';
 
+import { isZoneOrdered } from '../domain/types';
+import { isElementInZone } from '../utils/zoneUtils';
 import type {
   BoardElement,
   BoardZone,
@@ -224,7 +226,17 @@ export function BoardCanvas() {
     }
   }, [clearSelection]);
 
-  const handleDoubleClick = useCallback((element: BoardElement) => {
+const handleDoubleClick = useCallback((element: BoardElement) => {
+    // Vérifier si l'élément est dans une zone commandée
+    const parentOrderedZone = zones.find(z => 
+      isZoneOrdered(z) && isElementInZone(element, z)
+    );
+
+    if (parentOrderedZone) {
+      toast.info('Cet élément fait partie d\'un projet commandé et ne peut pas être modifié.');
+      return;
+    }
+
     switch (element.elementType) {
       case 'note': setEditingElementId(element.id); break;
       case 'palette': setEditingPaletteId(element.id); break;
@@ -234,7 +246,7 @@ export function BoardCanvas() {
       case 'pattern': setEditingPatternId(element.id); setIsPatternModalOpen(true); break;
       case 'silhouette': setEditingSilhouetteId(element.id); setIsSilhouetteModalOpen(true); break;
     }
-  }, []);
+  }, [zones]);
 
   const handleZoneDoubleClick = useCallback((zone: BoardZone) => {
     setEditingZoneId(zone.id);

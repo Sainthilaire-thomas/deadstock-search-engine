@@ -76,7 +76,7 @@ export async function getBoard(
     throw elementsError;
   }
 
-  // Get zones
+ // Get zones
   const { data: zonesData, error: zonesError } = await supabase
     .from('board_zones')
     .select('*')
@@ -88,9 +88,41 @@ export async function getBoard(
     throw zonesError;
   }
 
+  // Get project statuses for crystallized zones
+  const linkedProjectIds = (zonesData || [])
+    .map((z) => z.linked_project_id)
+    .filter((id): id is string => id !== null);
+
+  let projectStatusMap: Record<string, string> = {};
+
+  if (linkedProjectIds.length > 0) {
+    const { data: projectsData, error: projectsError } = await supabase
+      .from('projects')
+      .select('id, status')
+      .in('id', linkedProjectIds);
+
+    if (projectsError) {
+      console.error('getBoard projects error:', projectsError);
+      // Non-blocking: continue without project statuses
+    } else if (projectsData) {
+      projectStatusMap = Object.fromEntries(
+        projectsData.map((p) => [p.id, p.status])
+      );
+    }
+  }
+
   const board = mapBoardFromRow(boardData as BoardRow);
   const elements = (elementsData || []).map((row) => mapElementFromRow(row as BoardElementRow));
-  const zones = (zonesData || []).map((row) => mapZoneFromRow(row as BoardZoneRow));
+  
+  // Map zones with project status
+  const zones = (zonesData || []).map((row) => {
+    const zoneRow = row as BoardZoneRow;
+    // Inject project status into the row before mapping
+    if (zoneRow.linked_project_id && projectStatusMap[zoneRow.linked_project_id]) {
+      zoneRow.linked_project_status = projectStatusMap[zoneRow.linked_project_id];
+    }
+    return mapZoneFromRow(zoneRow);
+  });
 
   return {
     ...board,

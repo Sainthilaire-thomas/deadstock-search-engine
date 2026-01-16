@@ -5,7 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { GripVertical, Sparkles, ExternalLink, X } from 'lucide-react';
-import { isZoneCrystallized } from '../domain/types';
+import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
 import type { BoardZone } from '../domain/types';
 
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -39,7 +39,8 @@ export function ZoneCard({
 }: ZoneCardProps) {
   const [editName, setEditName] = useState(zone.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isCrystallized = isZoneCrystallized(zone);
+    const isCrystallized = isZoneCrystallized(zone);
+  const isOrdered = isZoneOrdered(zone);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -217,8 +218,8 @@ export function ZoneCard({
         )}
       </div>
 
-      {/* Resize handles - plus discrets */}
-      {!isCrystallized && (
+      {/* Resize handles - plus discrets (masqués pour zones commandées) */}
+      {!isOrdered && (
         <>
           {/* Corners */}
           <div

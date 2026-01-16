@@ -11,7 +11,8 @@ import type { ElementType, BoardElement } from "@/features/boards/domain/types";
 import type { SearchResult } from "@/features/search/domain/types";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
 import { OrderForm } from "./OrderForm";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, FileText, Package, CheckCircle, Trophy } from "lucide-react";
+import type { ProjectStatus, BoardZone } from "@/features/boards/domain/types";
 
 interface JourneyClientWrapperProps {
   initialSearchData: SearchResult;
@@ -101,12 +102,12 @@ function ElementListItem({ element }: { element: BoardElement }) {
 }
 
 // Composant pour les zones cristallisées
-function CrystallizedZoneItem({ 
-  zone, 
+function CrystallizedZoneItem({
+  zone,
   isSelected,
-  onClick 
-}: { 
-  zone: { id: string; name: string; crystallizedAt: Date | null };
+  onClick
+}: {
+  zone: { id: string; name: string; crystallizedAt: Date | null; linkedProjectStatus?: ProjectStatus };
   isSelected?: boolean;
   onClick?: () => void;
 }) {
@@ -152,13 +153,78 @@ const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
     return elements.filter((el) => el.elementType === selectedType);
   }, [elements, selectedType]);
 
-  // Filtrer les zones cristallisées
+ // Filtrer les zones cristallisées
   const crystallizedZones = useMemo(() => {
     if (selectedType !== "zones") {
       return [];
     }
     return zones.filter((z) => z.crystallizedAt !== null);
   }, [zones, selectedType]);
+
+  // Configuration des colonnes par statut
+  const STATUS_COLUMNS = [
+    {
+      key: 'draft' as const,
+      title: 'Brouillons',
+      icon: FileText,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+      statuses: ['draft'],
+    },
+    {
+      key: 'ordered' as const,
+      title: 'Commandés',
+      icon: Package,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+      statuses: ['ordered', 'shipped'],
+    },
+    {
+      key: 'received' as const,
+      title: 'Reçus',
+      icon: CheckCircle,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-950/30',
+      statuses: ['received', 'in_production'],
+    },
+    {
+      key: 'completed' as const,
+      title: 'Terminés',
+      icon: Trophy,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+      statuses: ['completed'],
+    },
+  ];
+
+  // Grouper les zones par statut du projet
+  const zonesByStatus = useMemo(() => {
+    const grouped: Record<string, BoardZone[]> = {
+      draft: [],
+      ordered: [],
+      received: [],
+      completed: [],
+    };
+
+    crystallizedZones.forEach((zone) => {
+      const status = zone.linkedProjectStatus || 'draft';
+      
+      if (['draft', 'in_progress'].includes(status)) {
+        grouped.draft.push(zone);
+      } else if (['ordered', 'shipped'].includes(status)) {
+        grouped.ordered.push(zone);
+      } else if (['received', 'in_production'].includes(status)) {
+        grouped.received.push(zone);
+      } else if (status === 'completed') {
+        grouped.completed.push(zone);
+      } else {
+        // Par défaut, mettre dans brouillons
+        grouped.draft.push(zone);
+      }
+    });
+
+    return grouped;
+  }, [crystallizedZones]);
 
   // Éléments de la zone cristallisée sélectionnée
 const selectedZone = useMemo(() => {
@@ -238,7 +304,7 @@ const zoneElements = useMemo(() => {
       return renderDefaultContent();
     }
 
-   // Zones cristallisées
+   // Zones cristallisées - Vue par statut
     if (selectedType === "zones") {
       return (
         <div className="p-6">
@@ -251,78 +317,94 @@ const zoneElements = useMemo(() => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Liste des projets */}
-            <div>
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">Projets</h2>
-              {crystallizedZones.length > 0 ? (
-                <div className="space-y-2">
-                  {crystallizedZones.map((zone) => (
-                    <CrystallizedZoneItem 
-                      key={zone.id} 
-                      zone={zone}
-                      isSelected={selectedZoneId === zone.id}
-                      onClick={() => setSelectedZoneId(
-                        selectedZoneId === zone.id ? null : zone.id
+          {crystallizedZones.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="text-4xl mb-3">⚡</div>
+              <p>Aucune zone cristallisée</p>
+              <p className="text-sm mt-1">
+                Cristallisez une zone depuis le Board pour la voir ici
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {STATUS_COLUMNS.map((column) => {
+                const zonesInColumn = zonesByStatus[column.key];
+                const Icon = column.icon;
+
+                return (
+                  <div key={column.key} className="space-y-3">
+                    {/* Header colonne */}
+                    <div className={`${column.bgColor} rounded-lg p-3`}>
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-5 h-5 ${column.color}`} />
+                        <span className="font-medium">{column.title}</span>
+                        <span className="ml-auto text-sm text-muted-foreground">
+                          {zonesInColumn.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Liste des projets */}
+                    <div className="space-y-2 min-h-[100px]">
+                      {zonesInColumn.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">
+                          Aucun projet
+                        </p>
+                      ) : (
+                        zonesInColumn.map((zone) => (
+                          <CrystallizedZoneItem
+                            key={zone.id}
+                            zone={zone}
+                            isSelected={selectedZoneId === zone.id}
+                            onClick={() => setSelectedZoneId(
+                              selectedZoneId === zone.id ? null : zone.id
+                            )}
+                          />
+                        ))
                       )}
-                    />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Contenu du projet sélectionné */}
+          {selectedZone && (
+            <div className="border-t pt-6">
+              <h2 className="text-lg font-medium mb-4">
+                Contenu de &quot;{selectedZone.name}&quot;
+              </h2>
+
+              {zoneElements.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {zoneElements.map((element) => (
+                    <ElementListItem key={element.id} element={element} />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <div className="text-4xl mb-3">⚡</div>
-                  <p>Aucune zone cristallisée</p>
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  <p>Aucun élément dans cette zone</p>
                   <p className="text-sm mt-1">
-                    Cristallisez une zone depuis le Board pour la voir ici
+                    Ajoutez des éléments dans la zone sur le Board
                   </p>
                 </div>
               )}
-            </div>
 
-            {/* Contenu du projet sélectionné */}
-            <div>
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">
-                {selectedZone ? `Contenu de "${selectedZone.name}"` : 'Sélectionnez un projet'}
-              </h2>
-              
-              {selectedZone ? (
-                <>
-                  {zoneElements.length > 0 ? (
-                    <div className="space-y-2">
-                      {zoneElements.map((element) => (
-                        <ElementListItem key={element.id} element={element} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                      <p>Aucun élément dans cette zone</p>
-                      <p className="text-sm mt-1">
-                        Ajoutez des éléments dans la zone sur le Board
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Bouton Passer commande */}
-                  {selectedZone.linkedProjectId && (
-                    <div className="mt-6 pt-4 border-t">
-                      <button
-                        onClick={() => setIsOrderFormOpen(true)}
-                        className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <ShoppingCart className="w-5 h-5" />
-                        Passer commande
-                      </button>
-                    </div>
-                  )}
-                </>
-              
-              ) : (
-                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                  <p>← Cliquez sur un projet pour voir son contenu</p>
+              {/* Bouton Passer commande - uniquement pour les brouillons */}
+              {selectedZone.linkedProjectId && selectedZone.linkedProjectStatus === 'draft' && (
+                <div className="mt-6 pt-4 border-t">
+                  <button
+                    onClick={() => setIsOrderFormOpen(true)}
+                    className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    Passer commande
+                  </button>
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       );
     }

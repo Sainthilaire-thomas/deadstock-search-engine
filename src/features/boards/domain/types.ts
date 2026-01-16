@@ -6,6 +6,17 @@
 
 export type BoardStatus = 'draft' | 'active' | 'archived';
 
+// Project status (pour zones cristallisées liées à un projet)
+export type ProjectStatus =
+  | 'draft'
+  | 'in_progress'
+  | 'ordered'
+  | 'shipped'
+  | 'received'
+  | 'in_production'
+  | 'completed'
+  | 'archived';
+
 // UPDATED Sprint 5 - Ajout video et link
 export type ElementType = 'textile' | 'palette' | 'inspiration' | 'calculation' | 'note' | 'video' | 'link' | 'pdf' | 'pattern' | 'silhouette';
 
@@ -62,9 +73,10 @@ export interface BoardZone {
   positionY: number;
   width: number;
   height: number;
-  // Crystallization fields
+    // Crystallization fields
   crystallizedAt: Date | null;
   linkedProjectId: string | null;
+  linkedProjectStatus?: ProjectStatus;
   createdAt: Date;
 }
 
@@ -371,6 +383,7 @@ export interface BoardZoneRow {
   // Crystallization columns
   crystallized_at: string | null;
   linked_project_id: string | null;
+  linked_project_status?: string;
   created_at: string;
 }
 
@@ -416,9 +429,10 @@ export function mapZoneFromRow(row: BoardZoneRow): BoardZone {
     positionY: row.position_y,
     width: row.width,
     height: row.height,
-    // Crystallization mapping
+        // Crystallization mapping
     crystallizedAt: row.crystallized_at ? new Date(row.crystallized_at) : null,
     linkedProjectId: row.linked_project_id,
+    linkedProjectStatus: row.linked_project_status as ProjectStatus | undefined,
     createdAt: new Date(row.created_at),
   };
 }
@@ -455,4 +469,13 @@ export interface ActionResult<T> {
 
 export function isZoneCrystallized(zone: BoardZone): boolean {
   return zone.crystallizedAt !== null;
+}
+
+export function isZoneOrdered(zone: BoardZone): boolean {
+  // Une zone est "commandée" si elle est cristallisée ET le projet lié n'est plus en brouillon
+  return (
+    zone.crystallizedAt !== null &&
+    zone.linkedProjectStatus !== undefined &&
+    zone.linkedProjectStatus !== 'draft'
+  );
 }
