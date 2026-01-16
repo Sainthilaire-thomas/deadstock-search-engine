@@ -13,6 +13,9 @@ export const metadata = {
   description: 'Gérez vos boards créatifs',
 };
 
+// Force dynamic rendering (requires authentication)
+export const dynamic = 'force-dynamic';
+
 // Server Action pour créer un board et rediriger
 async function createAndRedirect() {
   'use server';
