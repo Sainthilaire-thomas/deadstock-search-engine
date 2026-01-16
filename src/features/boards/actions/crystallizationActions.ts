@@ -1,5 +1,4 @@
 ﻿// src/features/boards/actions/crystallizationActions.ts
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -7,7 +6,8 @@ import { requireUserId } from '@/lib/auth/getAuthUser';
 import { zonesRepository } from '../infrastructure/zonesRepository';
 import { elementsRepository } from '../infrastructure/elementsRepository';
 import { createProject as createProjectInDb } from '@/features/journey/infrastructure/projectsRepository';
-import type { BoardZone, BoardElement } from '../domain/types';
+import { isElementInZone } from '../utils/zoneUtils';
+import type { BoardZone } from '../domain/types';
 import type { ActionResult } from '../domain/types';
 import type { ProjectType } from '@/features/journey/domain/types';
 
@@ -19,7 +19,7 @@ export interface CrystallizeZoneInput {
   zoneId: string;
   boardId: string;
   projectName: string;
-  projectType: ProjectType;  // ← Changé
+  projectType: ProjectType;
   client?: string;
   deadline?: string;
   budgetMin?: number;
@@ -88,26 +88,9 @@ export async function crystallizeZoneAction(
     };
   } catch (error) {
     console.error('crystallizeZoneAction error:', error);
-    return { 
-      success: false, 
-      error: 'Impossible de cristalliser la zone' 
+    return {
+      success: false,
+      error: 'Impossible de cristalliser la zone'
     };
   }
-}
-
-// ============================================
-// HELPER: Check if element is in zone
-// ============================================
-
-function isElementInZone(element: BoardElement, zone: BoardZone): boolean {
-  // Un élément est dans une zone si son centre est dans les limites de la zone
-  const elementCenterX = element.positionX + (element.width || 100) / 2;
-  const elementCenterY = element.positionY + (element.height || 80) / 2;
-
-  return (
-    elementCenterX >= zone.positionX &&
-    elementCenterX <= zone.positionX + zone.width &&
-    elementCenterY >= zone.positionY &&
-    elementCenterY <= zone.positionY + zone.height
-  );
 }

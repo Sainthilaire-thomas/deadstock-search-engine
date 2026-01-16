@@ -22,6 +22,8 @@ import { CrystallizationDialog } from './CrystallizationDialog';
 import { PaletteEditor } from './PaletteEditor';
 import { PatternImportModal } from '@/features/pattern/components/PatternImportModal';
 import { getFavoritesAction } from '@/features/favorites/actions/favoriteActions';
+import { getElementsInZone } from '../utils/zoneUtils';
+import { bulkMoveElementsAction } from '../actions/elementActions';
 
 // Sprint 5 imports
 import { ImageUploadModal } from './ImageUploadModal';
@@ -312,12 +314,18 @@ export function BoardCanvas() {
     elementStartY: number;
   } | null>(null);
 
-  const zoneDragRef = useRef<{
+ const zoneDragRef = useRef<{
     zoneId: string;
     startX: number;
     startY: number;
     zoneStartX: number;
     zoneStartY: number;
+    // Pour le déplacement solidaire des éléments (zone cristallisée)
+    containedElements?: Array<{
+      id: string;
+      startX: number;
+      startY: number;
+    }>;
   } | null>(null);
 
   const zoneResizeRef = useRef<{
@@ -726,10 +734,22 @@ const handleDoubleClick = (element: BoardElement) => {
   // ZONE DRAG
   // ============================================
 
-  const handleZoneMouseDown = (e: React.MouseEvent, zone: BoardZone) => {
+const handleZoneMouseDown = (e: React.MouseEvent, zone: BoardZone) => {
     if (e.button !== 0) return;
     e.stopPropagation();
     selectZone(zone.id);
+
+    // Si la zone est cristallisée, capturer les éléments contenus pour les déplacer ensemble
+    let containedElements: Array<{ id: string; startX: number; startY: number }> | undefined;
+    
+    if (zone.crystallizedAt && zone.linkedProjectId) {
+      const elementsInZone = getElementsInZone(elements, zone);
+      containedElements = elementsInZone.map(el => ({
+        id: el.id,
+        startX: el.positionX,
+        startY: el.positionY,
+      }));
+    }
 
     zoneDragRef.current = {
       zoneId: zone.id,
@@ -737,29 +757,59 @@ const handleDoubleClick = (element: BoardElement) => {
       startY: e.clientY,
       zoneStartX: zone.positionX,
       zoneStartY: zone.positionY,
+      containedElements,
     };
     setDragging(true);
-
     document.addEventListener('mousemove', handleZoneMouseMove);
     document.addEventListener('mouseup', handleZoneMouseUp);
   };
 
-  const handleZoneMouseMove = (e: MouseEvent) => {
+const handleZoneMouseMove = (e: MouseEvent) => {
     if (!zoneDragRef.current) return;
     const dx = e.clientX - zoneDragRef.current.startX;
     const dy = e.clientY - zoneDragRef.current.startY;
     const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
     const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
 
+    // Mettre à jour la position de la zone
     setDragPosition({ type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY });
+
+    // Si zone cristallisée, déplacer aussi les éléments contenus (mise à jour visuelle)
+    if (zoneDragRef.current.containedElements) {
+      zoneDragRef.current.containedElements.forEach(el => {
+        const elNewX = Math.max(0, el.startX + dx);
+        const elNewY = Math.max(0, el.startY + dy);
+        moveElementLocal(el.id, elNewX, elNewY);
+      });
+    }
   };
 
-  const handleZoneMouseUp = () => {
+const handleZoneMouseUp = async () => {
     const pos = dragPositionRef.current;
+    const dragData = zoneDragRef.current;
 
     if (pos && pos.type === 'zone') {
       moveZoneLocal(pos.id, pos.x, pos.y);
       saveZonePosition(pos.id, pos.x, pos.y);
+
+      // Si zone cristallisée, sauvegarder aussi les positions des éléments
+      if (dragData?.containedElements && dragData.containedElements.length > 0) {
+        const dx = pos.x - dragData.zoneStartX;
+        const dy = pos.y - dragData.zoneStartY;
+
+        const elementMoves = dragData.containedElements.map(el => ({
+          elementId: el.id,
+          positionX: el.startX + dx,
+          positionY: el.startY + dy,
+        }));
+
+        // Sauvegarder les nouvelles positions en bulk
+        try {
+          await bulkMoveElementsAction(elementMoves);
+        } catch (error) {
+          console.error('Erreur sauvegarde positions éléments:', error);
+        }
+      }
     }
 
     setDragPosition(null);
