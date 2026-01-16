@@ -39,7 +39,7 @@ export function FavoritesGrid({ favorites }: FavoritesGridProps) {
               <FavoriteButton textileId={textile.id} />
             </div>
 
-            <Link href={'/favorites/' + textile.id}>
+            <Link href={'/textiles/' + textile.id}>
               <Card className='overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full'>
                 <div className='relative h-48 bg-muted'>
                   {textile.image_url ? (
