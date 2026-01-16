@@ -158,7 +158,7 @@ export function BoardCanvas() {
   // DRAG STATE - Local pour fluidité maximale
   // ============================================
 
-  const [dragPosition, setDragPosition] = useState<{
+ const [dragPosition, setDragPosition] = useState<{
     type: 'element' | 'zone';
     id: string;
     x: number;
@@ -167,6 +167,10 @@ export function BoardCanvas() {
 
   const dragPositionRef = useRef(dragPosition);
   dragPositionRef.current = dragPosition;
+
+// Positions temporaires des éléments lors du drag d'une zone cristallisée
+  const [zoneDragElementPositions, setZoneDragElementPositions] = useState<Record<string, { x: number; y: number }>
+  >({});
 
   const [resizeState, setResizeState] = useState<{
     id: string;
@@ -774,19 +778,32 @@ const handleZoneMouseMove = (e: MouseEvent) => {
     // Mettre à jour la position de la zone
     setDragPosition({ type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY });
 
-    // Si zone cristallisée, déplacer aussi les éléments contenus (mise à jour visuelle)
-    if (zoneDragRef.current.containedElements) {
+    // Si zone cristallisée, calculer les nouvelles positions des éléments (visuel uniquement)
+    if (zoneDragRef.current.containedElements && zoneDragRef.current.containedElements.length > 0) {
+      const newPositions: Record<string, { x: number; y: number }> = {};
       zoneDragRef.current.containedElements.forEach(el => {
-        const elNewX = Math.max(0, el.startX + dx);
-        const elNewY = Math.max(0, el.startY + dy);
-        moveElementLocal(el.id, elNewX, elNewY);
+        newPositions[el.id] = {
+          x: Math.max(0, el.startX + dx),
+          y: Math.max(0, el.startY + dy),
+        };
       });
+      setZoneDragElementPositions(newPositions);
     }
   };
 
-const handleZoneMouseUp = async () => {
+const handleZoneMouseUp = () => {
+    // IMPORTANT: Cleanup immédiat AVANT toute opération async
+    document.removeEventListener('mousemove', handleZoneMouseMove);
+    document.removeEventListener('mouseup', handleZoneMouseUp);
+
     const pos = dragPositionRef.current;
     const dragData = zoneDragRef.current;
+
+    // Reset des states immédiatement
+    setDragPosition(null);
+    setZoneDragElementPositions({});
+    zoneDragRef.current = null;
+    setDragging(false);
 
     if (pos && pos.type === 'zone') {
       moveZoneLocal(pos.id, pos.x, pos.y);
@@ -803,20 +820,17 @@ const handleZoneMouseUp = async () => {
           positionY: el.startY + dy,
         }));
 
-        // Sauvegarder les nouvelles positions en bulk
-        try {
-          await bulkMoveElementsAction(elementMoves);
-        } catch (error) {
+        // Mettre à jour le state local immédiatement
+        elementMoves.forEach(move => {
+          moveElementLocal(move.elementId, move.positionX, move.positionY);
+        });
+
+        // Sauvegarder les nouvelles positions en bulk (async, fire-and-forget)
+        bulkMoveElementsAction(elementMoves).catch(error => {
           console.error('Erreur sauvegarde positions éléments:', error);
-        }
+        });
       }
     }
-
-    setDragPosition(null);
-    zoneDragRef.current = null;
-    setDragging(false);
-    document.removeEventListener('mousemove', handleZoneMouseMove);
-    document.removeEventListener('mouseup', handleZoneMouseUp);
   };
 
   // ============================================
@@ -991,12 +1005,17 @@ const handleZoneMouseUp = async () => {
               );
             })}
 
-            {/* Éléments */}
+           {/* Éléments */}
             {elements.map((element) => {
               const pos = dragPosition;
-              const position = (pos?.type === 'element' && pos.id === element.id)
+              // Position pendant drag individuel
+              const individualDragPos = (pos?.type === 'element' && pos.id === element.id)
                 ? { x: pos.x, y: pos.y }
-                : { x: element.positionX, y: element.positionY };
+                : null;
+              // Position pendant drag de zone cristallisée
+              const zoneDragPos = zoneDragElementPositions[element.id];
+              // Position finale
+              const position = individualDragPos || zoneDragPos || { x: element.positionX, y: element.positionY };
 
               return (
                 <ElementCard
