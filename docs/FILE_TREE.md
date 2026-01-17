@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-17 12:59:55
+**Generated:** 2026-01-17 17:19:34
 
 ---
 
@@ -8,11 +8,11 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 398 |
+| Total Files | 399 |
 | Total Directories | 136 |
 | TypeScript Files (.ts/.tsx) | 225 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 127 |
+| Markdown Files (.md) | 128 |
 | SQL Files (.sql) | 28 |
 | JSON Files (.json) | 5 |
 | CSS Files (.css) | 2 |
@@ -174,6 +174,7 @@ deadstock-search-engine/
 |   |   |-- SPEC_MODULE_RECHERCHE_DESIGNER.md
 |   |   |-- SPEC_PATTERN_IMPORT.md
 |   |   |-- SPRINT_CANVAS_IMPROVEMENTS.md
+|   |   |-- SPRINT_CANVAS_IMPROVEMENTS_V2.md
 |   |   |-- SPRINT_LANDING_AUTH.md
 |   |   |-- SPRINT_LANDING_AUTH_V2.md
 |   |   |-- SPRINT_LANDING_AUTH_V3.md
@@ -835,7 +836,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-17 13:00:08
+**Date:** 2026-01-17 17:19:43
 
 **Command to regenerate:**
 ```powershell

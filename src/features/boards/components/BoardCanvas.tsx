@@ -3,16 +3,18 @@
 
 'use client';
 
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { Layout, MousePointer } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useBoard } from '../context/BoardContext';
 import { useContextualSearchPanel } from '../context/ContextualSearchContext';
+import { useTransform, ZOOM_MIN, ZOOM_MAX } from '../context/TransformContext';
 import { BoardToolbar } from './BoardToolbar';
 import { ZoneCard } from './ZoneCard';
 import { ElementCard } from './ElementCard';
 import { ContextualSearchPanel } from './ContextualSearchPanel';
+import { ZoomControls } from './ZoomControls';
 
 import {
   useElementDrag,
@@ -82,9 +84,97 @@ export function BoardCanvas() {
     addElement,
   } = useBoard();
 
-  const { state: panelState } = useContextualSearchPanel();
+const { state: panelState } = useContextualSearchPanel();
+const { transform, setScale, zoomToFit } = useTransform();
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+const canvasRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // ============================================
+  // PAN MODE STATE (Space+Drag)
+  // ============================================
+  const [isPanMode, setIsPanMode] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+
+  // ============================================
+  // ZOOM HANDLER (Ctrl+Scroll)
+  // ============================================
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, transform.scale + delta));
+      // Arrondir à 2 décimales pour éviter les erreurs de floating point
+      setScale(Math.round(newScale * 100) / 100);
+    }
+  }, [transform.scale, setScale]);
+
+  // Attacher l'event wheel avec passive: false pour permettre preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+      return () => canvas.removeEventListener('wheel', handleWheel);
+    }
+  }, [handleWheel]);
+
+  // ============================================
+  // PAN MODE HANDLERS (Space+Drag)
+  // ============================================
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat && 
+          !(e.target instanceof HTMLInputElement) && 
+          !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        setIsPanMode(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsPanMode(false);
+        setIsPanning(false);
+        panStartRef.current = null;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  const handlePanMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isPanMode && canvasRef.current) {
+      e.preventDefault();
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: canvasRef.current.scrollLeft,
+        scrollTop: canvasRef.current.scrollTop,
+      };
+    }
+  }, [isPanMode]);
+
+  const handlePanMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isPanning && panStartRef.current && canvasRef.current) {
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      canvasRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+      canvasRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+    }
+  }, [isPanning]);
+
+  const handlePanMouseUp = useCallback(() => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  }, []);
 
   // ============================================
   // EDITING STATE
@@ -215,13 +305,16 @@ export function BoardCanvas() {
   }, [addNote, addPalette, addZone]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    // Ne pas traiter le clic si on est en mode pan
+    if (isPanMode) return;
+    
     if (e.target === canvasRef.current) {
       clearSelection();
       setEditingElementId(null);
       setEditingZoneId(null);
       setEditingPaletteId(null);
     }
-  }, [clearSelection]);
+ }, [clearSelection, isPanMode]);
 
 const handleDoubleClick = useCallback((element: BoardElement) => {
     // Vérifier si l'élément est dans une zone commandée
@@ -377,8 +470,11 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
     ...elements.map((e) => ({ x: e.positionX + (e.width || 200), y: e.positionY + (e.height || 150) })),
     ...zones.map((z) => ({ x: z.positionX + z.width, y: z.positionY + z.height })),
   ];
-  const canvasWidth = Math.max(1200, ...allPositions.map((p) => p.x + 100));
-  const canvasHeight = Math.max(800, ...allPositions.map((p) => p.y + 100));
+ const baseCanvasWidth = Math.max(1200, ...allPositions.map((p) => p.x + 100));
+  const baseCanvasHeight = Math.max(800, ...allPositions.map((p) => p.y + 100));
+  // Dimensions ajustées pour le zoom
+  const canvasWidth = baseCanvasWidth * transform.scale;
+  const canvasHeight = baseCanvasHeight * transform.scale;
   const isEmpty = elements.length === 0 && zones.length === 0;
   const showZones = viewMode === 'project';
 
@@ -394,10 +490,16 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
        
       />
 
-      <div
+     <div
         ref={canvasRef}
-        className="flex-1 relative overflow-auto bg-gray-100 dark:bg-gray-700"
+        className={`flex-1 relative overflow-auto bg-gray-100 dark:bg-gray-700 ${
+          isPanMode ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''
+        }`}
         onClick={handleCanvasClick}
+        onMouseDown={handlePanMouseDown}
+        onMouseMove={handlePanMouseMove}
+        onMouseUp={handlePanMouseUp}
+        onMouseLeave={handlePanMouseUp}
       >
         {isEmpty ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -410,7 +512,25 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             </p>
           </div>
         ) : (
-          <div className="relative" style={{ width: canvasWidth, height: canvasHeight, minWidth: '100%', minHeight: '100%' }}>
+          <div 
+            className="relative" 
+            style={{ 
+              width: canvasWidth, 
+              height: canvasHeight, 
+              minWidth: '100%', 
+              minHeight: '100%' 
+            }}
+          >
+            {/* Contenu zoomable */}
+            <div
+              ref={contentRef}
+              className="absolute origin-top-left"
+              style={{
+                transform: `scale(${transform.scale})`,
+                width: baseCanvasWidth,
+                height: baseCanvasHeight,
+              }}
+            >
             {/* Zones */}
             {zones.map((zone) => {
               const isDragging = zoneDragPosition?.id === zone.id;
@@ -472,6 +592,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                 />
               );
             })}
+            </div>
+            {/* Fin du contenu zoomable */}
           </div>
         )}
 
@@ -482,6 +604,30 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             Cliquer • Glisser • Double-clic éditer • Suppr supprimer
           </div>
         )}
+       {/* Zoom Controls */}
+        <ZoomControls
+          onRequestFit={() => {
+            if (elements.length === 0 && zones.length === 0) return;
+            
+            const allItems = [
+              ...elements.map(e => ({ x: e.positionX, y: e.positionY, w: e.width || 200, h: e.height || 150 })),
+              ...zones.map(z => ({ x: z.positionX, y: z.positionY, w: z.width, h: z.height })),
+            ];
+            
+            const contentBounds = {
+              minX: Math.min(...allItems.map(i => i.x)),
+              minY: Math.min(...allItems.map(i => i.y)),
+              maxX: Math.max(...allItems.map(i => i.x + i.w)),
+              maxY: Math.max(...allItems.map(i => i.y + i.h)),
+              width: 0,
+              height: 0,
+            };
+            contentBounds.width = contentBounds.maxX - contentBounds.minX;
+            contentBounds.height = contentBounds.maxY - contentBounds.minY;
+            
+            zoomToFit(contentBounds);
+          }}
+        />
 
         {/* View mode indicator */}
         <div className="absolute top-4 right-4 text-xs px-2 py-1 rounded bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
