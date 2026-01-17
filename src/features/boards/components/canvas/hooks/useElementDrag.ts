@@ -20,6 +20,7 @@ interface ElementDragRef {
 }
 
 interface UseElementDragProps {
+  scale?: number;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   moveElementLocal: (id: string, x: number, y: number) => void;
@@ -35,6 +36,7 @@ interface UseElementDragReturn {
 }
 
 export function useElementDrag({
+  scale = 1,
   onDragStart,
   onDragEnd,
   moveElementLocal,
@@ -49,11 +51,11 @@ export function useElementDrag({
 
   const elementDragRef = useRef<ElementDragRef | null>(null);
 
-  const handleElementMouseMove = useCallback((e: MouseEvent) => {
+ const handleElementMouseMove = useCallback((e: MouseEvent) => {
     if (!elementDragRef.current) return;
-    
-    const dx = e.clientX - elementDragRef.current.startX;
-    const dy = e.clientY - elementDragRef.current.startY;
+    // Diviser par scale pour compenser le zoom
+    const dx = (e.clientX - elementDragRef.current.startX) / scale;
+    const dy = (e.clientY - elementDragRef.current.startY) / scale;
     const newX = Math.max(0, elementDragRef.current.elementStartX + dx);
     const newY = Math.max(0, elementDragRef.current.elementStartY + dy);
 
@@ -63,7 +65,7 @@ export function useElementDrag({
       x: newX, 
       y: newY 
     });
-  }, []);
+ }, [scale]);
 
   const handleElementMouseUp = useCallback(() => {
     const pos = dragPositionRef.current;

@@ -221,7 +221,8 @@ const canvasRef = useRef<HTMLDivElement>(null);
   // ============================================
   // HOOKS
   // ============================================
-  const { dragPosition: elementDragPosition, handleElementMouseDown } = useElementDrag({
+const { dragPosition: elementDragPosition, handleElementMouseDown } = useElementDrag({
+    scale: transform.scale,
     moveElementLocal,
     saveElementPosition,
     toggleElementSelection,
@@ -229,14 +230,15 @@ const canvasRef = useRef<HTMLDivElement>(null);
     setDragging,
   });
 
-  const { 
-    dragPosition: zoneDragPosition, 
-    zoneDragElementPositions, 
+const {
+    dragPosition: zoneDragPosition,
+    zoneDragElementPositions,
     draggingZoneId,
     draggingElementIds,
     draggingElementCount,
-    handleZoneMouseDown 
+    handleZoneMouseDown
   } = useZoneDrag({
+    scale: transform.scale,
     elements,
     moveZoneLocal,
     saveZonePosition,
@@ -245,7 +247,8 @@ const canvasRef = useRef<HTMLDivElement>(null);
     setDragging,
   });
 
-  const { resizeState, handleZoneResizeStart } = useZoneResize({
+const { resizeState, handleZoneResizeStart } = useZoneResize({
+    scale: transform.scale,
     moveZoneLocal,
     saveZonePosition,
     resizeZoneLocal,

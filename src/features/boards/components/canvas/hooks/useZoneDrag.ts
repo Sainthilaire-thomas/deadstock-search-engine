@@ -28,6 +28,7 @@ interface ZoneDragRef {
 }
 
 interface UseZoneDragProps {
+  scale?: number;
   elements: BoardElement[];
   moveZoneLocal: (id: string, x: number, y: number) => void;
   saveZonePosition: (id: string, x: number, y: number) => Promise<void>;
@@ -46,6 +47,7 @@ interface UseZoneDragReturn {
 }
 
 export function useZoneDrag({
+  scale = 1,
   elements,
   moveZoneLocal,
   saveZonePosition,
@@ -66,11 +68,12 @@ export function useZoneDrag({
 
   const zoneDragRef = useRef<ZoneDragRef | null>(null);
 
-  const handleZoneMouseMove = useCallback((e: MouseEvent) => {
+const handleZoneMouseMove = useCallback((e: MouseEvent) => {
     if (!zoneDragRef.current) return;
 
-    const dx = e.clientX - zoneDragRef.current.startX;
-    const dy = e.clientY - zoneDragRef.current.startY;
+    // Diviser par scale pour compenser le zoom
+    const dx = (e.clientX - zoneDragRef.current.startX) / scale;
+    const dy = (e.clientY - zoneDragRef.current.startY) / scale;
     const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
     const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
 
@@ -78,8 +81,8 @@ export function useZoneDrag({
 
     // Ghost Mode: on ne met plus à jour zoneDragElementPositions pendant le drag
     // Les éléments sont masqués, pas besoin de calculer leurs positions
-  }, []);
-
+  }, [scale]);
+  
   const handleZoneMouseUp = useCallback(() => {
     // Cleanup immédiat AVANT toute opération async
     document.removeEventListener('mousemove', handleZoneMouseMove);

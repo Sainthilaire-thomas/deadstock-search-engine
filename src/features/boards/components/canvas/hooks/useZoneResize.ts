@@ -29,6 +29,7 @@ interface ZoneResizeRef {
 }
 
 interface UseZoneResizeProps {
+  scale?: number;
   moveZoneLocal: (id: string, x: number, y: number) => void;
   saveZonePosition: (id: string, x: number, y: number) => Promise<void>;
   resizeZoneLocal: (id: string, width: number, height: number) => void;
@@ -43,6 +44,7 @@ interface UseZoneResizeReturn {
 }
 
 export function useZoneResize({
+  scale = 1,
   moveZoneLocal,
   saveZonePosition,
   resizeZoneLocal,
@@ -56,12 +58,13 @@ export function useZoneResize({
 
   const zoneResizeRef = useRef<ZoneResizeRef | null>(null);
 
-  const handleZoneResizeMove = useCallback((e: MouseEvent) => {
+const handleZoneResizeMove = useCallback((e: MouseEvent) => {
     if (!zoneResizeRef.current) return;
 
     const ref = zoneResizeRef.current;
-    const dx = e.clientX - ref.startX;
-    const dy = e.clientY - ref.startY;
+    // Diviser par scale pour compenser le zoom
+    const dx = (e.clientX - ref.startX) / scale;
+    const dy = (e.clientY - ref.startY) / scale;
 
     let newX = ref.zoneStartX;
     let newY = ref.zoneStartY;
@@ -92,7 +95,7 @@ export function useZoneResize({
       width: newWidth,
       height: newHeight,
     });
-  }, []);
+   }, [scale]);
 
   const handleZoneResizeEnd = useCallback(() => {
     const resize = resizeStateRef.current;
