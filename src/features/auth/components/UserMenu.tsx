@@ -50,8 +50,18 @@ export function UserMenu() {
     : profile.email[0].toUpperCase();
 
   const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/";
+    console.log("🔴 SignOut clicked");
+    try {
+      await signOut();
+      console.log("🔴 SignOut success, redirecting...");
+      window.location.href = "/";
+    } catch (error) {
+      console.error("🔴 SignOut error:", error);
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    window.location.href = path;
   };
 
   return (
@@ -91,18 +101,36 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => window.location.href = "/settings"}>
+        <DropdownMenuItem 
+          onSelect={(e) => {
+            e.preventDefault();
+            handleNavigation("/settings");
+          }}
+          className="cursor-pointer"
+        >
           <Settings className="mr-2 h-4 w-4" />
           Paramètres
         </DropdownMenuItem>
         {profile.role === "admin" && (
-          <DropdownMenuItem onClick={() => window.location.href = "/admin"}>
+          <DropdownMenuItem 
+            onSelect={(e) => {
+              e.preventDefault();
+              handleNavigation("/admin");
+            }}
+            className="cursor-pointer"
+          >
             <User className="mr-2 h-4 w-4" />
             Administration
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+        <DropdownMenuItem 
+          onSelect={(e) => {
+            e.preventDefault();
+            handleSignOut();
+          }} 
+          className="text-red-600 cursor-pointer"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Déconnexion
         </DropdownMenuItem>
