@@ -1,7 +1,7 @@
 // src/app/page.tsx
 import Link from "next/link";
 import { ArrowRight, Check, Layers, Search, Sparkles, Timer, Shield, Zap, Heart, FileText } from "lucide-react";
-
+import { LandingHeader } from "@/features/auth/components/LandingHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,43 +10,8 @@ import { Separator } from "@/components/ui/separator";
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      {/* Top nav */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/90">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-              <span className="text-sm font-bold">DS</span>
-            </div>
-            <span className="hidden text-sm font-semibold sm:inline">Deadstock Search Engine</span>
-          </Link>
-
-          <nav className="hidden items-center gap-6 text-sm sm:flex">
-            <a href="#solution" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
-              Solution
-            </a>
-            <a href="#features" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
-              Fonctionnalités
-            </a>
-            <a href="#how" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
-              Comment ça marche
-            </a>
-            <Link href="/pricing" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
-              Tarifs
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden sm:inline-flex">
-              <Button variant="ghost">Connexion</Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="gap-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100">
-                Commencer gratuitement <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+       {/* Top nav */}
+      <LandingHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-linear-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950">
