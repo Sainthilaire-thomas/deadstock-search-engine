@@ -17,6 +17,7 @@ interface ZoneCardProps {
   isVisible?: boolean;
   isDragging?: boolean;
   ghostElementCount?: number;
+  style?: React.CSSProperties;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
@@ -33,6 +34,7 @@ export const ZoneCard = React.memo(function ZoneCard({
   isVisible = true,
   isDragging = false,
   ghostElementCount = 0,
+  style,
   onMouseDown,
   onDoubleClick,
   onResizeStart,
@@ -95,12 +97,13 @@ export const ZoneCard = React.memo(function ZoneCard({
         }
         rounded
       `}
-      style={{
+       style={{
         left: zone.positionX,
         top: zone.positionY,
         width: zone.width,
         height: zone.height,
         zIndex: isSelected ? 5 : 1,
+        ...style,
       }}
     >
       {/* Bouton × pour supprimer - visible au hover, sauf si cristallisée */}

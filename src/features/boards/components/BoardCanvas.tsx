@@ -27,6 +27,9 @@ import {
 } from './canvas';
 
 import { isZoneOrdered } from '../domain/types';
+import { AutoArrangeDialog, type AutoArrangeDialogResult } from './AutoArrangeDialog';
+import { autoArrangeByPhase, calculatePhaseBounds, type ArrangeOptions, type PhaseBounds } from '../utils/autoArrange';
+import { PhaseColumns } from './PhaseColumns';
 import { isElementInZone } from '../utils/zoneUtils';
 import type {
   BoardElement,
@@ -196,11 +199,20 @@ const canvasRef = useRef<HTMLDivElement>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [isSilhouetteModalOpen, setIsSilhouetteModalOpen] = useState(false);
 
-  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+ const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
   const [editingPatternId, setEditingPatternId] = useState<string | null>(null);
   const [editingSilhouetteId, setEditingSilhouetteId] = useState<string | null>(null);
+
+// Auto-arrange state (Sprint P2)
+  const [showAutoArrangeDialog, setShowAutoArrangeDialog] = useState(false);
+  const [isArranging, setIsArranging] = useState(false);
+  const [arrangeTargets, setArrangeTargets] = useState<Map<string, { x: number; y: number }> | null>(null);
+  
+  // Phase columns state (Sprint P2.5)
+  const [phaseBounds, setPhaseBounds] = useState<PhaseBounds[]>([]);
+  const [showPhaseColumns, setShowPhaseColumns] = useState(false);
 
   // ============================================
   // DERIVED STATE
@@ -461,11 +473,111 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
     setEditingPaletteId(null);
   }, [updateElement]);
 
-  const handleAddTextileFromFavorites = useCallback(async (elementData: TextileElementData, name: string) => {
+ const handleAddTextileFromFavorites = useCallback(async (elementData: TextileElementData, name: string) => {
     const position = { x: 100 + Math.random() * 300, y: 100 + Math.random() * 200 };
     await addElement({ elementType: 'textile', elementData, positionX: position.x, positionY: position.y });
   }, [addElement]);
 
+// ============================================
+  // AUTO-ARRANGE HANDLER (Sprint P2)
+  // ============================================
+  const handleAutoArrange = useCallback(async (options: AutoArrangeDialogResult) => {
+    const { showPhaseColumns: shouldShowColumns, ...arrangeOptions } = options;
+    
+    // Calculer les nouvelles positions
+    const result = autoArrangeByPhase(elements, zones, arrangeOptions);
+    
+    if (result.elementMoves.length === 0 && result.zoneMoves.length === 0) {
+      return;
+    }
+    
+    // Créer la map des positions cibles pour l'animation
+    const targets = new Map<string, { x: number; y: number }>();
+    
+    // Éléments libres
+    for (const move of result.elementMoves) {
+      targets.set(move.id, { x: move.x, y: move.y });
+    }
+    
+    // Zones + calculer le delta pour les éléments à l'intérieur
+    for (const move of result.zoneMoves) {
+      const zone = zones.find(z => z.id === move.id);
+      if (!zone) continue;
+      
+      targets.set(`zone-${move.id}`, { x: move.x, y: move.y });
+      
+      // Calculer le delta de déplacement de la zone
+      const deltaX = move.x - zone.positionX;
+      const deltaY = move.y - zone.positionY;
+      
+      // Trouver les éléments dans cette zone et les déplacer avec elle
+      for (const element of elements) {
+        const inX = element.positionX >= zone.positionX && 
+                    element.positionX < zone.positionX + zone.width;
+        const inY = element.positionY >= zone.positionY && 
+                    element.positionY < zone.positionY + zone.height;
+        
+        if (inX && inY && !targets.has(element.id)) {
+          targets.set(element.id, {
+            x: element.positionX + deltaX,
+            y: element.positionY + deltaY,
+          });
+        }
+      }
+    }
+    
+    // Démarrer l'animation
+    setArrangeTargets(targets);
+    setIsArranging(true);
+    
+    // Attendre la fin de l'animation CSS (500ms)
+    await new Promise(resolve => setTimeout(resolve, 550));
+    
+    // Appliquer les positions finales et sauvegarder en DB
+    // D'abord les éléments libres
+    for (const move of result.elementMoves) {
+      moveElementLocal(move.id, move.x, move.y);
+      saveElementPosition(move.id, move.x, move.y);
+    }
+    
+    // Ensuite les zones
+    for (const move of result.zoneMoves) {
+      const zone = zones.find(z => z.id === move.id);
+      if (!zone) continue;
+      
+      moveZoneLocal(move.id, move.x, move.y);
+      saveZonePosition(move.id, move.x, move.y);
+      
+      // Déplacer les éléments dans la zone
+      const deltaX = move.x - zone.positionX;
+      const deltaY = move.y - zone.positionY;
+      
+      for (const element of elements) {
+        const inX = element.positionX >= zone.positionX && 
+                    element.positionX < zone.positionX + zone.width;
+        const inY = element.positionY >= zone.positionY && 
+                    element.positionY < zone.positionY + zone.height;
+        
+        if (inX && inY) {
+          const newX = element.positionX + deltaX;
+          const newY = element.positionY + deltaY;
+          moveElementLocal(element.id, newX, newY);
+          saveElementPosition(element.id, newX, newY);
+        }
+      }
+    }
+    
+    // Calculer et stocker les bounds des phases pour l'affichage des colonnes
+    const bounds = calculatePhaseBounds(result, elements, zones, arrangeOptions);
+    setPhaseBounds(bounds);
+    setShowPhaseColumns(shouldShowColumns);
+    
+    // Terminer l'animation
+    setIsArranging(false);
+    setArrangeTargets(null);
+    
+    toast.success('Éléments rangés par phase');
+  }, [elements, zones, moveElementLocal, saveElementPosition, moveZoneLocal, saveZonePosition]);
   // ============================================
   // RENDER CALCULATIONS
   // ============================================
@@ -486,11 +598,11 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
   // ============================================
   return (
     <div className="flex h-full">
-      <BoardToolbar
+        <BoardToolbar
         onAddElement={handleAddElement}
         onToggleViewMode={toggleViewMode}
         viewMode={viewMode}
-       
+        onAutoArrange={() => setShowAutoArrangeDialog(true)}
       />
 
      <div
@@ -524,7 +636,7 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
               minHeight: '100%' 
             }}
           >
-            {/* Contenu zoomable */}
+          {/* Contenu zoomable */}
             <div
               ref={contentRef}
               className="absolute origin-top-left"
@@ -534,11 +646,24 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                 height: baseCanvasHeight,
               }}
             >
+            {/* Phase Columns Background (Sprint P2.5) */}
+            <PhaseColumns
+              phaseBounds={phaseBounds}
+              canvasHeight={baseCanvasHeight}
+              isVisible={showPhaseColumns && viewMode === 'project'}
+            />
+            
             {/* Zones */}
             {zones.map((zone) => {
               const isDragging = zoneDragPosition?.id === zone.id;
               const isResizing = resizeState?.id === zone.id;
-              const position = isDragging
+              
+              // Animation auto-arrange (Sprint P2)
+              const arrangeTarget = isArranging ? arrangeTargets?.get(`zone-${zone.id}`) : null;
+              
+              const position = arrangeTarget
+                ? { x: arrangeTarget.x, y: arrangeTarget.y }
+                : isDragging
                 ? { x: zoneDragPosition.x, y: zoneDragPosition.y }
                 : isResizing
                 ? { x: resizeState.x, y: resizeState.y }
@@ -551,11 +676,14 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
               const isBeingDragged = draggingZoneId === zone.id;
               const ghostElementCount = isBeingDragged ? draggingElementCount : 0;
 
-              return (
+             return (
                 <ZoneCard
                   key={zone.id}
                   zone={{ ...zone, positionX: position.x, positionY: position.y, width: size.width, height: size.height }}
                   isSelected={selectedZoneId === zone.id}
+                  style={isArranging && arrangeTarget ? {
+                    transition: 'left 0.5s ease-out, top 0.5s ease-out',
+                  } : undefined}
                   isEditing={editingZoneId === zone.id}
                   isVisible={showZones}
                   isDragging={isBeingDragged}
@@ -571,15 +699,20 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
               );
             })}
 
-          {/* Elements */}
+      {/* Elements */}
             {elements.map((element) => {
               // Ghost Mode: masquer les éléments pendant le drag de zone
               const isHiddenDuringZoneDrag = draggingElementIds.includes(element.id);
               if (isHiddenDuringZoneDrag) return null;
 
+              // Animation auto-arrange (Sprint P2)
+              const arrangeTarget = isArranging ? arrangeTargets?.get(element.id) : null;
+
               const individualDragPos = elementDragPosition?.id === element.id ? { x: elementDragPosition.x, y: elementDragPosition.y } : null;
               const zoneDragPos = zoneDragElementPositions[element.id];
-              const position = individualDragPos || zoneDragPos || { x: element.positionX, y: element.positionY };
+              const position = arrangeTarget 
+                ? { x: arrangeTarget.x, y: arrangeTarget.y }
+                : individualDragPos || zoneDragPos || { x: element.positionX, y: element.positionY };
 
               return (
                 <ElementCard
@@ -587,6 +720,9 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                   element={{ ...element, positionX: position.x, positionY: position.y }}
                   isSelected={selectedElementIds.includes(element.id)}
                   isEditing={editingElementId === element.id}
+                  style={isArranging && arrangeTarget ? {
+                    transition: 'left 0.5s ease-out, top 0.5s ease-out',
+                  } : undefined}
                   onMouseDown={(e) => handleElementMouseDown(e, element)}
                   onDoubleClick={() => handleDoubleClick(element)}
                   onSaveNote={(content) => handleSaveNote(element.id, content)}
@@ -684,6 +820,16 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         editingSilhouetteId={editingSilhouetteId}
         onCloseSilhouetteModal={() => { setIsSilhouetteModalOpen(false); setEditingSilhouetteId(null); }}
         onSaveSilhouette={handleSaveSilhouette}
+      />
+
+    {/* Auto-Arrange Dialog (Sprint P2) */}
+      <AutoArrangeDialog
+        isOpen={showAutoArrangeDialog}
+        onClose={() => setShowAutoArrangeDialog(false)}
+        onConfirm={handleAutoArrange}
+        elements={elements}
+        zones={zones}
+        initialShowPhaseColumns={showPhaseColumns}
       />
 
       {/* Contextual Search Panel */}

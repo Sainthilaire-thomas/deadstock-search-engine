@@ -42,6 +42,7 @@ interface ElementCardProps {
   element: BoardElement;
   isSelected: boolean;
   isEditing: boolean;
+  style?: React.CSSProperties;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onSaveNote: (content: string) => void;
@@ -54,6 +55,7 @@ export const ElementCard = React.memo(function ElementCard({
   element,
   isSelected,
   isEditing,
+  style: externalStyle,
   onMouseDown,
   onDoubleClick,
   onSaveNote,
@@ -208,13 +210,14 @@ export const ElementCard = React.memo(function ElementCard({
           : 'shadow-sm hover:shadow-md'
         }
       `}
-      style={{
+     style={{
         left: element.positionX,
         top: element.positionY,
         width,
         height,
         zIndex: isEditing ? 2000 : isSelected ? 1000 : element.zIndex + 10,
         cursor: isEditing ? 'default' : 'move',
+        ...externalStyle,
       }}
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}

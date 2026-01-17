@@ -20,6 +20,7 @@ import {
   Maximize2,
   Minimize2,
   Search,
+  AlignLeft,
 } from 'lucide-react';
 import { useImmersiveModeOptional } from '@/features/boards/context/ImmersiveModeContext';
 import { useContextualSearchPanel } from '../context/ContextualSearchContext';
@@ -42,6 +43,7 @@ interface BoardToolbarProps {
   onAddElement: (type: ToolType) => void;
   onToggleViewMode?: () => void;
   viewMode?: 'inspiration' | 'project';
+  onAutoArrange?: () => void;
 }
 
 interface ToolButtonProps {
@@ -94,7 +96,7 @@ function Divider() {
   return <div className="w-6 h-px bg-gray-200 dark:bg-gray-700 my-1 mx-auto" />;
 }
 
-export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspiration' }: BoardToolbarProps) {
+export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspiration', onAutoArrange }: BoardToolbarProps) {
   const isProjectMode = viewMode === 'project';
 
   // Mode immersif (optionnel - peut être null si hors du provider)
@@ -187,7 +189,7 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
       {/* Section: Vue et contrôles */}
       <Divider />
 
-      {/* Recherche contextuelle - Sprint B3 */}
+     {/* Recherche contextuelle - Sprint B3 */}
       <div className="relative">
         <ToolButton
           icon={<Search className="w-5 h-5" strokeWidth={1.5} />}
@@ -204,6 +206,15 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
           </div>
         )}
       </div>
+
+      {/* Auto-arrange - Sprint P2 */}
+      {onAutoArrange && (
+        <ToolButton
+          icon={<AlignLeft className="w-5 h-5" strokeWidth={1.5} />}
+          tooltip="Ranger automatiquement"
+          onClick={onAutoArrange}
+        />
+      )}
 
       {/* Mode Immersif */}
       {immersiveMode && (
