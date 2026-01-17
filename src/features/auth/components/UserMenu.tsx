@@ -67,20 +67,23 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.full_name || "Avatar"}
-              className="h-9 w-9 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-              {initials}
-            </div>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+  <button 
+    type="button"
+    className="relative h-9 w-9 rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+  >
+    {profile.avatar_url ? (
+      <img
+        src={profile.avatar_url}
+        alt={profile.full_name || "Avatar"}
+        className="h-9 w-9 rounded-full object-cover"
+      />
+    ) : (
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+        {initials}
+      </div>
+    )}
+  </button>
+</DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
