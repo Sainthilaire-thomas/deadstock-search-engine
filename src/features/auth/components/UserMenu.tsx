@@ -49,16 +49,23 @@ export function UserMenu() {
     ? profile.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : profile.email[0].toUpperCase();
 
-  const handleSignOut = async () => {
-    console.log("🔴 SignOut clicked");
-    try {
-      await signOut();
-      console.log("🔴 SignOut success, redirecting...");
-      window.location.href = "/";
-    } catch (error) {
-      console.error("🔴 SignOut error:", error);
-    }
-  };
+ const handleSignOut = async () => {
+  console.log("🔴 SignOut clicked");
+  try {
+    // Timeout de sécurité de 3 secondes
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("SignOut timeout")), 3000)
+    );
+    
+    await Promise.race([signOut(), timeoutPromise]);
+    console.log("🔴 SignOut success");
+  } catch (error) {
+    console.error("🔴 SignOut error:", error);
+  }
+  // Toujours rediriger, même en cas d'erreur
+  console.log("🔴 Redirecting to /");
+  window.location.href = "/";
+};
 
   const handleNavigation = (path: string) => {
     window.location.href = path;
