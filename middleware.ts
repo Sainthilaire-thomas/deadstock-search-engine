@@ -34,26 +34,24 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Routes publiques - pas de protection
-  const publicRoutes = ["/", "/pricing", "/login", "/signup", "/forgot-password", "/reset-password", "/api/auth"];
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith("/api/auth")
-  );
+  const publicRoutes = ["/", "/pricing", "/login", "/signup", "/forgot-password", "/reset-password"];
+  const isPublicRoute = publicRoutes.some(route => pathname === route) || 
+                        pathname.startsWith("/api/auth");
 
-  // Routes admin - nécessitent role admin
+  // Routes admin - nécessitent role admin (vérifié côté page)
   const isAdminRoute = pathname.startsWith("/admin");
 
   // Routes app protégées - nécessitent auth
-  const isProtectedRoute = pathname.startsWith("/search") || 
-                           pathname.startsWith("/favorites") || 
-                           pathname.startsWith("/boards") || 
-                           pathname.startsWith("/journey") ||
-                           pathname.startsWith("/textiles");
+  const isProtectedRoute = pathname.startsWith("/boards") ||
+                           pathname.startsWith("/textiles") ||
+                           pathname.startsWith("/settings") ||
+                           pathname.startsWith("/tools");
 
   // Si route publique, laisser passer
   if (isPublicRoute) {
-    // Mais rediriger vers /search si déjà connecté sur pages auth
+    // Mais rediriger vers /boards si déjà connecté sur pages auth
     if (user && (pathname === "/login" || pathname === "/signup")) {
-      return NextResponse.redirect(new URL("/search", request.url));
+      return NextResponse.redirect(new URL("/boards", request.url));
     }
     return response;
   }
@@ -65,21 +63,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Pour les routes admin, on vérifie le rôle côté page (pas dans middleware)
-  // car le middleware n'a pas accès facilement à la table users
-
   return response;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match toutes les routes sauf :
-     * - _next/static (fichiers statiques)
-     * - _next/image (optimisation images)
-     * - favicon.ico
-     * - fichiers publics (.svg, .png, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

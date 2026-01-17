@@ -76,8 +76,8 @@ export default function LandingPage() {
                   Voir les tarifs
                 </Button>
               </Link>
-              <Link href="/search" className="w-full sm:w-auto">
-                <Button size="lg" variant="ghost" className="w-full">
+              <Link href="/boards" className="w-full sm:w-auto">
+  <Button size="lg" variant="ghost" className="w-full">
                   Voir la démo
                 </Button>
               </Link>
@@ -340,7 +340,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-6 text-sm text-zinc-400">
               <Link href="/pricing" className="hover:text-white transition-colors">Tarifs</Link>
-              <Link href="/search" className="hover:text-white transition-colors">Démo</Link>
+              <Link href="/boards" className="hover:text-white transition-colors">Démo</Link>
               <Link href="/login" className="hover:text-white transition-colors">Connexion</Link>
             </div>
           </div>
