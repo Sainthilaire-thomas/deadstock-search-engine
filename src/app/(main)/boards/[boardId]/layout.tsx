@@ -1,8 +1,8 @@
-// src/app/boards/[boardId]/layout.tsx
-
+// src/app/(main)/boards/[boardId]/layout.tsx
 import { notFound } from 'next/navigation';
 import { getBoardAction } from '@/features/boards/actions/boardActions';
 import { BoardProvider } from '@/features/boards/context/BoardContext';
+import { BoardLayoutClient } from '@/features/boards/components/BoardLayoutClient';
 
 interface BoardLayoutProps {
   params: Promise<{ boardId: string }>;
@@ -19,7 +19,9 @@ export default async function BoardLayout({ params, children }: BoardLayoutProps
 
   return (
     <BoardProvider initialBoard={result.data}>
-      {children}
+      <BoardLayoutClient>
+        {children}
+      </BoardLayoutClient>
     </BoardProvider>
   );
 }

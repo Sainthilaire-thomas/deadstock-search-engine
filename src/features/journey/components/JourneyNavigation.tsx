@@ -1,8 +1,9 @@
 /**
  * JourneyNavigation Component
- * 
+ *
  * Navigation pour la vue Journey d'un Board
  * Affiche les 3 phases avec compteurs d'éléments
+ * Note: Le header (titre board, retour) est maintenant dans SharedBoardHeader
  */
 
 "use client";
@@ -10,7 +11,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { ChevronRight, LayoutGrid } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBoard } from "@/features/boards/context/BoardContext";
 import { JOURNEY_PHASES, ELEMENT_TYPE_CONFIGS } from "../config/steps";
@@ -33,8 +34,8 @@ export function JourneyNavigation() {
   const searchParams = useSearchParams();
   const boardId = params.boardId as string;
   const selectedType = searchParams.get("type");
-  
-  const { elements, zones, board } = useBoard();
+
+  const { elements, zones } = useBoard();
 
   // Compter les éléments par type et par phase
   const phaseCounts = useMemo((): PhaseCount[] => {
@@ -59,22 +60,7 @@ export function JourneyNavigation() {
 
   return (
     <div className="flex h-full w-64 flex-col border-r border-border bg-card">
-      {/* Header */}
-      <div className="border-b border-border p-4">
-        <Link
-          href={`/boards/${boardId}`}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <LayoutGrid className="h-4 w-4" />
-          <span>Retour au Board</span>
-        </Link>
-        <h2 className="mt-3 text-lg font-semibold text-foreground">
-          {board?.name || "Board"}
-        </h2>
-        <p className="text-xs text-muted-foreground mt-1">Vue Journey</p>
-      </div>
-
-      {/* Phases */}
+      {/* Phases - navigation directe sans header */}
       <nav className="flex-1 overflow-y-auto p-2">
         {JOURNEY_PHASES.map((phase) => {
           const phaseCount = phaseCounts.find((pc) => pc.phaseId === phase.id);

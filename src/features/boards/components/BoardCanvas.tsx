@@ -124,17 +124,7 @@ export function BoardCanvas() {
       .filter(Boolean)
   ), [elements]);
 
-  const elementCounts = useMemo(() => ({
-    conception: elements.filter(el =>
-      ['palette', 'pattern', 'silhouette', 'inspiration', 'pdf'].includes(el.elementType)
-    ).length,
-    preparation: elements.filter(el =>
-      ['calculation', 'textile', 'note'].includes(el.elementType)
-    ).length,
-    execution: elements.filter(el =>
-      ['video', 'link'].includes(el.elementType)
-    ).length,
-  }), [elements]);
+ 
 
   const isEditing = !!(editingElementId || editingZoneId || editingPaletteId);
 
@@ -394,7 +384,7 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         onAddElement={handleAddElement}
         onToggleViewMode={toggleViewMode}
         viewMode={viewMode}
-        elementCounts={elementCounts}
+       
       />
 
       <div

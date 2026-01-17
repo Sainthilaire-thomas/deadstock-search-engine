@@ -345,7 +345,7 @@ const zoneElements = useMemo(() => {
                     </div>
 
                     {/* Liste des projets */}
-                    <div className="space-y-2 min-h-[100px]">
+                    <div className="space-y-2 min-h-25">
                       {zonesInColumn.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-4">
                           Aucun projet
@@ -443,7 +443,7 @@ const zoneElements = useMemo(() => {
   };
 
  return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-full bg-background">
       {/* Sidebar Navigation */}
       <JourneyNavigation />
       {/* Main Content */}

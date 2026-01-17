@@ -1,5 +1,5 @@
 // src/features/boards/components/BoardToolbar.tsx
-// Sprint 6: Boutons PDF, Pattern, Silhouette activés
+// Sprint Navigation: JourneyButtons retirés - navigation dans le header
 
 'use client';
 
@@ -20,14 +20,10 @@ import {
   Maximize2,
   Minimize2,
   Search,
-  Lightbulb,
-  Calculator,
-  ShoppingCart,
 } from 'lucide-react';
-import { useParams } from 'next/navigation';
-import NextLink from 'next/link';
 import { useImmersiveModeOptional } from '@/features/boards/context/ImmersiveModeContext';
 import { useContextualSearchPanel } from '../context/ContextualSearchContext';
+
 // Types pour les outils
 export type ToolType =
   | 'image'
@@ -46,11 +42,6 @@ interface BoardToolbarProps {
   onAddElement: (type: ToolType) => void;
   onToggleViewMode?: () => void;
   viewMode?: 'inspiration' | 'project';
-  elementCounts?: {
-    conception: number;
-    preparation: number;
-    execution: number;
-  };
 }
 
 interface ToolButtonProps {
@@ -103,85 +94,14 @@ function Divider() {
   return <div className="w-6 h-px bg-gray-200 dark:bg-gray-700 my-1 mx-auto" />;
 }
 
-interface JourneyButtonProps {
-  icon: React.ReactNode;
-  tooltip: string;
-  href: string;
-  count: number;
-  phaseTypes: { emoji: string; label: string; type: string }[];
-}
-
-function JourneyButton({ icon, tooltip, href, count, phaseTypes }: JourneyButtonProps) {
-  return (
-    <div className="group relative">
-      <NextLink
-        href={href}
-        className={`
-          relative w-10 h-10 flex items-center justify-center
-          rounded-lg transition-all duration-150
-          text-gray-500 dark:text-gray-400 
-          hover:text-gray-900 dark:hover:text-gray-100 
-          hover:bg-gray-100 dark:hover:bg-gray-800
-          cursor-pointer
-        `}
-        title={tooltip}
-      >
-        {icon}
-        {/* Badge compteur */}
-        {count > 0 && (
-          <div className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-[10px] font-bold text-primary-foreground">
-              {count}
-            </span>
-          </div>
-        )}
-      </NextLink>
-
-      {/* Popup au hover avec les types */}
-      <div className="
-        absolute left-full ml-1
-        bg-popover border border-border
-        text-popover-foreground
-        text-xs
-        rounded-lg shadow-lg
-        opacity-0 group-hover:opacity-100
-        invisible group-hover:visible
-        z-50
-        transition-all duration-150
-        min-w-40
-        overflow-hidden
-        before:content-[''] before:absolute before:top-0 before:bottom-0 before:-left-2 before:w-2
-      ">
-        <div className="px-3 py-2 border-b border-border bg-muted/50">
-          <span className="font-semibold">{tooltip}</span>
-          <span className="ml-2 text-muted-foreground">({count})</span>
-        </div>
-        <div className="py-1">
-          {phaseTypes.map((pt) => (
-            <NextLink
-              key={pt.type}
-              href={`${href}?type=${pt.type}`}
-              className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent transition-colors"
-            >
-              <span>{pt.emoji}</span>
-              <span>{pt.label}</span>
-            </NextLink>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspiration', elementCounts }: BoardToolbarProps) {
-  const params = useParams();
-  const boardId = params.boardId as string;
+export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspiration' }: BoardToolbarProps) {
   const isProjectMode = viewMode === 'project';
 
   // Mode immersif (optionnel - peut être null si hors du provider)
   const immersiveMode = useImmersiveModeOptional();
   const isImmersive = immersiveMode?.isImmersive ?? false;
-// Recherche contextuelle
+
+  // Recherche contextuelle
   const contextualSearch = useContextualSearchPanel();
   const hasActiveConstraints = contextualSearch.state.constraints.length > 0;
 
@@ -242,7 +162,7 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
 
       <Divider />
 
-      {/* Section: Documents - Sprint 6 ACTIVÉ */}
+      {/* Section: Documents */}
       <ToolButton
         icon={<FileText className="w-5 h-5" strokeWidth={1.5} />}
         tooltip="PDF"
@@ -261,53 +181,11 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
         onClick={() => onAddElement('silhouette')}
       />
 
-     {/* Spacer */}
+      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Section: Journey - Accès rapide aux phases */}
-      <Divider />
-
-      <JourneyButton
-        icon={<Lightbulb className="w-5 h-5" strokeWidth={1.5} />}
-        tooltip="Conception"
-        href={`/boards/${boardId}/journey`}
-        count={elementCounts?.conception ?? 0}
-        phaseTypes={[
-          { emoji: '🎨', label: 'Palettes', type: 'palette' },
-          { emoji: '✂️', label: 'Patrons', type: 'pattern' },
-          { emoji: '👤', label: 'Silhouettes', type: 'silhouette' },
-          { emoji: '📷', label: 'Inspirations', type: 'inspiration' },
-          { emoji: '📄', label: 'Documents', type: 'pdf' },
-        ]}
-      />
-
-      <JourneyButton
-        icon={<Calculator className="w-5 h-5" strokeWidth={1.5} />}
-        tooltip="Préparation"
-        href={`/boards/${boardId}/journey`}
-        count={elementCounts?.preparation ?? 0}
-        phaseTypes={[
-          { emoji: '📐', label: 'Calculs', type: 'calculation' },
-          { emoji: '🧵', label: 'Tissus', type: 'textile' },
-          { emoji: '📝', label: 'Notes', type: 'note' },
-        ]}
-      />
-
-      <JourneyButton
-        icon={<ShoppingCart className="w-5 h-5" strokeWidth={1.5} />}
-        tooltip="Exécution"
-        href={`/boards/${boardId}/journey`}
-        count={elementCounts?.execution ?? 0}
-        phaseTypes={[
-          { emoji: '🎬', label: 'Vidéos', type: 'video' },
-          { emoji: '🔗', label: 'Liens', type: 'link' },
-          { emoji: '⚡', label: 'Projets', type: 'zones' },
-        ]}
-      />
-
-      <Divider />
-
       {/* Section: Vue et contrôles */}
+      <Divider />
 
       {/* Recherche contextuelle - Sprint B3 */}
       <div className="relative">
@@ -327,7 +205,6 @@ export function BoardToolbar({ onAddElement, onToggleViewMode, viewMode = 'inspi
         )}
       </div>
 
-    
       {/* Mode Immersif */}
       {immersiveMode && (
         <ToolButton

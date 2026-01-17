@@ -1,23 +1,62 @@
-// src/features/boards/components/BoardHeader.tsx
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Share, MoreHorizontal, Check, X,LayoutList } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { ArrowLeft, Share, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useBoard } from '../context/BoardContext';
+import { ViewToggle } from './ViewToggle';
+import { JOURNEY_PHASES } from '@/features/journey/config/steps';
+import type { PhaseId } from '@/features/journey/config/steps';
 
-export function BoardHeader() {
+interface SharedBoardHeaderProps {
+  currentView: 'board' | 'journey';
+}
+
+export function SharedBoardHeader({ currentView }: SharedBoardHeaderProps) {
   const params = useParams();
   const boardId = params.boardId as string;
-  const { board, elements, updateBoardName } = useBoard();
+  const { board, elements, zones, updateBoardName } = useBoard();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(board?.name || '');
 
   const displayName = board?.name || 'Sans titre';
+
+  // Calculer les compteurs par phase
+  const phaseCounts = useMemo(() => {
+    const counts: Record<PhaseId, number> = { mood: 0, conception: 0, execution: 0 };
+    
+    JOURNEY_PHASES.forEach((phase) => {
+      const phaseTypes = phase.elementTypes.map(et => et.type);
+      counts[phase.id] = elements.filter(el => 
+        phaseTypes.includes(el.elementType)
+      ).length;
+    });
+    
+    // Ajouter les zones cristallisées à execution
+    const crystallizedZonesCount = zones.filter(z => z.crystallizedAt !== null).length;
+    counts.execution += crystallizedZonesCount;
+    
+    return counts;
+  }, [elements, zones]);
+
+  // Calculer les compteurs par type d'élément
+  const elementCountsByType = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // Compter chaque type d'élément
+    elements.forEach(el => {
+      counts[el.elementType] = (counts[el.elementType] || 0) + 1;
+    });
+    
+    // Ajouter le compteur des zones cristallisées
+    counts['zones'] = zones.filter(z => z.crystallizedAt !== null).length;
+    
+    return counts;
+  }, [elements, zones]);
 
   const handleSaveName = async () => {
     if (editName.trim()) {
@@ -32,15 +71,13 @@ export function BoardHeader() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveName();
-    } else if (e.key === 'Escape') {
-      handleCancel();
-    }
+    if (e.key === 'Enter') handleSaveName();
+    else if (e.key === 'Escape') handleCancel();
   };
 
   return (
     <header className="border-b bg-background px-4 py-3 flex items-center justify-between shrink-0">
+      {/* Left section */}
       <div className="flex items-center gap-4">
         <Link href="/boards">
           <Button variant="ghost" size="icon">
@@ -83,13 +120,14 @@ export function BoardHeader() {
         </div>
       </div>
 
-          <div className="flex items-center gap-2">
-        <Link href={`/boards/${boardId}/journey`}>
-          <Button variant="outline" size="sm">
-            <LayoutList className="w-4 h-4 mr-2" />
-            Journey
-          </Button>
-        </Link>
+      {/* Right section */}
+      <div className="flex items-center gap-3">
+        <ViewToggle 
+          currentView={currentView} 
+          boardId={boardId} 
+          phaseCounts={phaseCounts}
+          elementCountsByType={elementCountsByType}
+        />
         <Button variant="outline" size="sm" disabled>
           <Share className="w-4 h-4 mr-2" />
           Partager
