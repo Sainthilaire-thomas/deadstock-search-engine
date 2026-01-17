@@ -2,7 +2,7 @@
 // Sprint 6 - Élément Silhouette (croquis de mode)
 
 'use client';
-
+import React from 'react';
 import { User, Library, Upload } from 'lucide-react';
 import type { SilhouetteElementData } from '../../domain/types';
 
@@ -12,7 +12,7 @@ interface SilhouetteElementProps {
   height: number;
 }
 
-export function SilhouetteElement({ data, width, height }: SilhouetteElementProps) {
+export const SilhouetteElement = React.memo(function SilhouetteElement({ data, width, height }: SilhouetteElementProps) {
   const isCompact = height < 100;
   const hasImage = !!data.url;
   const isFromLibrary = data.source === 'library';
@@ -99,4 +99,4 @@ export function SilhouetteElement({ data, width, height }: SilhouetteElementProp
       </div>
     </div>
   );
-}
+});

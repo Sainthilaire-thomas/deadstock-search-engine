@@ -50,7 +50,7 @@ interface ElementCardProps {
   onSavePalette?: (data: PaletteElementData) => void;
 }
 
-export function ElementCard({
+export const ElementCard = React.memo(function ElementCard({
   element,
   isSelected,
   isEditing,
@@ -401,9 +401,9 @@ export function ElementCard({
           onClose={() => setColorPickerAnchor(null)}
         />
       )}
-    </div>
+       </div>
   );
-}
+});
 
 // ============================================
 // PREVIEWS - Style épuré
@@ -498,6 +498,6 @@ function CalculationPreview({ data }: { data: any }) {
           {data.result.recommended}m recommandés
         </p>
       )}
-    </div>
+            </div>
   );
 }

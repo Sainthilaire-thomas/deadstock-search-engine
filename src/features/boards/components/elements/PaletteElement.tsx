@@ -2,7 +2,7 @@
 // VERSION COMPACTE - Optimisée pour l'espace
 
 'use client';
-
+import React from 'react';
 import { Palette } from 'lucide-react';
 import type { PaletteElementData } from '../../domain/types';
 
@@ -12,7 +12,7 @@ interface PaletteElementProps {
   height: number;
 }
 
-export function PaletteElement({ data, width, height }: PaletteElementProps) {
+export const PaletteElement = React.memo(function PaletteElement({ data, width, height }: PaletteElementProps) {
   const { name, colors } = data;
   const hasColors = colors && colors.length > 0;
   const colorCount = hasColors ? colors.length : 0;
@@ -73,9 +73,10 @@ export function PaletteElement({ data, width, height }: PaletteElementProps) {
           </div>
         )}
       </div>
-    </div>
+        </div>
   );
-}
+});
+
 
 // Helper pour déterminer si une couleur est claire
 function isLightColor(hex: string): boolean {

@@ -3,6 +3,7 @@
 
 'use client';
 
+import React from 'react';
 import { Scissors, FileText, Image as ImageIcon } from 'lucide-react';
 import type { PatternElementData } from '../../domain/types';
 
@@ -12,7 +13,7 @@ interface PatternElementProps {
   height: number;
 }
 
-export function PatternElement({ data, width, height }: PatternElementProps) {
+export const PatternElement = React.memo(function PatternElement({ data, width, height }: PatternElementProps) {
   const isCompact = height < 100;
   const showThumbnail = data.thumbnailUrl && height >= 80;
   const isPdf = data.fileType === 'pdf';
@@ -114,4 +115,4 @@ export function PatternElement({ data, width, height }: PatternElementProps) {
       )}
     </div>
   );
-}
+});

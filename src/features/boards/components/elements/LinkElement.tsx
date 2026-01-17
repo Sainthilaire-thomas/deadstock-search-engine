@@ -4,6 +4,7 @@
 
 'use client';
 
+import React from 'react';
 import { Globe, Image as ImageIcon } from 'lucide-react';
 
 export interface LinkElementData {
@@ -45,7 +46,7 @@ export function getFaviconUrl(url: string): string {
   }
 }
 
-export function LinkElement({ data, width, height }: LinkElementProps) {
+export const LinkElement = React.memo(function LinkElement({ data, width, height }: LinkElementProps) {
   const domain = extractDomain(data.url);
   const faviconUrl = data.favicon || getFaviconUrl(data.url);
   const isCompact = height < 100;
@@ -141,4 +142,4 @@ export function LinkElement({ data, width, height }: LinkElementProps) {
       </div>
     </div>
   );
-}
+});

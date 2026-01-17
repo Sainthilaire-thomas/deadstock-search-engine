@@ -139,7 +139,14 @@ export function BoardCanvas() {
     setDragging,
   });
 
-  const { dragPosition: zoneDragPosition, zoneDragElementPositions, handleZoneMouseDown } = useZoneDrag({
+  const { 
+    dragPosition: zoneDragPosition, 
+    zoneDragElementPositions, 
+    draggingZoneId,
+    draggingElementIds,
+    draggingElementCount,
+    handleZoneMouseDown 
+  } = useZoneDrag({
     elements,
     moveZoneLocal,
     saveZonePosition,
@@ -417,6 +424,10 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                 ? { width: resizeState.width, height: resizeState.height }
                 : { width: zone.width, height: zone.height };
 
+              // Ghost Mode: déterminer si cette zone est en cours de drag
+              const isBeingDragged = draggingZoneId === zone.id;
+              const ghostElementCount = isBeingDragged ? draggingElementCount : 0;
+
               return (
                 <ZoneCard
                   key={zone.id}
@@ -424,6 +435,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                   isSelected={selectedZoneId === zone.id}
                   isEditing={editingZoneId === zone.id}
                   isVisible={showZones}
+                  isDragging={isBeingDragged}
+                  ghostElementCount={ghostElementCount}
                   onMouseDown={(e) => handleZoneMouseDown(e, zone)}
                   onDoubleClick={() => handleZoneDoubleClick(zone)}
                   onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle as ResizeHandle)}
@@ -435,8 +448,12 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
               );
             })}
 
-            {/* Elements */}
+          {/* Elements */}
             {elements.map((element) => {
+              // Ghost Mode: masquer les éléments pendant le drag de zone
+              const isHiddenDuringZoneDrag = draggingElementIds.includes(element.id);
+              if (isHiddenDuringZoneDrag) return null;
+
               const individualDragPos = elementDragPosition?.id === element.id ? { x: elementDragPosition.x, y: elementDragPosition.y } : null;
               const zoneDragPos = zoneDragElementPositions[element.id];
               const position = individualDragPos || zoneDragPos || { x: element.positionX, y: element.positionY };

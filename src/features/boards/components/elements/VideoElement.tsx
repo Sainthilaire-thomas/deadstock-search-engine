@@ -3,6 +3,7 @@
 
 'use client';
 
+import React from 'react';
 import { Play, ExternalLink } from 'lucide-react';
 
 export interface VideoElementData {
@@ -70,7 +71,7 @@ function getEmbedUrl(data: VideoElementData): string | null {
   return null;
 }
 
-export function VideoElement({ data, width, height, isPreview = true }: VideoElementProps) {
+export const VideoElement = React.memo(function VideoElement({ data, width, height, isPreview = true }: VideoElementProps) {
   const embedUrl = getEmbedUrl(data);
   
   // Mode preview (thumbnail + bouton play)
@@ -152,4 +153,4 @@ export function VideoElement({ data, width, height, isPreview = true }: VideoEle
       </a>
     </div>
   );
-}
+});

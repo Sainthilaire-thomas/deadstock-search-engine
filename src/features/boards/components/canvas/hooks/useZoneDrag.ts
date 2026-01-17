@@ -1,5 +1,6 @@
 // src/features/boards/components/canvas/hooks/useZoneDrag.ts
-// Hook pour le drag & drop des zones (avec déplacement solidaire des éléments)
+// Hook pour le drag & drop des zones (avec Ghost Mode pour performance)
+// Sprint P0.4 - Ghost Mode: éléments masqués pendant le drag
 
 import { useRef, useState, useCallback } from 'react';
 import { bulkMoveElementsAction } from '../../../actions/elementActions';
@@ -38,6 +39,9 @@ interface UseZoneDragProps {
 interface UseZoneDragReturn {
   dragPosition: DragPosition | null;
   zoneDragElementPositions: Record<string, { x: number; y: number }>;
+  draggingZoneId: string | null;
+  draggingElementIds: string[];
+  draggingElementCount: number;
   handleZoneMouseDown: (e: React.MouseEvent, zone: BoardZone) => void;
 }
 
@@ -51,6 +55,11 @@ export function useZoneDrag({
 }: UseZoneDragProps): UseZoneDragReturn {
   const [dragPosition, setDragPosition] = useState<DragPosition | null>(null);
   const [zoneDragElementPositions, setZoneDragElementPositions] = useState<Record<string, { x: number; y: number }>>({});
+  
+  // Ghost Mode states
+  const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
+  const [draggingElementIds, setDraggingElementIds] = useState<string[]>([]);
+  const [draggingElementCount, setDraggingElementCount] = useState<number>(0);
 
   const dragPositionRef = useRef(dragPosition);
   dragPositionRef.current = dragPosition;
@@ -59,7 +68,7 @@ export function useZoneDrag({
 
   const handleZoneMouseMove = useCallback((e: MouseEvent) => {
     if (!zoneDragRef.current) return;
-    
+
     const dx = e.clientX - zoneDragRef.current.startX;
     const dy = e.clientY - zoneDragRef.current.startY;
     const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
@@ -67,17 +76,8 @@ export function useZoneDrag({
 
     setDragPosition({ type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY });
 
-    // Si zone cristallisée, calculer les nouvelles positions des éléments (visuel uniquement)
-    if (zoneDragRef.current.containedElements && zoneDragRef.current.containedElements.length > 0) {
-      const newPositions: Record<string, { x: number; y: number }> = {};
-      zoneDragRef.current.containedElements.forEach(el => {
-        newPositions[el.id] = {
-          x: Math.max(0, el.startX + dx),
-          y: Math.max(0, el.startY + dy),
-        };
-      });
-      setZoneDragElementPositions(newPositions);
-    }
+    // Ghost Mode: on ne met plus à jour zoneDragElementPositions pendant le drag
+    // Les éléments sont masqués, pas besoin de calculer leurs positions
   }, []);
 
   const handleZoneMouseUp = useCallback(() => {
@@ -91,6 +91,9 @@ export function useZoneDrag({
     // Reset des states immédiatement
     setDragPosition(null);
     setZoneDragElementPositions({});
+    setDraggingZoneId(null);
+    setDraggingElementIds([]);
+    setDraggingElementCount(0);
     zoneDragRef.current = null;
     setDragging(false);
 
@@ -129,6 +132,7 @@ export function useZoneDrag({
 
     // Si la zone est cristallisée, capturer les éléments contenus pour les déplacer ensemble
     let containedElements: Array<{ id: string; startX: number; startY: number }> | undefined;
+    let elementIds: string[] = [];
 
     if (zone.crystallizedAt && zone.linkedProjectId) {
       const elementsInZone = getElementsInZone(elements, zone);
@@ -137,6 +141,7 @@ export function useZoneDrag({
         startX: el.positionX,
         startY: el.positionY,
       }));
+      elementIds = elementsInZone.map(el => el.id);
     }
 
     zoneDragRef.current = {
@@ -148,6 +153,11 @@ export function useZoneDrag({
       containedElements,
     };
 
+    // Ghost Mode: activer le masquage des éléments
+    setDraggingZoneId(zone.id);
+    setDraggingElementIds(elementIds);
+    setDraggingElementCount(elementIds.length);
+
     setDragging(true);
     document.addEventListener('mousemove', handleZoneMouseMove);
     document.addEventListener('mouseup', handleZoneMouseUp);
@@ -156,6 +166,9 @@ export function useZoneDrag({
   return {
     dragPosition,
     zoneDragElementPositions,
+    draggingZoneId,
+    draggingElementIds,
+    draggingElementCount,
     handleZoneMouseDown,
   };
 }

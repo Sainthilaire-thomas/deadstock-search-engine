@@ -1,6 +1,6 @@
 // src/features/boards/components/elements/ImageElement.tsx
 'use client';
-
+import React from 'react';
 import { ExternalLink, AlertCircle } from 'lucide-react';
 import type { InspirationElementData } from '../../domain/types';
 
@@ -10,7 +10,7 @@ interface ImageElementProps {
   height: number;
 }
 
-export function ImageElement({ data, width, height }: ImageElementProps) {
+export const ImageElement = React.memo(function ImageElement({ data, width, height }: ImageElementProps) {
   const { imageUrl, caption, sourceUrl } = data;
 
   if (!imageUrl) {
@@ -61,4 +61,4 @@ export function ImageElement({ data, width, height }: ImageElementProps) {
       )}
     </div>
   );
-}
+});

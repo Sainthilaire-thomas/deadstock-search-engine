@@ -2,8 +2,8 @@
 // Sprint 6 - Élément PDF
 
 'use client';
-
-import { FileText, File, ExternalLink } from 'lucide-react';
+import React from 'react';
+import { FileText } from 'lucide-react';
 import type { PdfElementData } from '../../domain/types';
 
 interface PdfElementProps {
@@ -38,7 +38,7 @@ function getShortFilename(filename: string, maxLength: number = 20): string {
   return `${nameWithoutExt.slice(0, maxLength - 3 - ext.length - 1)}...${ext ? '.' + ext : ''}`;
 }
 
-export function PdfElement({ data, width, height }: PdfElementProps) {
+export const PdfElement = React.memo(function PdfElement({ data, width, height }: PdfElementProps) {
   const isCompact = height < 100;
   const showThumbnail = data.thumbnailUrl && height >= 80;
 
@@ -102,4 +102,4 @@ export function PdfElement({ data, width, height }: PdfElementProps) {
       )}
     </div>
   );
-}
+});

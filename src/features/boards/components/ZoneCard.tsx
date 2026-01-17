@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { GripVertical, Sparkles, ExternalLink, X } from 'lucide-react';
 import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
 import type { BoardZone } from '../domain/types';
@@ -15,6 +15,8 @@ interface ZoneCardProps {
   isSelected: boolean;
   isEditing: boolean;
   isVisible?: boolean;
+  isDragging?: boolean;
+  ghostElementCount?: number;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
@@ -24,11 +26,13 @@ interface ZoneCardProps {
   onDelete?: () => void;
 }
 
-export function ZoneCard({
+export const ZoneCard = React.memo(function ZoneCard({
   zone,
   isSelected,
   isEditing,
   isVisible = true,
+  isDragging = false,
+  ghostElementCount = 0,
   onMouseDown,
   onDoubleClick,
   onResizeStart,
@@ -63,25 +67,30 @@ export function ZoneCard({
     onDelete?.();
   };
 
-  // Mode Inspiration : zones invisibles (sauf si cristallisées)
+  
   // Mode Inspiration : zones invisibles avec animation (sauf si cristallisées)
   const shouldShow = isVisible || isCrystallized;
-  
+
+  // Ghost Mode: style spécial pendant le drag avec éléments masqués
+  const isGhostMode = isDragging && ghostElementCount > 0;
+
   return (
     <div
       className={`
         group
         absolute transition-all duration-300 ease-in-out
-        ${shouldShow 
-          ? 'opacity-100 scale-100' 
+        ${shouldShow
+          ? 'opacity-100 scale-100'
           : 'opacity-0 scale-95 pointer-events-none'
         }
-        ${isCrystallized
-          ? 'border border-solid border-gray-400 bg-gray-50/50 dark:bg-gray-800/30'
-          : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent'
+        ${isGhostMode
+          ? 'border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/30 dark:bg-blue-900/20'
+          : isCrystallized
+            ? 'border border-solid border-gray-400 bg-gray-50/50 dark:bg-gray-800/30'
+            : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent'
         }
-        ${isSelected 
-          ? 'shadow-md ring-1 ring-gray-400 dark:ring-gray-500' 
+        ${isSelected
+          ? 'shadow-md ring-1 ring-gray-400 dark:ring-gray-500'
           : 'hover:border-gray-400 dark:hover:border-gray-500'
         }
         rounded
@@ -167,6 +176,15 @@ export function ZoneCard({
           </span>
         )}
       </div>
+
+      {/* Ghost Mode indicator - nombre d'éléments masqués */}
+      {isGhostMode && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-blue-500/80 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
+            {ghostElementCount} élément{ghostElementCount > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
 
       {/* Zone content area - pour le drag */}
       <div
@@ -258,6 +276,6 @@ export function ZoneCard({
           />
         </>
       )}
-    </div>
+        </div>
   );
-}
+});
