@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, Layout, Archive } from 'lucide-react';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { listBoardsWithPreviewAction, createBoardAction } from '@/features/boards/actions/boardActions';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -10,8 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { BOARD_STATUS_LABELS, type BoardWithPreview } from '@/features/boards/domain/types';
 
 export const metadata = {
-  title: 'Mes Boards | Deadstock',
-  description: 'Gérez vos boards créatifs',
+  title: 'Mes Projets | Deadstock',
+  description: 'Gérez vos projets créatifs',
 };
 
 // Force dynamic rendering (requires authentication)
@@ -20,13 +21,15 @@ export const dynamic = 'force-dynamic';
 // Server Action pour créer un board et rediriger
 async function createAndRedirect() {
   'use server';
-  const result = await createBoardAction({ name: 'Nouveau board' });
+  const result = await createBoardAction({ name: 'Nouveau projet' });
   if (result.success && result.data) {
     redirect(`/boards/${result.data.id}`);
   }
 }
 
 export default async function BoardsPage() {
+  const t = await getTranslations();
+  const locale = await getLocale();
   const result = await listBoardsWithPreviewAction();
   const boards = result.data ?? [];
 
@@ -38,15 +41,17 @@ export default async function BoardsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold">Mes Boards</h1>
+          <h1 className="text-2xl font-semibold">{t('project.myProjects')}</h1>
           <p className="text-muted-foreground mt-1">
-            Organisez vos idées et inspirations
+            {locale === 'en' 
+              ? 'Organize your ideas and inspirations' 
+              : 'Organisez vos idées et inspirations'}
           </p>
         </div>
         <form action={createAndRedirect}>
           <Button type="submit">
             <Plus className="w-4 h-4 mr-2" />
-            Nouveau board
+            {t('project.newProject')}
           </Button>
         </form>
       </div>
@@ -58,15 +63,14 @@ export default async function BoardsPage() {
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
               <Layout className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h2 className="text-lg font-medium mb-2">Aucun board</h2>
+            <h2 className="text-lg font-medium mb-2">{t('project.noProjects')}</h2>
             <p className="text-muted-foreground text-center max-w-sm mb-6">
-              Créez votre premier board pour commencer à organiser vos tissus,
-              palettes et inspirations.
+              {t('project.createFirst')}
             </p>
             <form action={createAndRedirect}>
               <Button type="submit">
                 <Plus className="w-4 h-4 mr-2" />
-                Créer mon premier board
+                {t('project.createProject')}
               </Button>
             </form>
           </CardContent>
@@ -77,11 +81,11 @@ export default async function BoardsPage() {
       {activeBoards.length > 0 && (
         <div className="mb-12">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Boards actifs ({activeBoards.length})
+            {t('project.plural')} ({activeBoards.length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeBoards.map((board) => (
-              <BoardCard key={board.id} board={board} />
+              <BoardCard key={board.id} board={board} locale={locale} />
             ))}
           </div>
         </div>
@@ -92,11 +96,11 @@ export default async function BoardsPage() {
         <div>
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
             <Archive className="w-4 h-4" />
-            Archivés ({archivedBoards.length})
+            {locale === 'en' ? 'Archived' : 'Archivés'} ({archivedBoards.length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
             {archivedBoards.map((board) => (
-              <BoardCard key={board.id} board={board} />
+              <BoardCard key={board.id} board={board} locale={locale} />
             ))}
           </div>
         </div>
@@ -106,13 +110,24 @@ export default async function BoardsPage() {
 }
 
 // Composant carte board avec preview
-function BoardCard({ board }: { board: BoardWithPreview }) {
-  const displayName = board.name || 'Sans titre';
-  const updatedAt = new Date(board.updatedAt).toLocaleDateString('fr-FR', {
+async function BoardCard({ board, locale }: { board: BoardWithPreview; locale: string }) {
+  const t = await getTranslations();
+  
+  const displayName = board.name || (locale === 'en' ? 'Untitled' : 'Sans titre');
+  const updatedAt = new Date(board.updatedAt).toLocaleDateString(locale === 'en' ? 'en-GB' : 'fr-FR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
+
+  // Labels avec pluralisation
+  const elementLabel = locale === 'en'
+    ? `${board.elementCount} element${board.elementCount > 1 ? 's' : ''}`
+    : `${board.elementCount} élément${board.elementCount > 1 ? 's' : ''}`;
+  
+  const zoneLabel = `${board.zoneCount} zone${board.zoneCount > 1 ? 's' : ''}`;
+
+  const modifiedLabel = locale === 'en' ? 'Modified' : 'Modifié le';
 
   return (
     <Link href={`/boards/${board.id}`}>
@@ -133,17 +148,17 @@ function BoardCard({ board }: { board: BoardWithPreview }) {
                 <Layout className="w-8 h-8 text-muted-foreground/50" />
               </div>
             )}
-            
+
             {/* Badges compteurs */}
             <div className="absolute bottom-2 right-2 flex gap-1.5">
               {board.elementCount > 0 && (
                 <span className="bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
-                  {board.elementCount} élément{board.elementCount > 1 ? 's' : ''}
+                  {elementLabel}
                 </span>
               )}
               {board.zoneCount > 0 && (
                 <span className="bg-primary/80 text-white text-xs px-2 py-0.5 rounded-full">
-                  {board.zoneCount} zone{board.zoneCount > 1 ? 's' : ''}
+                  {zoneLabel}
                 </span>
               )}
             </div>
@@ -157,7 +172,7 @@ function BoardCard({ board }: { board: BoardWithPreview }) {
                   {displayName}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Modifié le {updatedAt}
+                  {modifiedLabel} {updatedAt}
                 </p>
               </div>
 

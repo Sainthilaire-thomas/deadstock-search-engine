@@ -1,6 +1,7 @@
 ﻿// src/app/layout.tsx
-
 import type { Metadata } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { FavoritesProvider } from '@/features/favorites/context/FavoritesContext';
@@ -18,7 +19,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
- // Charger les favoris initiaux côté serveur
+  // Charger la locale et les messages
+  const locale = await getLocale();
+  const messages = await getMessages();
+
+  // Charger les favoris initiaux côté serveur
   let initialFavoriteIds: string[] = [];
   try {
     const user = await getAuthUser();
@@ -29,20 +34,23 @@ export default async function RootLayout({
   } catch (error) {
     console.error('Error loading initial favorites:', error);
   }
+
   return (
-    <html lang='fr' suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body>
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange
-        >
-          <FavoritesProvider initialFavorites={initialFavoriteIds}>
-            {children}
-          </FavoritesProvider>
-          <Toaster position="top-right" />
-        </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange
+          >
+            <FavoritesProvider initialFavorites={initialFavoriteIds}>
+              {children}
+            </FavoritesProvider>
+            <Toaster position="top-right" />
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

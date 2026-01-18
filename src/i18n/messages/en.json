@@ -1,0 +1,139 @@
+{
+  "nav": {
+    "search": "Search",
+    "favorites": "Favorites",
+    "projects": "Projects",
+    "admin": "Admin"
+  },
+  "header": {
+    "searchPlaceholder": "Search fabrics...",
+    "myProjects": "My Projects",
+    "returnTo": "Back to \"{name}\""
+  },
+  "project": {
+    "singular": "Project",
+    "plural": "Projects",
+    "myProjects": "My Projects",
+    "newProject": "New project",
+    "createProject": "Create project",
+    "deleteProject": "Delete project",
+    "noProjects": "No projects",
+    "createFirst": "Create your first project to organize your searches",
+    "elements": "{count, plural, =0 {No elements} =1 {1 element} other {# elements}}",
+    "zones": "{count, plural, =0 {No zones} =1 {1 zone} other {# zones}}"
+  },
+  "canvas": {
+    "title": "Canvas",
+    "emptyState": "Drag elements here or use the toolbar",
+    "zoom": "Zoom",
+    "fitToScreen": "Fit to screen",
+    "resetView": "Reset view"
+  },
+  "journey": {
+    "title": "Journey",
+    "phases": {
+      "mood": "Mood",
+      "conception": "Design",
+      "execution": "Execution"
+    }
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search fabrics...",
+    "filters": "Filters",
+    "clearFilters": "Clear filters",
+    "results": "{count, plural, =0 {No results} =1 {1 result} other {# results}}",
+    "noResults": "No fabrics found",
+    "tryDifferent": "Try different criteria"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "empty": "No favorites",
+    "addFirst": "Add fabrics to your favorites from search",
+    "remove": "Remove from favorites",
+    "add": "Add to favorites"
+  },
+  "textile": {
+    "price": "Price",
+    "pricePerMeter": "{price}/m",
+    "available": "Available",
+    "outOfStock": "Out of stock",
+    "material": "Material",
+    "color": "Color",
+    "width": "Width",
+    "pattern": "Pattern",
+    "weave": "Weave",
+    "viewDetails": "View details",
+    "addToBoard": "Add to project",
+    "saleTypes": {
+      "cutToOrder": "Cut to order",
+      "fixedLength": "{length}m piece",
+      "hybrid": "{length}m piece or cut",
+      "byPiece": "By piece"
+    }
+  },
+  "elements": {
+    "note": "Note",
+    "palette": "Palette",
+    "inspiration": "Inspiration",
+    "calculation": "Yardage calculation",
+    "textile": "Fabric",
+    "video": "Video",
+    "link": "Link",
+    "pdf": "PDF",
+    "pattern": "Pattern",
+    "silhouette": "Silhouette"
+  },
+  "toolbar": {
+    "addNote": "Add note",
+    "addPalette": "Add palette",
+    "addTextile": "Add fabric",
+    "addCalculation": "Calculate yardage",
+    "addImage": "Add image",
+    "addVideo": "Add video",
+    "addLink": "Add link",
+    "addPdf": "Add PDF",
+    "addPattern": "Add pattern",
+    "addSilhouette": "Add silhouette",
+    "createZone": "Create zone",
+    "contextualSearch": "Contextual search"
+  },
+  "zone": {
+    "singular": "Zone",
+    "plural": "Zones",
+    "create": "Create zone",
+    "name": "Zone name",
+    "delete": "Delete zone",
+    "crystallize": "Crystallize to order"
+  },
+  "order": {
+    "title": "Order",
+    "create": "Create order",
+    "supplier": "Supplier",
+    "totalMeters": "Total yardage",
+    "estimatedPrice": "Estimated price"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  }
+}

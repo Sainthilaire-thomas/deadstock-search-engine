@@ -1,7 +1,7 @@
-// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { locales, defaultLocale, isValidLocale } from "@/i18n/config";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -10,6 +10,38 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // ============================================
+  // 1. Gestion de la locale (next-intl)
+  // ============================================
+  const localeCookie = request.cookies.get('NEXT_LOCALE')?.value;
+  
+  if (!localeCookie || !isValidLocale(localeCookie)) {
+    // Détecter depuis Accept-Language header
+    const acceptLanguage = request.headers.get('Accept-Language');
+    let detectedLocale = defaultLocale;
+    
+    if (acceptLanguage) {
+      const preferredLocales = acceptLanguage
+        .split(',')
+        .map(lang => lang.split(';')[0].trim().substring(0, 2));
+      
+      const matchedLocale = preferredLocales.find(l => isValidLocale(l));
+      if (matchedLocale && isValidLocale(matchedLocale)) {
+        detectedLocale = matchedLocale;
+      }
+    }
+    
+    // Stocker la locale dans un cookie
+    response.cookies.set('NEXT_LOCALE', detectedLocale, {
+      maxAge: 60 * 60 * 24 * 365, // 1 an
+      path: '/',
+      sameSite: 'lax',
+    });
+  }
+
+  // ============================================
+  // 2. Gestion Supabase Auth (existant)
+  // ============================================
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

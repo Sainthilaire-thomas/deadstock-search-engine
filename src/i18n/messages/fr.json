@@ -1,0 +1,139 @@
+{
+  "nav": {
+    "search": "Recherche",
+    "favorites": "Favoris",
+    "projects": "Projets",
+    "admin": "Administration"
+  },
+  "header": {
+    "searchPlaceholder": "Chercher des tissus...",
+    "myProjects": "Mes Projets",
+    "returnTo": "Retour à \"{name}\""
+  },
+  "project": {
+    "singular": "Projet",
+    "plural": "Projets",
+    "myProjects": "Mes Projets",
+    "newProject": "Nouveau projet",
+    "createProject": "Créer un projet",
+    "deleteProject": "Supprimer le projet",
+    "noProjects": "Aucun projet",
+    "createFirst": "Créez votre premier projet pour organiser vos recherches",
+    "elements": "{count, plural, =0 {Aucun élément} =1 {1 élément} other {# éléments}}",
+    "zones": "{count, plural, =0 {Aucune zone} =1 {1 zone} other {# zones}}"
+  },
+  "canvas": {
+    "title": "Canvas",
+    "emptyState": "Glissez des éléments ici ou utilisez la barre d'outils",
+    "zoom": "Zoom",
+    "fitToScreen": "Ajuster à l'écran",
+    "resetView": "Réinitialiser la vue"
+  },
+  "journey": {
+    "title": "Parcours",
+    "phases": {
+      "mood": "Mood",
+      "conception": "Conception",
+      "execution": "Exécution"
+    }
+  },
+  "search": {
+    "title": "Recherche",
+    "placeholder": "Rechercher des tissus...",
+    "filters": "Filtres",
+    "clearFilters": "Effacer les filtres",
+    "results": "{count, plural, =0 {Aucun résultat} =1 {1 résultat} other {# résultats}}",
+    "noResults": "Aucun tissu trouvé",
+    "tryDifferent": "Essayez avec d'autres critères"
+  },
+  "favorites": {
+    "title": "Favoris",
+    "empty": "Aucun favori",
+    "addFirst": "Ajoutez des tissus à vos favoris depuis la recherche",
+    "remove": "Retirer des favoris",
+    "add": "Ajouter aux favoris"
+  },
+  "textile": {
+    "price": "Prix",
+    "pricePerMeter": "{price}/m",
+    "available": "Disponible",
+    "outOfStock": "Rupture de stock",
+    "material": "Matière",
+    "color": "Couleur",
+    "width": "Largeur",
+    "pattern": "Motif",
+    "weave": "Armure",
+    "viewDetails": "Voir les détails",
+    "addToBoard": "Ajouter au projet",
+    "saleTypes": {
+      "cutToOrder": "Coupe à la demande",
+      "fixedLength": "Coupon {length}m",
+      "hybrid": "Coupon {length}m ou coupe",
+      "byPiece": "À la pièce"
+    }
+  },
+  "elements": {
+    "note": "Note",
+    "palette": "Palette",
+    "inspiration": "Inspiration",
+    "calculation": "Calcul métrage",
+    "textile": "Tissu",
+    "video": "Vidéo",
+    "link": "Lien",
+    "pdf": "PDF",
+    "pattern": "Patron",
+    "silhouette": "Silhouette"
+  },
+  "toolbar": {
+    "addNote": "Ajouter une note",
+    "addPalette": "Ajouter une palette",
+    "addTextile": "Ajouter un tissu",
+    "addCalculation": "Calculer le métrage",
+    "addImage": "Ajouter une image",
+    "addVideo": "Ajouter une vidéo",
+    "addLink": "Ajouter un lien",
+    "addPdf": "Ajouter un PDF",
+    "addPattern": "Ajouter un patron",
+    "addSilhouette": "Ajouter une silhouette",
+    "createZone": "Créer une zone",
+    "contextualSearch": "Recherche contextuelle"
+  },
+  "zone": {
+    "singular": "Zone",
+    "plural": "Zones",
+    "create": "Créer une zone",
+    "name": "Nom de la zone",
+    "delete": "Supprimer la zone",
+    "crystallize": "Cristalliser en commande"
+  },
+  "order": {
+    "title": "Commande",
+    "create": "Créer la commande",
+    "supplier": "Fournisseur",
+    "totalMeters": "Métrage total",
+    "estimatedPrice": "Prix estimé"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "success": "Succès",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "theme": "Thème",
+    "themes": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    }
+  }
+}

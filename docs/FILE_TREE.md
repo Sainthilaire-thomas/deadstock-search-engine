@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-18 09:11:11
+**Generated:** 2026-01-18 12:38:34
 
 ---
 
@@ -8,12 +8,12 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 406 |
+| Total Files | 411 |
 | Total Directories | 137 |
-| TypeScript Files (.ts/.tsx) | 232 |
+| TypeScript Files (.ts/.tsx) | 233 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 132 |
-| SQL Files (.sql) | 28 |
+| Markdown Files (.md) | 135 |
+| SQL Files (.sql) | 29 |
 | JSON Files (.json) | 5 |
 | CSS Files (.css) | 2 |
 | Other Files | 7 |
@@ -53,6 +53,7 @@ deadstock-search-engine/
 |   |   |-- 029_extend_users.sql
 |   |   |-- 030_user_creation_trigger.sql
 |   |   |-- 031_add_project_order_fields.sql
+|   |   |-- 032_add_board_cover_image.sql
 |   |   +-- MIGRATIONS.md
 |   |-- seeds/
 |   |   +-- enrich_dictionaries.sql
@@ -154,6 +155,7 @@ deadstock-search-engine/
 |   |   |   |-- ARCHITECTURE_UX_BOARD_REALISATION.md
 |   |   |   |-- GLOSSAIRE.md
 |   |   |   |-- GLOSSAIRE_V2.md
+|   |   |   |-- GLOSSAIRE_V3_i18n.md
 |   |   |   |-- MIGRATION_JOURNEY_TO_BOARD.md
 |   |   |   |-- SPEC_BOARD_MODULE.md
 |   |   |   |-- SPEC_BOARD_MOODBOARD_V2.md
@@ -190,6 +192,8 @@ deadstock-search-engine/
 |   |   |-- SPRINT_PLAN_V2.1.md
 |   |   |-- SPRINT_PLAN_V2.2.md
 |   |   |-- SPRINT_PLAN_V3.md
+|   |   |-- SPRINT_UI1_I18N1.md
+|   |   |-- SPRINT_UI1_I18N1_V1.1.md
 |   |   +-- SYNTHESE_DONNEES_DESIGNER (1).md
 |   |-- state/
 |   |   |-- CURRENT_STATE.md
@@ -534,6 +538,7 @@ deadstock-search-engine/
 |   |   |   |-- auth.ts
 |   |   |   |-- browser.ts
 |   |   |   |-- client.ts
+|   |   |   |-- database.types.ts
 |   |   |   |-- scraper.ts
 |   |   |   +-- server.ts
 |   |   +-- utils.ts
@@ -766,6 +771,7 @@ deadstock-search-engine/
 - `029_extend_users.sql`
 - `030_user_creation_trigger.sql`
 - `031_add_project_order_fields.sql`
+- `032_add_board_cover_image.sql`
 
 ### Seeds
 
@@ -852,7 +858,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-18 09:11:40
+**Date:** 2026-01-18 12:38:44
 
 **Command to regenerate:**
 ```powershell
