@@ -53,8 +53,8 @@ export function MainHeader() {
         {/* Navigation centrale */}
         {!showImmersive && (
           <nav className="hidden md:flex items-center gap-6">
-            {/* Retour au projet actif */}
-            {activeBoard && !isOnBoardPage && (
+           {/* Retour au projet actif - visible seulement sur search/favorites, pas sur /boards */}
+            {activeBoard && !isOnBoardPage && !isOnBoardsList && (
               <Link
                 href={activeBoard.returnPath}
                 className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
@@ -75,8 +75,8 @@ export function MainHeader() {
               </Link>
             )}
 
-            {/* Lien Projets */}
-            {!isOnBoardsList && !isOnBoardPage && (
+           {/* Lien Projets - toujours visible sauf sur la liste des boards */}
+            {!isOnBoardsList && (
               <Link
                 href="/boards"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

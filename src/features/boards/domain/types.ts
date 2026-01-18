@@ -50,6 +50,7 @@ export interface Board {
   name: string | null;
   description: string | null;
   status: BoardStatus;
+  coverImageUrl: string | null;  // ← AJOUTER
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,18 @@ export interface BoardWithDetails extends Board {
   zones: BoardZone[];
   elementCount: number;
 }
+
+// ============================================
+// BOARD WITH PREVIEW (pour liste boards)
+// ============================================
+
+export interface BoardWithPreview extends Board {
+  coverImageUrl: string | null;
+  previewUrl: string | null;  // URL finale (cover ou auto-extrait)
+  elementCount: number;
+  zoneCount: number;
+}
+
 
 // ============================================
 // BOARD ZONE
@@ -367,10 +380,10 @@ export interface BoardRow {
   name: string | null;
   description: string | null;
   status: string;
+  cover_image_url: string | null;  // ← AJOUTER
   created_at: string;
   updated_at: string;
 }
-
 export interface BoardZoneRow {
   id: string;
   board_id: string;
@@ -414,6 +427,7 @@ export function mapBoardFromRow(row: BoardRow): Board {
     name: row.name,
     description: row.description,
     status: row.status as BoardStatus,
+    coverImageUrl: row.cover_image_url,  // ← AJOUTER
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

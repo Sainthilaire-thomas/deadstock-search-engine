@@ -1,12 +1,13 @@
-// src/app/boards/page.tsx
+// src/app/(main)/boards/page.tsx
 
 import Link from 'next/link';
-import { Plus, Layout, Archive, MoreHorizontal, Trash2 } from 'lucide-react';
-import { listBoardsAction, createBoardAction } from '@/features/boards/actions/boardActions';
+import Image from 'next/image';
+import { Plus, Layout, Archive } from 'lucide-react';
+import { listBoardsWithPreviewAction, createBoardAction } from '@/features/boards/actions/boardActions';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { BOARD_STATUS_LABELS } from '@/features/boards/domain/types';
+import { BOARD_STATUS_LABELS, type BoardWithPreview } from '@/features/boards/domain/types';
 
 export const metadata = {
   title: 'Mes Boards | Deadstock',
@@ -26,7 +27,7 @@ async function createAndRedirect() {
 }
 
 export default async function BoardsPage() {
-  const result = await listBoardsAction();
+  const result = await listBoardsWithPreviewAction();
   const boards = result.data ?? [];
 
   const activeBoards = boards.filter((b) => b.status !== 'archived');
@@ -104,8 +105,8 @@ export default async function BoardsPage() {
   );
 }
 
-// Composant carte board
-function BoardCard({ board }: { board: { id: string; name: string | null; status: string; updatedAt: Date } }) {
+// Composant carte board avec preview
+function BoardCard({ board }: { board: BoardWithPreview }) {
   const displayName = board.name || 'Sans titre';
   const updatedAt = new Date(board.updatedAt).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -115,28 +116,58 @@ function BoardCard({ board }: { board: { id: string; name: string | null; status
 
   return (
     <Link href={`/boards/${board.id}`}>
-      <Card className="hover:border-foreground/20 transition-colors cursor-pointer group">
-        <CardContent className="p-4">
-          {/* Preview placeholder */}
-          <div className="aspect-video bg-muted rounded-md mb-3 flex items-center justify-center">
-            <Layout className="w-8 h-8 text-muted-foreground/50" />
+      <Card className="hover:border-foreground/20 transition-colors cursor-pointer group overflow-hidden">
+        <CardContent className="p-0">
+          {/* Preview image */}
+          <div className="aspect-video bg-muted relative overflow-hidden">
+            {board.previewUrl ? (
+              <Image
+                src={board.previewUrl}
+                alt={displayName}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Layout className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+            )}
+            
+            {/* Badges compteurs */}
+            <div className="absolute bottom-2 right-2 flex gap-1.5">
+              {board.elementCount > 0 && (
+                <span className="bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                  {board.elementCount} élément{board.elementCount > 1 ? 's' : ''}
+                </span>
+              )}
+              {board.zoneCount > 0 && (
+                <span className="bg-primary/80 text-white text-xs px-2 py-0.5 rounded-full">
+                  {board.zoneCount} zone{board.zoneCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Info */}
-          <div className="flex items-start justify-between">
-            <div className="min-w-0 flex-1">
-              <h3 className="font-medium truncate">{displayName}</h3>
-              <p className="text-sm text-muted-foreground">
-                Modifié le {updatedAt}
-              </p>
+          <div className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium truncate group-hover:text-primary transition-colors">
+                  {displayName}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Modifié le {updatedAt}
+                </p>
+              </div>
+
+              {/* Status badge */}
+              {board.status === 'archived' && (
+                <span className="text-xs bg-muted px-2 py-1 rounded ml-2">
+                  {BOARD_STATUS_LABELS[board.status as keyof typeof BOARD_STATUS_LABELS]}
+                </span>
+              )}
             </div>
-            
-            {/* Status badge */}
-            {board.status === 'archived' && (
-              <span className="text-xs bg-muted px-2 py-1 rounded">
-                {BOARD_STATUS_LABELS[board.status as keyof typeof BOARD_STATUS_LABELS]}
-              </span>
-            )}
           </div>
         </CardContent>
       </Card>

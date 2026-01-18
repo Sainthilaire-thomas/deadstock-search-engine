@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import type {
   Board,
   BoardWithDetails,
+  BoardWithPreview,
   BoardRow,
   BoardElementRow,
   BoardZoneRow,
@@ -36,6 +37,114 @@ export async function listBoards(userId: string): Promise<Board[]> {
   }
 
   return (data || []).map((row) => mapBoardFromRow(row as BoardRow));
+}
+
+// ============================================
+// LIST BOARDS WITH PREVIEW
+// ============================================
+
+export async function listBoardsWithPreview(userId: string): Promise<BoardWithPreview[]> {
+  const supabase = createAdminClient();
+
+  // Récupérer les boards avec leurs éléments et zones
+  const { data, error } = await supabase
+    .from('boards')
+    .select(`
+      *,
+      board_elements (
+        id,
+        element_type,
+        element_data
+      ),
+      board_zones (
+        id
+      )
+    `)
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('listBoardsWithPreview error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => {
+    const board = mapBoardFromRow(row as BoardRow);
+    const elements = row.board_elements || [];
+    const zones = row.board_zones || [];
+
+    return {
+      ...board,
+      previewUrl: extractPreviewUrl(
+        row.cover_image_url, 
+        elements as Array<{ element_type: string; element_data: Record<string, unknown> }>
+      ),
+      elementCount: elements.length,
+      zoneCount: zones.length,
+    };
+  });
+}
+
+/**
+ * Extrait l'URL de preview d'un board
+ * Priorité: cover_image_url > inspiration > textile > silhouette > pattern
+ */
+function extractPreviewUrl(
+  coverImageUrl: string | null,
+  elements: Array<{ element_type: string; element_data: Record<string, unknown> }>
+): string | null {
+  // 1. Cover explicite définie par l'utilisateur
+  if (coverImageUrl) {
+    return coverImageUrl;
+  }
+
+  // 2. Chercher dans les éléments par priorité
+  
+  // Priorité aux inspirations (images uploadées)
+  const inspiration = elements.find(
+    (e) => e.element_type === 'inspiration' && e.element_data?.imageUrl
+  );
+  if (inspiration?.element_data?.imageUrl) {
+    return inspiration.element_data.imageUrl as string;
+  }
+
+  // Textiles avec image (depuis snapshot)
+  const textile = elements.find(
+    (e) => e.element_type === 'textile' && e.element_data?.snapshot
+  );
+  if (textile?.element_data?.snapshot) {
+    const snapshot = textile.element_data.snapshot as Record<string, unknown>;
+    if (snapshot.imageUrl) {
+      return snapshot.imageUrl as string;
+    }
+  }
+
+  // Silhouettes
+  const silhouette = elements.find(
+    (e) => e.element_type === 'silhouette' && e.element_data?.url
+  );
+  if (silhouette?.element_data?.url) {
+    return silhouette.element_data.url as string;
+  }
+
+  // Patterns (thumbnail)
+  const pattern = elements.find(
+    (e) => e.element_type === 'pattern' && e.element_data?.thumbnailUrl
+  );
+  if (pattern?.element_data?.thumbnailUrl) {
+    return pattern.element_data.thumbnailUrl as string;
+  }
+
+  // Pattern (url directe si pas de thumbnail)
+  const patternDirect = elements.find(
+    (e) => e.element_type === 'pattern' && e.element_data?.url && e.element_data?.fileType === 'image'
+  );
+  if (patternDirect?.element_data?.url) {
+    return patternDirect.element_data.url as string;
+  }
+
+  // 3. Pas d'image trouvée
+  return null;
 }
 
 // ============================================
@@ -113,7 +222,7 @@ export async function getBoard(
 
   const board = mapBoardFromRow(boardData as BoardRow);
   const elements = (elementsData || []).map((row) => mapElementFromRow(row as BoardElementRow));
-  
+
   // Map zones with project status
   const zones = (zonesData || []).map((row) => {
     const zoneRow = row as BoardZoneRow;
@@ -197,6 +306,36 @@ export async function updateBoard(
 }
 
 // ============================================
+// UPDATE BOARD COVER IMAGE
+// ============================================
+
+export async function updateBoardCoverImage(
+  boardId: string,
+  coverImageUrl: string | null,
+  userId: string
+): Promise<Board | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('boards')
+    .update({ cover_image_url: coverImageUrl })
+    .eq('id', boardId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Not found
+    }
+    console.error('updateBoardCoverImage error:', error);
+    throw error;
+  }
+
+  return mapBoardFromRow(data as BoardRow);
+}
+
+// ============================================
 // DELETE BOARD
 // ============================================
 
@@ -247,9 +386,11 @@ export async function getBoardsCount(userId: string): Promise<number> {
 
 export const boardsRepository = {
   listBoards,
+  listBoardsWithPreview,
   getBoard,
   createBoard,
   updateBoard,
+  updateBoardCoverImage,
   deleteBoard,
   getBoardsCount,
 };

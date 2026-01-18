@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-18 06:18:11
+**Generated:** 2026-01-18 09:11:11
 
 ---
 
@@ -8,15 +8,15 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 404 |
-| Total Directories | 136 |
-| TypeScript Files (.ts/.tsx) | 230 |
+| Total Files | 406 |
+| Total Directories | 137 |
+| TypeScript Files (.ts/.tsx) | 232 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 128 |
+| Markdown Files (.md) | 132 |
 | SQL Files (.sql) | 28 |
 | JSON Files (.json) | 5 |
 | CSS Files (.css) | 2 |
-| Other Files | 11 |
+| Other Files | 7 |
 
 ---
 
@@ -61,16 +61,20 @@ deadstock-search-engine/
 |   |-- schema_deadstock.sql
 |   +-- USAGE_GUIDE.md
 |-- docs/
-|   |-- ai_context/
+|   |-- _archive/
 |   |   |-- CONTEXT_SUMMARY.md
 |   |   |-- NEXT_STEPS.md
 |   |   |-- NEXT_STEPS_MVP_DEMO.md
+|   |   |-- PHASES.md
+|   |   |-- PRODUCT_VISION.md
 |   |   |-- PROJECT_CONTEXT_COMPACT.md
 |   |   |-- PROJECT_CONTEXT_COMPACT_V2.md
 |   |   |-- PROJECT_CONTEXT_COMPACT_V3.md
 |   |   |-- PROJECT_CONTEXT_V4.1.md
-|   |   |-- PROJECT_CONTEXT_V4.md
-|   |   +-- PROJECT_CONTEXT_V4_2.md
+|   |   +-- PROJECT_CONTEXT_V4.md
+|   |-- ai_context/
+|   |   |-- PROJECT_CONTEXT_V4_2.md
+|   |   +-- PROJECT_CONTEXT_V4_3.md
 |   |-- decisions/
 |   |   |-- ADR_001_database_architecture.md
 |   |   |-- ADR_002_normalization_english_i18n.md
@@ -102,6 +106,7 @@ deadstock-search-engine/
 |   |   |-- ADR_028_BOARDS_ROADMAP.md
 |   |   |-- ADR_029_BOARD_JOURNEY_COMPLEMENTARITY.md
 |   |   |-- ADR_030_AUTH_MULTI_SCHEMA_V2.md
+|   |   |-- ADR_031_SIGNOUT_SERVER_SIDE.md
 |   |   |-- ADR_TEMPLATE.md
 |   |   +-- ARCHITECTURE_DECISION_SUMMARY.md
 |   |-- market/
@@ -109,9 +114,7 @@ deadstock-search-engine/
 |   |   +-- ANALYSE_OUTILS_CALCUL_METRAGE.md
 |   |-- project/
 |   |   |-- ARCHITECTURE_3_LEVEL_SEARCH.md
-|   |   |-- PHASES.md
 |   |   |-- PHASES_V2.md
-|   |   |-- PRODUCT_VISION.md
 |   |   |-- PRODUCT_VISION_V2.1.md
 |   |   |-- PROJECT_OVERVIEW.md
 |   |   |-- RECAP_MISE_A_JOUR_DOCS.md
@@ -178,6 +181,8 @@ deadstock-search-engine/
 |   |   |-- SPRINT_LANDING_AUTH.md
 |   |   |-- SPRINT_LANDING_AUTH_V2.md
 |   |   |-- SPRINT_LANDING_AUTH_V3.md
+|   |   |-- SPRINT_NAVIGATION_CLEANUP.md
+|   |   |-- SPRINT_NAVIGATION_CLEANUP_COMPLETED.md
 |   |   |-- SPRINT_NAVIGATION_UNIFICATION.md
 |   |   |-- SPRINT_PLAN.md
 |   |   |-- SPRINT_PLAN_CRISTALLISATION.md
@@ -202,12 +207,6 @@ deadstock-search-engine/
 |   |-- generate-file-tree.ps1
 |   +-- load-env.ts
 |-- src/
-|   |-- _backup/
-|   |   |-- favorites/
-|   |   |   |-- [id]/
-|   |   |   +-- page.tsx
-|   |   +-- search/
-|   |       +-- page.tsx
 |   |-- app/
 |   |   |-- (auth)/
 |   |   |   |-- forgot-password/
@@ -222,6 +221,12 @@ deadstock-search-engine/
 |   |   |-- (main)/
 |   |   |   |-- boards/
 |   |   |   |   |-- [boardId]/
+|   |   |   |   +-- page.tsx
+|   |   |   |-- favorites/
+|   |   |   |   +-- page.tsx
+|   |   |   |-- home/
+|   |   |   |   +-- page.tsx
+|   |   |   |-- search/
 |   |   |   |   +-- page.tsx
 |   |   |   |-- settings/
 |   |   |   |   +-- page.tsx
@@ -261,7 +266,9 @@ deadstock-search-engine/
 |   |   |   +-- page.tsx
 |   |   |-- api/
 |   |   |   |-- auth/
-|   |   |   |   +-- callback/
+|   |   |   |   |-- callback/
+|   |   |   |   |   +-- route.ts
+|   |   |   |   +-- signout/
 |   |   |   |       +-- route.ts
 |   |   |   |-- colors/
 |   |   |   |   +-- available/
@@ -281,6 +288,7 @@ deadstock-search-engine/
 |   |   |-- layout.tsx
 |   |   +-- page.tsx
 |   |-- components/
+|   |   |-- navigation/
 |   |   |-- search/
 |   |   |   |-- Filters.tsx
 |   |   |   |-- PriceDisplay.tsx
@@ -288,7 +296,6 @@ deadstock-search-engine/
 |   |   |   |-- SearchInterface.tsx
 |   |   |   |-- TextileGrid.tsx
 |   |   |   +-- YardageFilterBadge.tsx
-|   |   |-- textile/
 |   |   |-- theme/
 |   |   |   |-- ThemeProvider.tsx
 |   |   |   +-- ThemeToggle.tsx
@@ -315,9 +322,6 @@ deadstock-search-engine/
 |   |       |-- tabs.tsx
 |   |       |-- textarea.tsx
 |   |       +-- tooltip.tsx
-|   |-- domains/
-|   |   +-- pattern/
-|   |       +-- constants/
 |   |-- features/
 |   |   |-- admin/
 |   |   |   |-- application/
@@ -469,6 +473,11 @@ deadstock-search-engine/
 |   |   |   |   +-- projectsRepository.ts
 |   |   |   +-- services/
 |   |   |       +-- yardageCalculator.ts
+|   |   |-- navigation/
+|   |   |   |-- components/
+|   |   |   |   +-- MainHeader.tsx
+|   |   |   +-- context/
+|   |   |       +-- NavigationContext.tsx
 |   |   |-- normalization/
 |   |   |   |-- application/
 |   |   |   |   +-- normalizeTextile.ts
@@ -545,10 +554,6 @@ deadstock-search-engine/
 |-- package-lock.json
 |-- postcss.config.mjs
 |-- README.md
-|-- supabase_audit_admin.txt
-|-- supabase_audit_client.txt
-|-- supabase_audit_next_headers.txt
-|-- supabase_audit_server.txt
 |-- tailwind.config.ts
 |-- tsconfig.json
 +-- tsconfig.tsbuildinfo
@@ -724,6 +729,7 @@ deadstock-search-engine/
 ## API Routes
 
 - `/api/auth/callback`
+- `/api/auth/signout`
 - `/api/colors/available`
 - `/api/search/contextual`
 - `/api/search`
@@ -769,6 +775,9 @@ deadstock-search-engine/
 
 ## Components Summary
 
+### `components/navigation/`
+
+
 ### `components/search/`
 
 - `Filters.tsx`
@@ -777,9 +786,6 @@ deadstock-search-engine/
 - `SearchInterface.tsx`
 - `TextileGrid.tsx`
 - `YardageFilterBadge.tsx`
-
-### `components/textile/`
-
 
 ### `components/theme/`
 
@@ -846,7 +852,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-18 06:18:33
+**Date:** 2026-01-18 09:11:40
 
 **Command to regenerate:**
 ```powershell

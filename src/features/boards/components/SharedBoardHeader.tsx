@@ -79,11 +79,11 @@ export function SharedBoardHeader({ currentView }: SharedBoardHeaderProps) {
     <header className="border-b bg-background px-4 py-3 flex items-center justify-between shrink-0">
       {/* Left section */}
       <div className="flex items-center gap-4">
-        <Link href="/boards">
+        {/* <Link href="/boards">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
-        </Link>
+        </Link> */}
 
         <div>
           {isEditing ? (

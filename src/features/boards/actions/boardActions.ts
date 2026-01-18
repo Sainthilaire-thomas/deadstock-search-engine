@@ -8,6 +8,7 @@ import { requireUserId } from '@/lib/auth/getAuthUser';
 import type {
   Board,
   BoardWithDetails,
+  BoardWithPreview,  // ← AJOUTER
   CreateBoardInput,
   UpdateBoardInput,
   ActionResult,
@@ -138,5 +139,46 @@ export async function getBoardsCountAction(): Promise<ActionResult<number>> {
   } catch (error) {
     console.error('getBoardsCountAction error:', error);
     return { success: false, error: 'Impossible de compter les boards' };
+  }
+}
+
+// ============================================
+// LIST BOARDS WITH PREVIEW
+// ============================================
+
+export async function listBoardsWithPreviewAction(): Promise<ActionResult<BoardWithPreview[]>> {
+  try {
+    const userId = await requireUserId();
+    const boards = await boardsRepository.listBoardsWithPreview(userId);
+    return { success: true, data: boards };
+  } catch (error) {
+    console.error('listBoardsWithPreviewAction error:', error);
+    return { success: false, error: 'Impossible de charger les boards' };
+  }
+}
+
+// ============================================
+// UPDATE BOARD COVER IMAGE
+// ============================================
+
+export async function updateBoardCoverImageAction(
+  boardId: string,
+  coverImageUrl: string | null
+): Promise<ActionResult<Board>> {
+  try {
+    const userId = await requireUserId();
+    const board = await boardsRepository.updateBoardCoverImage(boardId, coverImageUrl, userId);
+
+    if (!board) {
+      return { success: false, error: 'Board introuvable' };
+    }
+
+    revalidatePath('/boards');
+    revalidatePath(`/boards/${boardId}`);
+
+    return { success: true, data: board };
+  } catch (error) {
+    console.error('updateBoardCoverImageAction error:', error);
+    return { success: false, error: 'Impossible de mettre à jour la couverture' };
   }
 }
