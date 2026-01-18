@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-17 17:19:34
+**Generated:** 2026-01-18 06:18:11
 
 ---
 
@@ -8,9 +8,9 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 399 |
+| Total Files | 404 |
 | Total Directories | 136 |
-| TypeScript Files (.ts/.tsx) | 225 |
+| TypeScript Files (.ts/.tsx) | 230 |
 | JavaScript Files (.js/.jsx) | 0 |
 | Markdown Files (.md) | 128 |
 | SQL Files (.sql) | 28 |
@@ -384,6 +384,7 @@ deadstock-search-engine/
 |   |   |   |   |   |-- SilhouetteElement.tsx
 |   |   |   |   |   +-- VideoElement.tsx
 |   |   |   |   |-- AddToBoardButton.tsx
+|   |   |   |   |-- AutoArrangeDialog.tsx
 |   |   |   |   |-- BoardCanvas.tsx
 |   |   |   |   |-- BoardLayoutClient.tsx
 |   |   |   |   |-- BoardToolbar.tsx
@@ -400,17 +401,20 @@ deadstock-search-engine/
 |   |   |   |   |-- PaletteEditor.tsx
 |   |   |   |   |-- PatternModal.tsx
 |   |   |   |   |-- PdfModal.tsx
+|   |   |   |   |-- PhaseColumns.tsx
 |   |   |   |   |-- SearchFiltersCompact.tsx
 |   |   |   |   |-- SharedBoardHeader.tsx
 |   |   |   |   |-- SilhouetteModal.tsx
 |   |   |   |   |-- UnsplashImagePicker.tsx
 |   |   |   |   |-- VideoModal.tsx
 |   |   |   |   |-- ViewToggle.tsx
-|   |   |   |   +-- ZoneCard.tsx
+|   |   |   |   |-- ZoneCard.tsx
+|   |   |   |   +-- ZoomControls.tsx
 |   |   |   |-- context/
 |   |   |   |   |-- BoardContext.tsx
 |   |   |   |   |-- ContextualSearchContext.tsx
-|   |   |   |   +-- ImmersiveModeContext.tsx
+|   |   |   |   |-- ImmersiveModeContext.tsx
+|   |   |   |   +-- TransformContext.tsx
 |   |   |   |-- domain/
 |   |   |   |   +-- types.ts
 |   |   |   |-- hooks/
@@ -422,6 +426,7 @@ deadstock-search-engine/
 |   |   |   |-- services/
 |   |   |   |   +-- unsplashService.ts
 |   |   |   +-- utils/
+|   |   |       |-- autoArrange.ts
 |   |   |       |-- colorExtractor.ts
 |   |   |       +-- zoneUtils.ts
 |   |   |-- favorites/
@@ -593,6 +598,7 @@ deadstock-search-engine/
 - `/src/features/boards/actions/elementActions.ts`
 - `/src/features/boards/actions/zoneActions.ts`
 - `/src/features/boards/components/AddToBoardButton.tsx`
+- `/src/features/boards/components/AutoArrangeDialog.tsx`
 - `/src/features/boards/components/BoardCanvas.tsx`
 - `/src/features/boards/components/BoardLayoutClient.tsx`
 - `/src/features/boards/components/BoardToolbar.tsx`
@@ -624,6 +630,7 @@ deadstock-search-engine/
 - `/src/features/boards/components/PaletteEditor.tsx`
 - `/src/features/boards/components/PatternModal.tsx`
 - `/src/features/boards/components/PdfModal.tsx`
+- `/src/features/boards/components/PhaseColumns.tsx`
 - `/src/features/boards/components/SearchFiltersCompact.tsx`
 - `/src/features/boards/components/SharedBoardHeader.tsx`
 - `/src/features/boards/components/SilhouetteModal.tsx`
@@ -631,15 +638,18 @@ deadstock-search-engine/
 - `/src/features/boards/components/VideoModal.tsx`
 - `/src/features/boards/components/ViewToggle.tsx`
 - `/src/features/boards/components/ZoneCard.tsx`
+- `/src/features/boards/components/ZoomControls.tsx`
 - `/src/features/boards/context/BoardContext.tsx`
 - `/src/features/boards/context/ContextualSearchContext.tsx`
 - `/src/features/boards/context/ImmersiveModeContext.tsx`
+- `/src/features/boards/context/TransformContext.tsx`
 - `/src/features/boards/domain/types.ts`
 - `/src/features/boards/hooks/useContextualSearch.ts`
 - `/src/features/boards/infrastructure/boardsRepository.ts`
 - `/src/features/boards/infrastructure/elementsRepository.ts`
 - `/src/features/boards/infrastructure/zonesRepository.ts`
 - `/src/features/boards/services/unsplashService.ts`
+- `/src/features/boards/utils/autoArrange.ts`
 - `/src/features/boards/utils/colorExtractor.ts`
 - `/src/features/boards/utils/zoneUtils.ts`
 
@@ -836,7 +846,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-17 17:19:43
+**Date:** 2026-01-18 06:18:33
 
 **Command to regenerate:**
 ```powershell
