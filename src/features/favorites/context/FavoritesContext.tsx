@@ -49,6 +49,11 @@ export function FavoritesProvider({
     }
   }, []);
 
+  // Charger le count au montage
+  useEffect(() => {
+    refreshCount();
+  }, [refreshCount]);
+  
   return (
     <FavoritesContext.Provider value={{ favoriteIds, count, addFavorite, removeFavorite, isFavorite, refreshCount }}>
       {children}
