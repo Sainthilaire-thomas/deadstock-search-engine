@@ -9,6 +9,7 @@ import { ImmersiveModeProvider, useImmersiveMode } from '@/features/boards/conte
 import { AuthProvider } from '@/features/auth/context/AuthContext';
 import { FavoritesProvider } from '@/features/favorites/context/FavoritesContext';
 import { MainHeader } from '@/features/navigation/components/MainHeader';
+import { NavigationProvider } from '@/features/navigation/context/NavigationContext';
 
 function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const { isImmersive, exitImmersiveMode } = useImmersiveMode();
@@ -49,11 +50,13 @@ export default function MainLayout({
 }) {
   return (
     <AuthProvider>
-      <FavoritesProvider>
-        <ImmersiveModeProvider>
-          <MainLayoutContent>{children}</MainLayoutContent>
-        </ImmersiveModeProvider>
-      </FavoritesProvider>
+      <NavigationProvider>
+        <FavoritesProvider>
+          <ImmersiveModeProvider>
+            <MainLayoutContent>{children}</MainLayoutContent>
+          </ImmersiveModeProvider>
+        </FavoritesProvider>
+      </NavigationProvider>
     </AuthProvider>
   );
 }

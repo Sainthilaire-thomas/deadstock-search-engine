@@ -4,15 +4,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, LayoutGrid } from 'lucide-react';
+import { Search, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { UserMenu } from '@/features/auth/components/UserMenu';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { FavoritesCountBadge } from '@/features/favorites/components/FavoritesCountBadge';
 import { useImmersiveMode } from '@/features/boards/context/ImmersiveModeContext';
+import { useNavigation } from '@/features/navigation/context/NavigationContext';
 
 export function MainHeader() {
   const pathname = usePathname();
   const { isImmersive } = useImmersiveMode();
+  const { activeBoard } = useNavigation();
 
   // Détecter les pages pour adapter la navigation
   const isOnSearchPage = pathname === '/search';
@@ -51,7 +53,18 @@ export function MainHeader() {
         {/* Navigation centrale */}
         {!showImmersive && (
           <nav className="hidden md:flex items-center gap-6">
-          {/* Lien Recherche */}
+            {/* Retour au projet actif */}
+            {activeBoard && !isOnBoardPage && (
+              <Link
+                href={activeBoard.returnPath}
+                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Retour à "{activeBoard.name}"
+              </Link>
+            )}
+
+            {/* Lien Recherche */}
             {!isOnSearchPage && (
               <Link
                 href="/search"
