@@ -35,23 +35,26 @@ export async function middleware(request: NextRequest) {
 
   // Routes publiques - pas de protection
   const publicRoutes = ["/", "/pricing", "/login", "/signup", "/forgot-password", "/reset-password"];
-  const isPublicRoute = publicRoutes.some(route => pathname === route) || 
+  const isPublicRoute = publicRoutes.some(route => pathname === route) ||
                         pathname.startsWith("/api/auth");
 
   // Routes admin - nécessitent role admin (vérifié côté page)
   const isAdminRoute = pathname.startsWith("/admin");
 
   // Routes app protégées - nécessitent auth
-  const isProtectedRoute = pathname.startsWith("/boards") ||
+  const isProtectedRoute = pathname.startsWith("/home") ||
+                           pathname.startsWith("/search") ||
+                           pathname.startsWith("/favorites") ||
+                           pathname.startsWith("/boards") ||
                            pathname.startsWith("/textiles") ||
                            pathname.startsWith("/settings") ||
                            pathname.startsWith("/tools");
 
   // Si route publique, laisser passer
   if (isPublicRoute) {
-    // Mais rediriger vers /boards si déjà connecté sur pages auth
+    // Mais rediriger vers /home si déjà connecté sur pages auth
     if (user && (pathname === "/login" || pathname === "/signup")) {
-      return NextResponse.redirect(new URL("/boards", request.url));
+      return NextResponse.redirect(new URL("/home", request.url));
     }
     return response;
   }
