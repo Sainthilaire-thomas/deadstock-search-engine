@@ -1,6 +1,0 @@
-﻿C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\admin\infrastructure\jobsRepo.ts:2  import { createClient } from '@/lib/supabase/client';
-C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\admin\infrastructure\sitesRepo.ts:2  import { createClient } from '@/lib/supabase/client';
-C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\favorites\infrastructure\favoritesRepository.ts:8  import { createClient } from '@/lib/supabase/client';
-C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\search\infrastructure\textileRepository.ts:3  import { createClient } from '@/lib/supabase/client';
-C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\tuning\infrastructure\dictionaryRepo.ts:8  import { createScraperClient } from '@/lib/supabase/client';
-C:\Users\thoma\OneDrive\SONEAR_2025\deadstok\deadstock-search-engine\src\features\tuning\infrastructure\unknownsRepo.ts:7  import { createScraperClient } from '@/lib/supabase/client';
