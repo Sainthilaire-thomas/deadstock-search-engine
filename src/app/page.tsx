@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import ValueChainComparison from '@/components/landing/ValueChainComparison';
 import Link from 'next/link';
 
 export default function LandingPageV2() {
@@ -167,6 +168,9 @@ export default function LandingPageV2() {
           </div>
         </div>
       </section>
+
+       {/* Value Chain Comparison */}
+      <ValueChainComparison />
 
       {/* Two Journeys Section */}
       <section id="parcours" className="py-32 relative">
