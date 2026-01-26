@@ -1,7 +1,8 @@
 // src/features/boards/components/canvas/hooks/useElementDrag.ts
 // Hook pour le drag & drop des éléments
+// SCALE-2: Optimisé avec requestAnimationFrame pour 60fps max
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import type { BoardElement } from '../../../domain/types';
 
 interface DragPosition {
@@ -50,36 +51,73 @@ export function useElementDrag({
   dragPositionRef.current = dragPosition;
 
   const elementDragRef = useRef<ElementDragRef | null>(null);
+  
+  // SCALE-2: RAF throttling refs
+  const rafIdRef = useRef<number | null>(null);
+  const pendingPositionRef = useRef<DragPosition | null>(null);
 
- const handleElementMouseMove = useCallback((e: MouseEvent) => {
+  // SCALE-2: Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
+
+  // SCALE-2: RAF update function
+  const updatePositionWithRAF = useCallback(() => {
+    if (pendingPositionRef.current) {
+      setDragPosition(pendingPositionRef.current);
+      pendingPositionRef.current = null;
+    }
+    rafIdRef.current = null;
+  }, []);
+
+  const handleElementMouseMove = useCallback((e: MouseEvent) => {
     if (!elementDragRef.current) return;
+
     // Diviser par scale pour compenser le zoom
     const dx = (e.clientX - elementDragRef.current.startX) / scale;
     const dy = (e.clientY - elementDragRef.current.startY) / scale;
     const newX = Math.max(0, elementDragRef.current.elementStartX + dx);
     const newY = Math.max(0, elementDragRef.current.elementStartY + dy);
 
-    setDragPosition({ 
-      type: 'element', 
-      id: elementDragRef.current.elementId, 
-      x: newX, 
-      y: newY 
-    });
- }, [scale]);
+    // SCALE-2: Store position in ref, schedule RAF update
+    pendingPositionRef.current = {
+      type: 'element',
+      id: elementDragRef.current.elementId,
+      x: newX,
+      y: newY
+    };
+
+    // Only schedule RAF if not already scheduled
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(updatePositionWithRAF);
+    }
+  }, [scale, updatePositionWithRAF]);
 
   const handleElementMouseUp = useCallback(() => {
-    const pos = dragPositionRef.current;
+    // SCALE-2: Cancel pending RAF
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
 
-    if (pos && pos.type === 'element') {
-      moveElementLocal(pos.id, pos.x, pos.y);
-      saveElementPosition(pos.id, pos.x, pos.y);
+    // Apply any pending position immediately
+    const finalPos = pendingPositionRef.current || dragPositionRef.current;
+    pendingPositionRef.current = null;
+
+    if (finalPos && finalPos.type === 'element') {
+      moveElementLocal(finalPos.id, finalPos.x, finalPos.y);
+      saveElementPosition(finalPos.id, finalPos.x, finalPos.y);
     }
 
     setDragPosition(null);
     elementDragRef.current = null;
     setDragging(false);
     onDragEnd?.();
-    
+
     document.removeEventListener('mousemove', handleElementMouseMove);
     document.removeEventListener('mouseup', handleElementMouseUp);
   }, [moveElementLocal, saveElementPosition, setDragging, onDragEnd, handleElementMouseMove]);
@@ -100,7 +138,7 @@ export function useElementDrag({
       elementStartX: element.positionX,
       elementStartY: element.positionY,
     };
-    
+
     setDragging(true);
     onDragStart?.();
 

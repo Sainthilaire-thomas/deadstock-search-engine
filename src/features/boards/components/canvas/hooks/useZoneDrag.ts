@@ -1,8 +1,9 @@
 // src/features/boards/components/canvas/hooks/useZoneDrag.ts
 // Hook pour le drag & drop des zones (avec Ghost Mode pour performance)
 // Sprint P0.4 - Ghost Mode: éléments masqués pendant le drag
+// SCALE-2: Optimisé avec requestAnimationFrame pour 60fps max
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { bulkMoveElementsAction } from '../../../actions/elementActions';
 import { getElementsInZone } from '../../../utils/zoneUtils';
 import type { BoardElement, BoardZone } from '../../../domain/types';
@@ -57,7 +58,7 @@ export function useZoneDrag({
 }: UseZoneDragProps): UseZoneDragReturn {
   const [dragPosition, setDragPosition] = useState<DragPosition | null>(null);
   const [zoneDragElementPositions, setZoneDragElementPositions] = useState<Record<string, { x: number; y: number }>>({});
-  
+
   // Ghost Mode states
   const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
   const [draggingElementIds, setDraggingElementIds] = useState<string[]>([]);
@@ -68,7 +69,29 @@ export function useZoneDrag({
 
   const zoneDragRef = useRef<ZoneDragRef | null>(null);
 
-const handleZoneMouseMove = useCallback((e: MouseEvent) => {
+  // SCALE-2: RAF throttling refs
+  const rafIdRef = useRef<number | null>(null);
+  const pendingPositionRef = useRef<DragPosition | null>(null);
+
+  // SCALE-2: Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
+
+  // SCALE-2: RAF update function
+  const updatePositionWithRAF = useCallback(() => {
+    if (pendingPositionRef.current) {
+      setDragPosition(pendingPositionRef.current);
+      pendingPositionRef.current = null;
+    }
+    rafIdRef.current = null;
+  }, []);
+
+  const handleZoneMouseMove = useCallback((e: MouseEvent) => {
     if (!zoneDragRef.current) return;
 
     // Diviser par scale pour compenser le zoom
@@ -77,18 +100,32 @@ const handleZoneMouseMove = useCallback((e: MouseEvent) => {
     const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
     const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
 
-    setDragPosition({ type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY });
+    // SCALE-2: Store position in ref, schedule RAF update
+    pendingPositionRef.current = { type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY };
+
+    // Only schedule RAF if not already scheduled
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(updatePositionWithRAF);
+    }
 
     // Ghost Mode: on ne met plus à jour zoneDragElementPositions pendant le drag
     // Les éléments sont masqués, pas besoin de calculer leurs positions
-  }, [scale]);
-  
+  }, [scale, updatePositionWithRAF]);
+
   const handleZoneMouseUp = useCallback(() => {
     // Cleanup immédiat AVANT toute opération async
     document.removeEventListener('mousemove', handleZoneMouseMove);
     document.removeEventListener('mouseup', handleZoneMouseUp);
 
-    const pos = dragPositionRef.current;
+    // SCALE-2: Cancel pending RAF
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
+    // Apply any pending position immediately
+    const pos = pendingPositionRef.current || dragPositionRef.current;
+    pendingPositionRef.current = null;
     const dragData = zoneDragRef.current;
 
     // Reset des states immédiatement
