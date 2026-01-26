@@ -301,6 +301,37 @@ const { resizeState, handleZoneResizeStart } = useZoneResize({
   // ============================================
   // HANDLERS
   // ============================================
+
+  // Callback mémorisé pour ContextualSearchPanel (REACT-3)
+  const handleAddTextileToBoard = useCallback(async (textile: { 
+    id: string; 
+    name: string; 
+    supplier_name?: string | null; 
+    price_value?: number | null; 
+    price_currency?: string | null; 
+    image_url?: string | null; 
+    quantity_value?: number | null; 
+    fiber?: string | null; 
+    color?: string | null; 
+  }) => {
+    const position = { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 };
+    const elementData: TextileElementData = {
+      textileId: textile.id,
+      snapshot: {
+        name: textile.name,
+        source: textile.supplier_name || '',
+        price: textile.price_value || 0,
+        currency: textile.price_currency || 'EUR',
+        imageUrl: textile.image_url ?? null,
+        availableQuantity: textile.quantity_value || null,
+        material: textile.fiber || null,
+        color: textile.color || null,
+      },
+    };
+    await addElement({ elementType: 'textile', elementData, positionX: position.x, positionY: position.y });
+    toast.success(`"${textile.name}" ajouté au board`);
+  }, [addElement]);
+
   const handleAddElement = useCallback(async (type: ToolType) => {
     const position = { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 };
 
@@ -822,37 +853,22 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         onSaveSilhouette={handleSaveSilhouette}
       />
 
-    {/* Auto-Arrange Dialog (Sprint P2) */}
-      <AutoArrangeDialog
-        isOpen={showAutoArrangeDialog}
-        onClose={() => setShowAutoArrangeDialog(false)}
-        onConfirm={handleAutoArrange}
-        elements={elements}
-        zones={zones}
-        initialShowPhaseColumns={showPhaseColumns}
-      />
+  {/* Auto-Arrange Dialog (Sprint P2) */}
+      {showAutoArrangeDialog && (
+        <AutoArrangeDialog
+          isOpen={showAutoArrangeDialog}
+          onClose={() => setShowAutoArrangeDialog(false)}
+          onConfirm={handleAutoArrange}
+          elements={elements}
+          zones={zones}
+          initialShowPhaseColumns={showPhaseColumns}
+        />
+      )}
 
-      {/* Contextual Search Panel */}
+    {/* Contextual Search Panel */}
       <ContextualSearchPanel
         boardId={boardId}
-        onAddToBoard={async (textile) => {
-          const position = { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 };
-          const elementData: TextileElementData = {
-            textileId: textile.id,
-            snapshot: {
-              name: textile.name,
-              source: textile.supplier_name || '',
-              price: textile.price_value || 0,
-              currency: textile.price_currency || 'EUR',
-              imageUrl: textile.image_url ?? null,
-              availableQuantity: textile.quantity_value || null,
-              material: textile.fiber || null,
-              color: textile.color || null,
-            },
-          };
-          await addElement({ elementType: 'textile', elementData, positionX: position.x, positionY: position.y });
-          toast.success(`"${textile.name}" ajouté au board`);
-        }}
+        onAddToBoard={handleAddTextileToBoard}
       />
     </div>
   );

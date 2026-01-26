@@ -136,12 +136,14 @@ export function CanvasModals({
       )}
 
       {/* Pattern Import Modal */}
-       <PatternImportModal
-        open={showPatternModal}
-        onClose={onClosePatternImportModal}
-        context="board"
-        onAddToBoard={onAddPatternCalculation}
-      />
+      {showPatternModal && (
+        <PatternImportModal
+          open={showPatternModal}
+          onClose={onClosePatternImportModal}
+          context="board"
+          onAddToBoard={onAddPatternCalculation}
+        />
+      )}
 
       {/* Palette Editor Modal */}
       {editingPaletteId && (() => {
@@ -166,44 +168,54 @@ export function CanvasModals({
       )}
 
       {/* Video Modal */}
-      <VideoModal
-        isOpen={showVideoModal}
-        onClose={onCloseVideoModal}
-        onSave={onSaveVideo}
-        initialData={getElementData<VideoElementData>(editingVideoId)}
-      />
+      {showVideoModal && (
+        <VideoModal
+          isOpen={showVideoModal}
+          onClose={onCloseVideoModal}
+          onSave={onSaveVideo}
+          initialData={getElementData<VideoElementData>(editingVideoId)}
+        />
+      )}
 
       {/* Link Modal */}
-      <LinkModal
-        isOpen={showLinkModal}
-        onClose={onCloseLinkModal}
-        onSave={onSaveLink}
-        initialData={getElementData<LinkElementData>(editingLinkId)}
-      />
+      {showLinkModal && (
+        <LinkModal
+          isOpen={showLinkModal}
+          onClose={onCloseLinkModal}
+          onSave={onSaveLink}
+          initialData={getElementData<LinkElementData>(editingLinkId)}
+        />
+      )}
 
       {/* PDF Modal */}
-      <PdfModal
-        isOpen={isPdfModalOpen}
-        onClose={onClosePdfModal}
-        onSave={onSavePdf}
-        initialData={getElementData<PdfElementData>(editingPdfId)}
-      />
+      {isPdfModalOpen && (
+        <PdfModal
+          isOpen={isPdfModalOpen}
+          onClose={onClosePdfModal}
+          onSave={onSavePdf}
+          initialData={getElementData<PdfElementData>(editingPdfId)}
+        />
+      )}
 
       {/* Pattern Modal */}
-      <PatternModal
-        isOpen={isPatternModalOpen}
-        onClose={onClosePatternElementModal}
-        onSave={onSavePattern}
-        initialData={getElementData<PatternElementData>(editingPatternId)}
-      />
+      {isPatternModalOpen && (
+        <PatternModal
+          isOpen={isPatternModalOpen}
+          onClose={onClosePatternElementModal}
+          onSave={onSavePattern}
+          initialData={getElementData<PatternElementData>(editingPatternId)}
+        />
+      )}
 
       {/* Silhouette Modal */}
-      <SilhouetteModal
-        isOpen={isSilhouetteModalOpen}
-        onClose={onCloseSilhouetteModal}
-        onSave={onSaveSilhouette}
-        initialData={getElementData<SilhouetteElementData>(editingSilhouetteId)}
-      />
+      {isSilhouetteModalOpen && (
+        <SilhouetteModal
+          isOpen={isSilhouetteModalOpen}
+          onClose={onCloseSilhouetteModal}
+          onSave={onSaveSilhouette}
+          initialData={getElementData<SilhouetteElementData>(editingSilhouetteId)}
+        />
+      )}
     </>
   );
 }
