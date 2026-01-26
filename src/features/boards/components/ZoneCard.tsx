@@ -12,6 +12,8 @@ type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
 interface ZoneCardProps {
   zone: BoardZone;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
   isSelected: boolean;
   isEditing: boolean;
   isVisible?: boolean;
@@ -29,6 +31,8 @@ interface ZoneCardProps {
 
 export const ZoneCard = React.memo(function ZoneCard({
   zone,
+  position,
+  size,
   isSelected,
   isEditing,
   isVisible = true,
@@ -98,10 +102,10 @@ export const ZoneCard = React.memo(function ZoneCard({
         rounded
       `}
        style={{
-        left: zone.positionX,
-        top: zone.positionY,
-        width: zone.width,
-        height: zone.height,
+          left: position.x,
+          top: position.y,
+          width: size.width,
+          height: size.height,
         zIndex: isSelected ? 5 : 1,
         ...style,
       }}

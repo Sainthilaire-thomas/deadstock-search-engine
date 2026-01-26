@@ -40,6 +40,7 @@ import type {
 
 interface ElementCardProps {
   element: BoardElement;
+  position: { x: number; y: number };
   isSelected: boolean;
   isEditing: boolean;
   style?: React.CSSProperties;
@@ -53,6 +54,7 @@ interface ElementCardProps {
 
 export const ElementCard = React.memo(function ElementCard({
   element,
+  position,
   isSelected,
   isEditing,
   style: externalStyle,
@@ -211,8 +213,8 @@ export const ElementCard = React.memo(function ElementCard({
         }
       `}
      style={{
-        left: element.positionX,
-        top: element.positionY,
+        left: position.x,
+        top: position.y,
         width,
         height,
         zIndex: isEditing ? 2000 : isSelected ? 1000 : element.zIndex + 10,

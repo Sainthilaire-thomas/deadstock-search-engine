@@ -710,7 +710,9 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
              return (
                 <ZoneCard
                   key={zone.id}
-                  zone={{ ...zone, positionX: position.x, positionY: position.y, width: size.width, height: size.height }}
+                  zone={zone}
+                  position={position}
+                  size={size}
                   isSelected={selectedZoneId === zone.id}
                   style={isArranging && arrangeTarget ? {
                     transition: 'left 0.5s ease-out, top 0.5s ease-out',
@@ -748,7 +750,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
               return (
                 <ElementCard
                   key={element.id}
-                  element={{ ...element, positionX: position.x, positionY: position.y }}
+                  element={element}
+                  position={position}
                   isSelected={selectedElementIds.includes(element.id)}
                   isEditing={editingElementId === element.id}
                   style={isArranging && arrangeTarget ? {
