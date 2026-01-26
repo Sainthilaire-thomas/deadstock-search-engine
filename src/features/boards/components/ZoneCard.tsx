@@ -3,12 +3,17 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { GripVertical, Sparkles, ExternalLink, X } from 'lucide-react';
 import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
 import type { BoardZone } from '../domain/types';
 
 type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+export interface ZoneCardHandle {
+  setTransform: (x: number, y: number) => void;
+  resetTransform: () => void;
+}
 
 interface ZoneCardProps {
   zone: BoardZone;
@@ -29,7 +34,7 @@ interface ZoneCardProps {
   onDelete?: () => void;
 }
 
-export const ZoneCard = React.memo(function ZoneCard({
+export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(function ZoneCard({
   zone,
   position,
   size,
@@ -46,9 +51,24 @@ export const ZoneCard = React.memo(function ZoneCard({
   onCancelEdit,
   onCrystallize,
   onDelete,
-}: ZoneCardProps) {
+}, ref) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [editName, setEditName] = useState(zone.name);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Expose methods for direct DOM manipulation during drag
+  useImperativeHandle(ref, () => ({
+    setTransform: (x: number, y: number) => {
+      if (cardRef.current) {
+        cardRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    },
+    resetTransform: () => {
+      if (cardRef.current) {
+        cardRef.current.style.transform = '';
+      }
+    },
+  }), []);
     const isCrystallized = isZoneCrystallized(zone);
   const isOrdered = isZoneOrdered(zone);
 
@@ -80,8 +100,9 @@ export const ZoneCard = React.memo(function ZoneCard({
   // Ghost Mode: style spécial pendant le drag avec éléments masqués
   const isGhostMode = isDragging && ghostElementCount > 0;
 
-  return (
+ return (
     <div
+      ref={cardRef}
       className={`
         group
         absolute transition-all duration-300 ease-in-out
@@ -101,9 +122,10 @@ export const ZoneCard = React.memo(function ZoneCard({
         }
         rounded
       `}
-       style={{
-          left: position.x,
-          top: position.y,
+           style={{
+          left: 0,
+          top: 0,
+          transform: `translate(${position.x}px, ${position.y}px)`,
           width: size.width,
           height: size.height,
         zIndex: isSelected ? 5 : 1,
@@ -284,5 +306,5 @@ export const ZoneCard = React.memo(function ZoneCard({
         </>
       )}
         </div>
-  );
-});
+   );
+}));

@@ -3,7 +3,7 @@
 // Sprint 7: Ajout bouton contrainte sur palette et calculation
 
 'use client';
-import React from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useState } from 'react';
 
 import { GripVertical, X, ExternalLink, Play, Eye } from 'lucide-react';
@@ -38,6 +38,11 @@ import type {
   CalculationElementData,
 } from '../domain/types';
 
+export interface ElementCardHandle {
+  setTransform: (x: number, y: number) => void;
+  resetTransform: () => void;
+}
+
 interface ElementCardProps {
   element: BoardElement;
   position: { x: number; y: number };
@@ -52,7 +57,7 @@ interface ElementCardProps {
   onSavePalette?: (data: PaletteElementData) => void;
 }
 
-export const ElementCard = React.memo(function ElementCard({
+export const ElementCard = React.memo(forwardRef<ElementCardHandle, ElementCardProps>(function ElementCard({
   element,
   position,
   isSelected,
@@ -64,7 +69,23 @@ export const ElementCard = React.memo(function ElementCard({
   onCancelEdit,
   onDelete,
   onSavePalette,
-}: ElementCardProps) {
+}, ref) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Expose methods for direct DOM manipulation during drag
+  useImperativeHandle(ref, () => ({
+    setTransform: (x: number, y: number) => {
+      if (cardRef.current) {
+        cardRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    },
+    resetTransform: () => {
+      if (cardRef.current) {
+        cardRef.current.style.transform = '';
+      }
+    },
+  }), []);
+
   const width = element.width || 180;
   const height = element.height || 120;
 
@@ -198,6 +219,7 @@ export const ElementCard = React.memo(function ElementCard({
 
   return (
     <div
+      ref={cardRef}
       className={`
         group
         absolute
@@ -213,8 +235,9 @@ export const ElementCard = React.memo(function ElementCard({
         }
       `}
      style={{
-        left: position.x,
-        top: position.y,
+        left: 0,
+        top: 0,
+        transform: `translate(${position.x}px, ${position.y}px)`,
         width,
         height,
         zIndex: isEditing ? 2000 : isSelected ? 1000 : element.zIndex + 10,
@@ -408,7 +431,7 @@ export const ElementCard = React.memo(function ElementCard({
       )}
        </div>
   );
-});
+}));
 
 // ============================================
 // PREVIEWS - Style épuré
