@@ -15,7 +15,6 @@ import { ShoppingCart, FileText, Package, CheckCircle, Trophy } from "lucide-rea
 import type { ProjectStatus, BoardZone } from "@/features/boards/domain/types";
 
 interface JourneyClientWrapperProps {
-  initialSearchData: SearchResult;
   initialFavorites: FavoriteWithTextile[];
 }
 
@@ -134,9 +133,8 @@ function CrystallizedZoneItem({
   );
 }
 
-export function JourneyClientWrapper({ 
-  initialSearchData, 
-  initialFavorites 
+export function JourneyClientWrapper({
+  initialFavorites
 }: JourneyClientWrapperProps) {
   const searchParams = useSearchParams();
   const selectedType = searchParams.get("type");
@@ -289,10 +287,9 @@ const zoneElements = useMemo(() => {
   const renderContent = () => {
     // Cas spécial : type=textile → vue avec tabs
     if (selectedType === "textile") {
-      return (
+       return (
         <div className="p-6 h-full">
-          <TextileJourneyView 
-            initialSearchData={initialSearchData}
+          <TextileJourneyView
             initialFavorites={initialFavorites}
           />
         </div>

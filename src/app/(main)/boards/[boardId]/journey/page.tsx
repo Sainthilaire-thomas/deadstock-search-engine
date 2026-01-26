@@ -1,22 +1,19 @@
 /**
  * Journey Page - Vue par type/phase des éléments d'un Board
- * 
- * Server Component qui charge les données initiales pour search et favorites,
- * puis les passe au Client Component wrapper.
+ *
+ * Server Component allégé - les textiles sont chargés à la demande
+ * côté client pour éviter le chargement de 268+ textiles au mount.
  */
-
-import { searchTextiles } from "@/features/search/application/searchTextiles";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { getFavoritesBySession } from "@/features/favorites/infrastructure/favoritesRepository";
 import { JourneyClientWrapper } from "@/features/journey/components/JourneyClientWrapper";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
 
 export default async function JourneyPage() {
-  // Charger les données de recherche initiales
-  const initialSearchData = await searchTextiles();
-
-  // Charger les favoris
+  // Charger uniquement les favoris (léger)
+  // Les textiles seront chargés à la demande dans TextileJourneyView
   let initialFavorites: FavoriteWithTextile[] = [];
+  
   try {
     const user = await getAuthUser();
     if (user) {
@@ -25,21 +22,9 @@ export default async function JourneyPage() {
   } catch (error) {
     console.error("Could not load favorites:", error);
   }
-  // Ajouter l'info isFavorite à chaque textile pour la recherche
-  const favoriteIds = new Set(initialFavorites.map(f => f.textile_id));
-  const textilesWithFavorites = initialSearchData.textiles.map(textile => ({
-    ...textile,
-    isFavorite: favoriteIds.has(textile.id),
-  }));
-
-  const searchDataWithFavorites = {
-    ...initialSearchData,
-    textiles: textilesWithFavorites,
-  };
 
   return (
     <JourneyClientWrapper
-      initialSearchData={searchDataWithFavorites}
       initialFavorites={initialFavorites}
     />
   );
