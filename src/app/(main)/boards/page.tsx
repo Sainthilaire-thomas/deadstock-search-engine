@@ -85,8 +85,8 @@ export default async function BoardsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeBoards.map((board) => (
-              <BoardCard key={board.id} board={board} locale={locale} />
-            ))}
+  <BoardCard key={board.id} board={board} locale={locale} t={t} />
+))}
           </div>
         </div>
       )}
@@ -100,8 +100,8 @@ export default async function BoardsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
             {archivedBoards.map((board) => (
-              <BoardCard key={board.id} board={board} locale={locale} />
-            ))}
+  <BoardCard key={board.id} board={board} locale={locale} t={t} />
+))}
           </div>
         </div>
       )}
@@ -110,8 +110,7 @@ export default async function BoardsPage() {
 }
 
 // Composant carte board avec preview
-async function BoardCard({ board, locale }: { board: BoardWithPreview; locale: string }) {
-  const t = await getTranslations();
+function BoardCard({ board, locale, t }: { board: BoardWithPreview; locale: string; t: Awaited<ReturnType<typeof getTranslations>> }) {
   
   const displayName = board.name || (locale === 'en' ? 'Untitled' : 'Sans titre');
   const updatedAt = new Date(board.updatedAt).toLocaleDateString(locale === 'en' ? 'en-GB' : 'fr-FR', {

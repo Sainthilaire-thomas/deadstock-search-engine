@@ -8,6 +8,8 @@ import { X, Upload, Link as LinkIcon, Loader2, AlertCircle, Camera } from 'lucid
 import { Button } from '@/components/ui/button';
 import { UnsplashImagePicker } from './UnsplashImagePicker';
 import type { InspirationElementData } from '../domain/types';
+import { uploadImage, uploadFromUrl } from '@/lib/storage/imageUpload';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import type { UnsplashPhoto } from '../services/unsplashService';
 
 interface ImageUploadModalProps {
@@ -19,6 +21,7 @@ interface ImageUploadModalProps {
 type InputMode = 'choice' | 'upload' | 'url' | 'unsplash';
 
 export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadModalProps) {
+  const { user } = useAuth();
   const [mode, setMode] = useState<InputMode>(initialData?.imageUrl ? 'url' : 'choice');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
   const [caption, setCaption] = useState(initialData?.caption || '');
@@ -29,7 +32,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Upload fichier
+ // Upload fichier vers Supabase Storage
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -39,8 +42,13 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('L\'image ne doit pas dépasser 5 Mo');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('L\'image ne doit pas dépasser 10 Mo');
+      return;
+    }
+
+    if (!user?.id) {
+      setError('Vous devez être connecté pour uploader une image');
       return;
     }
 
@@ -48,34 +56,27 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     setError(null);
 
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        setPreviewUrl(dataUrl);
-        setImageUrl(dataUrl);
-        setMode('upload');
+      // Upload vers Supabase Storage (optimise automatiquement)
+      const result = await uploadImage(file, user.id);
+      
+      setPreviewUrl(result.url);
+      setImageUrl(result.url);
+      setMode('upload');
 
-        if (!caption) {
-          const fileName = file.name.replace(/\.[^/.]+$/, '');
-          setCaption(fileName);
-        }
-
-        setIsLoading(false);
-      };
-      reader.onerror = () => {
-        setError('Erreur lors de la lecture du fichier');
-        setIsLoading(false);
-      };
-      reader.readAsDataURL(file);
+      if (!caption) {
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+        setCaption(fileName);
+      }
     } catch (err) {
-      setError('Erreur lors du chargement de l\'image');
+      console.error('Upload error:', err);
+      setError('Erreur lors de l\'upload de l\'image');
+    } finally {
       setIsLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [caption]);
+  }, [caption, user?.id]);
 
   // Valider URL
   const handleUrlValidate = useCallback(() => {
@@ -107,7 +108,7 @@ export function ImageUploadModal({ initialData, onSave, onCancel }: ImageUploadM
     img.src = imageUrl.trim();
   }, [imageUrl]);
 
-  // Sélection Unsplash
+// Sélection Unsplash - utilise l'URL Unsplash directement (hotlinking autorisé)
   const handleUnsplashSelect = useCallback((url: string, photo: UnsplashPhoto) => {
     setPreviewUrl(url);
     setImageUrl(url);

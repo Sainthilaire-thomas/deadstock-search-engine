@@ -6,6 +6,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { X, FileText, Upload, Loader2, File } from 'lucide-react';
 import type { PdfElementData } from '../domain/types';
+import { uploadPdf } from '@/lib/storage/imageUpload';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface PdfModalProps {
   isOpen: boolean;
@@ -15,6 +17,7 @@ interface PdfModalProps {
 }
 
 export function PdfModal({ isOpen, onClose, onSave, initialData }: PdfModalProps) {
+  const { user } = useAuth();
   const [filename, setFilename] = useState(initialData?.filename || '');
   const [fileUrl, setFileUrl] = useState(initialData?.url || '');
   const [pageCount, setPageCount] = useState(initialData?.pageCount || undefined);
@@ -28,20 +31,8 @@ export function PdfModal({ isOpen, onClose, onSave, initialData }: PdfModalProps
 
   const isEditMode = !!initialData;
 
-  /**
-   * Convertit un fichier en base64
-   */
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  /**
-   * Traite le fichier uploadé
+ /**
+   * Traite le fichier uploadé - Upload vers Supabase Storage
    */
   const processFile = async (file: File) => {
     // Vérifier que c'est bien un PDF
@@ -57,24 +48,25 @@ export function PdfModal({ isOpen, onClose, onSave, initialData }: PdfModalProps
       return;
     }
 
+    if (!user?.id) {
+      setError('Vous devez être connecté pour uploader un fichier');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Convertir en base64 (pour MVP - idéalement utiliser Supabase Storage)
-      const base64 = await fileToBase64(file);
-      
-      setFilename(file.name);
-      setFileUrl(base64);
-      setFileSize(file.size);
-      
-      // Note: Pour obtenir le nombre de pages et une thumbnail,
-      // il faudrait utiliser pdf.js côté client ou une API serveur
-      // Pour le MVP, on laisse ces champs optionnels
-      
+      // Upload vers Supabase Storage
+      const result = await uploadPdf(file, user.id);
+
+      setFilename(result.name);
+      setFileUrl(result.url);
+      setFileSize(result.size);
+
     } catch (err) {
-      console.error('Erreur lors du traitement du fichier:', err);
-      setError('Erreur lors du traitement du fichier');
+      console.error('Erreur lors de l\'upload du fichier:', err);
+      setError('Erreur lors de l\'upload du fichier');
     } finally {
       setIsLoading(false);
     }

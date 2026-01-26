@@ -6,6 +6,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { X, Scissors, Upload, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
 import type { PatternElementData } from '../domain/types';
+import { uploadImage, uploadPdf } from '@/lib/storage/imageUpload';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface PatternModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ const KNOWN_BRANDS = [
 ];
 
 export function PatternModal({ isOpen, onClose, onSave, initialData }: PatternModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState(initialData?.name || '');
   const [brand, setBrand] = useState(initialData?.brand || '');
   const [fileUrl, setFileUrl] = useState(initialData?.url || '');
@@ -44,16 +47,7 @@ export function PatternModal({ isOpen, onClose, onSave, initialData }: PatternMo
 
   const isEditMode = !!initialData;
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const isImageFile = (file: File): boolean => {
+const isImageFile = (file: File): boolean => {
     return file.type.startsWith('image/');
   };
 
@@ -72,27 +66,36 @@ export function PatternModal({ isOpen, onClose, onSave, initialData }: PatternMo
       return;
     }
 
+    if (!user?.id) {
+      setError('Vous devez être connecté pour uploader un fichier');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const base64 = await fileToBase64(file);
-      
-      setFileUrl(base64);
-      setFileType(isPdf ? 'pdf' : 'image');
-      
+      if (isPdf) {
+        // Upload PDF vers Storage
+        const result = await uploadPdf(file, user.id);
+        setFileUrl(result.url);
+        setFileType('pdf');
+      } else {
+        // Upload image vers Storage (avec optimisation)
+        const result = await uploadImage(file, user.id, { generateThumbnail: true });
+        setFileUrl(result.url);
+        setFileType('image');
+        setThumbnailUrl(result.thumbnailUrl || result.url);
+      }
+
       if (!name) {
         const fileName = file.name.replace(/\.[^/.]+$/, '');
         setName(fileName);
       }
 
-      if (isImage) {
-        setThumbnailUrl(base64);
-      }
-      
     } catch (err) {
-      console.error('Erreur lors du traitement du fichier:', err);
-      setError('Erreur lors du traitement du fichier');
+      console.error('Erreur lors de l\'upload du fichier:', err);
+      setError('Erreur lors de l\'upload du fichier');
     } finally {
       setIsLoading(false);
     }

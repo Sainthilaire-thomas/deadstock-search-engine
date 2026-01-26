@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-18 12:38:34
+**Generated:** 2026-01-26 13:46:55
 
 ---
 
@@ -8,15 +8,15 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 411 |
-| Total Directories | 137 |
-| TypeScript Files (.ts/.tsx) | 233 |
+| Total Files | 429 |
+| Total Directories | 145 |
+| TypeScript Files (.ts/.tsx) | 240 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 135 |
+| Markdown Files (.md) | 142 |
 | SQL Files (.sql) | 29 |
-| JSON Files (.json) | 5 |
+| JSON Files (.json) | 7 |
 | CSS Files (.css) | 2 |
-| Other Files | 7 |
+| Other Files | 9 |
 
 ---
 
@@ -76,6 +76,11 @@ deadstock-search-engine/
 |   |-- ai_context/
 |   |   |-- PROJECT_CONTEXT_V4_2.md
 |   |   +-- PROJECT_CONTEXT_V4_3.md
+|   |-- audit/
+|   |   |-- AUDIT_PERFORMANCE_V1.md
+|   |   |-- AUDIT_PERFORMANCE_V2.2.md
+|   |   |-- AUDIT_PERFORMANCE_V2_3.md
+|   |   +-- SPRINT_PERFORMANCE.md
 |   |-- decisions/
 |   |   |-- ADR_001_database_architecture.md
 |   |   |-- ADR_002_normalization_english_i18n.md
@@ -164,37 +169,44 @@ deadstock-search-engine/
 |   |   |   |-- SPRINT_BOARD_3_PALETTE_COMPLETE.md
 |   |   |   |-- SPRINT4_COMPLETE.md
 |   |   |   +-- SPRINT5_COMPLETE.md
-|   |   |-- admin_journey_complete.md
-|   |   |-- BOARD_JOURNEY_SPRINTS.md
-|   |   |-- BOARD_JOURNEY_SPRINTS_V2.1.md
-|   |   |-- BOARD_JOURNEY_SPRINTS_V2.2.md
-|   |   |-- PARCOURS_DESIGNER_REFERENCE.md
-|   |   |-- SPEC_ADMIN_DATA_TUNING_COMPLETE.md
-|   |   |-- SPEC_ADMIN_DATA_TUNING_V3.md
-|   |   |-- SPEC_CONTEXTUAL_SEARCH.md
-|   |   |-- SPEC_DEMAND_DRIVEN_INDEXATION.md
-|   |   |-- SPEC_DESIGN_SYSTEM_PARCOURS.md
-|   |   |-- SPEC_JOURNEY_UI_AMBITIEUSE.md
-|   |   |-- SPEC_MODULE_ADMIN.md
-|   |   |-- SPEC_MODULE_RECHERCHE_DESIGNER.md
-|   |   |-- SPEC_PATTERN_IMPORT.md
+|   |   |-- consumer/
+|   |   |   |-- Deadstock_Strategy_V2_API_First.docx
+|   |   |   |-- Deadstock_Strategy_V2_Complete.docx
+|   |   |   +-- SPEC_CONSUMER_EXPERIENCE_V0.md
+|   |   |-- sprints_standby/
+|   |   |   |-- admin_journey_complete.md
+|   |   |   |-- BOARD_JOURNEY_SPRINTS.md
+|   |   |   |-- BOARD_JOURNEY_SPRINTS_V2.1.md
+|   |   |   |-- BOARD_JOURNEY_SPRINTS_V2.2.md
+|   |   |   |-- PARCOURS_DESIGNER_REFERENCE.md
+|   |   |   |-- SPEC_ADMIN_DATA_TUNING_COMPLETE.md
+|   |   |   |-- SPEC_ADMIN_DATA_TUNING_V3.md
+|   |   |   |-- SPEC_CONTEXTUAL_SEARCH.md
+|   |   |   |-- SPEC_DEMAND_DRIVEN_INDEXATION.md
+|   |   |   |-- SPEC_DESIGN_SYSTEM_PARCOURS.md
+|   |   |   |-- SPEC_JOURNEY_UI_AMBITIEUSE.md
+|   |   |   |-- SPEC_MODULE_ADMIN.md
+|   |   |   |-- SPEC_MODULE_RECHERCHE_DESIGNER.md
+|   |   |   |-- SPEC_PATTERN_IMPORT.md
+|   |   |   |-- SPRINT_NAVIGATION_CLEANUP.md
+|   |   |   |-- SPRINT_NAVIGATION_CLEANUP_COMPLETED.md
+|   |   |   |-- SPRINT_NAVIGATION_UNIFICATION.md
+|   |   |   |-- SPRINT_PLAN_CRISTALLISATION.md
+|   |   |   |-- SPRINT_PLAN_CRISTALLISATION_V2.md
+|   |   |   +-- SYNTHESE_DONNEES_DESIGNER (1).md
 |   |   |-- SPRINT_CANVAS_IMPROVEMENTS.md
 |   |   |-- SPRINT_CANVAS_IMPROVEMENTS_V2.md
+|   |   |-- SPRINT_IMAGES_STORAGE.md
 |   |   |-- SPRINT_LANDING_AUTH.md
 |   |   |-- SPRINT_LANDING_AUTH_V2.md
 |   |   |-- SPRINT_LANDING_AUTH_V3.md
-|   |   |-- SPRINT_NAVIGATION_CLEANUP.md
-|   |   |-- SPRINT_NAVIGATION_CLEANUP_COMPLETED.md
-|   |   |-- SPRINT_NAVIGATION_UNIFICATION.md
 |   |   |-- SPRINT_PLAN.md
-|   |   |-- SPRINT_PLAN_CRISTALLISATION.md
-|   |   |-- SPRINT_PLAN_CRISTALLISATION_V2.md
 |   |   |-- SPRINT_PLAN_V2.1.md
 |   |   |-- SPRINT_PLAN_V2.2.md
 |   |   |-- SPRINT_PLAN_V3.md
 |   |   |-- SPRINT_UI1_I18N1.md
 |   |   |-- SPRINT_UI1_I18N1_V1.1.md
-|   |   +-- SYNTHESE_DONNEES_DESIGNER (1).md
+|   |   +-- SPRINT_UI1_I18N1_V1.2.md
 |   |-- state/
 |   |   |-- CURRENT_STATE.md
 |   |   |-- CURRENT_STATE_UPDATED.md
@@ -290,8 +302,13 @@ deadstock-search-engine/
 |   |   |-- favicon.ico
 |   |   |-- globals.css
 |   |   |-- layout.tsx
-|   |   +-- page.tsx
+|   |   |-- page.tsx
+|   |   +-- page-v1-backup.tsx
 |   |-- components/
+|   |   |-- i18n/
+|   |   |   +-- LocaleSwitcher.tsx
+|   |   |-- landing/
+|   |   |   +-- ValueChainComparison.tsx
 |   |   |-- navigation/
 |   |   |-- search/
 |   |   |   |-- Filters.tsx
@@ -524,6 +541,13 @@ deadstock-search-engine/
 |   |       +-- infrastructure/
 |   |           |-- dictionaryRepo.ts
 |   |           +-- unknownsRepo.ts
+|   |-- i18n/
+|   |   |-- messages/
+|   |   |   |-- en.json
+|   |   |   +-- fr.json
+|   |   |-- config.ts
+|   |   |-- index.ts
+|   |   +-- request.ts
 |   |-- lib/
 |   |   |-- auth/
 |   |   |   |-- getAuthUser.ts
@@ -533,6 +557,8 @@ deadstock-search-engine/
 |   |   |   |-- colorMatching.ts
 |   |   |   |-- databaseColors.ts
 |   |   |   +-- index.ts
+|   |   |-- storage/
+|   |   |   +-- imageUpload.ts
 |   |   |-- supabase/
 |   |   |   |-- admin.ts
 |   |   |   |-- auth.ts
@@ -781,6 +807,14 @@ deadstock-search-engine/
 
 ## Components Summary
 
+### `components/i18n/`
+
+- `LocaleSwitcher.tsx`
+
+### `components/landing/`
+
+- `ValueChainComparison.tsx`
+
 ### `components/navigation/`
 
 
@@ -858,7 +892,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-18 12:38:44
+**Date:** 2026-01-26 13:47:06
 
 **Command to regenerate:**
 ```powershell

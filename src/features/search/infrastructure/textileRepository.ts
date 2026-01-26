@@ -183,31 +183,40 @@ export const textileRepository = {
       console.error('Error fetching categories:', catError);
     }
 
-    // 2. Pour chaque catégorie, récupérer les valeurs distinctes depuis textile_attributes
+    // 2. UNE SEULE requête pour TOUTES les valeurs d'attributs
+    const { data: allAttributesData, error: attrError } = await supabase
+      .from('textile_attributes')
+      .select('category_slug, value');
+
+    if (attrError) {
+      console.error('Error fetching attributes:', attrError);
+    }
+
+    // 3. Agrégation côté client (très rapide en JS)
+    const valuesByCategory = new Map<string, Set<string>>();
+    for (const attr of allAttributesData || []) {
+      if (!attr.value) continue;
+      if (!valuesByCategory.has(attr.category_slug)) {
+        valuesByCategory.set(attr.category_slug, new Set());
+      }
+      valuesByCategory.get(attr.category_slug)!.add(attr.value);
+    }
+
+    // 4. Construire les catégories avec leurs valeurs
     const categories: FilterCategory[] = [];
-
     for (const cat of categoriesData || []) {
-      const { data: valuesData } = await supabase
-        .from('textile_attributes')
-        .select('value')
-        .eq('category_slug', cat.slug);
-
-      const uniqueValues = [...new Set(valuesData?.map(v => v.value))]
-        .filter(Boolean)
-        .sort() as string[];
-
-      // N'ajouter que si on a des valeurs
-      if (uniqueValues.length > 0) {
+      const valuesSet = valuesByCategory.get(cat.slug);
+      if (valuesSet && valuesSet.size > 0) {
         categories.push({
           slug: cat.slug,
           name: cat.name,
-          displayOrder: cat.display_order ?? 0,  // Fallback si null
-          values: uniqueValues,
+          displayOrder: cat.display_order ?? 0,
+          values: [...valuesSet].sort(),
         });
       }
     }
 
-    // 3. Legacy format pour rétrocompatibilité
+    // 5. Legacy format pour rétrocompatibilité
     const fiberCategory = categories.find(c => c.slug === 'fiber');
     const colorCategory = categories.find(c => c.slug === 'color');
     const patternCategory = categories.find(c => c.slug === 'pattern');

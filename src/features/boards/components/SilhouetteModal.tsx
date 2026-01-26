@@ -6,6 +6,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { X, User, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 import type { SilhouetteElementData } from '../domain/types';
+import { uploadImage } from '@/lib/storage/imageUpload';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface SilhouetteModalProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ const CATEGORIES = [
 ];
 
 export function SilhouetteModal({ isOpen, onClose, onSave, initialData }: SilhouetteModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState(initialData?.name || '');
   const [category, setCategory] = useState(initialData?.category || '');
   const [imageUrl, setImageUrl] = useState(initialData?.url || '');
@@ -36,24 +39,20 @@ export function SilhouetteModal({ isOpen, onClose, onSave, initialData }: Silhou
 
   const isEditMode = !!initialData;
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Seules les images sont acceptées (JPG, PNG, SVG, WebP)');
       return;
     }
 
-    const maxSize = 5 * 1024 * 1024; // 5 MB
+    const maxSize = 10 * 1024 * 1024; // 10 MB
     if (file.size > maxSize) {
-      setError('L\'image est trop volumineuse (max 5 MB)');
+      setError('L\'image est trop volumineuse (max 10 MB)');
+      return;
+    }
+
+    if (!user?.id) {
+      setError('Vous devez être connecté pour uploader une image');
       return;
     }
 
@@ -61,22 +60,23 @@ export function SilhouetteModal({ isOpen, onClose, onSave, initialData }: Silhou
     setError(null);
 
     try {
-      const base64 = await fileToBase64(file);
-      setImageUrl(base64);
-      
+      // Upload vers Supabase Storage
+      const result = await uploadImage(file, user.id);
+      setImageUrl(result.url);
+
       // Utiliser le nom du fichier si pas de nom défini
       if (!name) {
         const fileName = file.name.replace(/\.[^/.]+$/, '');
         setName(fileName);
       }
     } catch (err) {
-      console.error('Erreur lors du traitement de l\'image:', err);
-      setError('Erreur lors du traitement de l\'image');
+      console.error('Erreur lors de l\'upload de l\'image:', err);
+      setError('Erreur lors de l\'upload de l\'image');
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);

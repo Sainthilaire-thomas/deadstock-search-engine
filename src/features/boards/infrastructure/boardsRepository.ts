@@ -46,19 +46,13 @@ export async function listBoards(userId: string): Promise<Board[]> {
 export async function listBoardsWithPreview(userId: string): Promise<BoardWithPreview[]> {
   const supabase = createAdminClient();
 
-  // Récupérer les boards avec leurs éléments et zones
+  // Requête optimisée : counts seulement, pas de element_data
   const { data, error } = await supabase
     .from('boards')
     .select(`
       *,
-      board_elements (
-        id,
-        element_type,
-        element_data
-      ),
-      board_zones (
-        id
-      )
+      board_elements (count),
+      board_zones (count)
     `)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
@@ -70,17 +64,16 @@ export async function listBoardsWithPreview(userId: string): Promise<BoardWithPr
 
   return (data || []).map((row) => {
     const board = mapBoardFromRow(row as BoardRow);
-    const elements = row.board_elements || [];
-    const zones = row.board_zones || [];
+    
+    // Extraire les counts depuis la réponse Supabase
+    const elementCount = (row.board_elements as unknown as { count: number }[])?.[0]?.count ?? 0;
+    const zoneCount = (row.board_zones as unknown as { count: number }[])?.[0]?.count ?? 0;
 
     return {
       ...board,
-      previewUrl: extractPreviewUrl(
-        row.cover_image_url, 
-        elements as Array<{ element_type: string; element_data: Record<string, unknown> }>
-      ),
-      elementCount: elements.length,
-      zoneCount: zones.length,
+      previewUrl: row.cover_image_url || null,
+      elementCount,
+      zoneCount,
     };
   });
 }
