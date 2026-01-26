@@ -82,6 +82,20 @@ export interface SearchResult {
   textiles: Textile[];
   total: number;
   filters: AvailableFilters;
+  // Pagination metadata
+  pagination: PaginationMeta;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
 }
 
 // Catégorie de filtre dynamique

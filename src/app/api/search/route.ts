@@ -1,14 +1,21 @@
 ﻿// src/app/api/search/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { searchTextiles } from '@/features/search/application/searchTextiles';
 import type { SearchFilters } from '@/features/search/domain/types';
 
+interface SearchRequestBody extends SearchFilters {
+  page?: number;
+  limit?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const filters: SearchFilters = await request.json();
+    const body: SearchRequestBody = await request.json();
     
-    const result = await searchTextiles(filters);
+    // Extraire pagination du body
+    const { page, limit, ...filters } = body;
+    
+    const result = await searchTextiles(filters, { page, limit });
     
     return NextResponse.json(result);
   } catch (error) {

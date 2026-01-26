@@ -89,14 +89,22 @@ function mapSearchRowToTextile(row: TextileSearchRow): Textile {
 }
 
 export const textileRepository = {
-  async search(filters: SearchFilters): Promise<Textile[]> {
+  async search(
+    filters: SearchFilters,
+    page: number = 1,
+    limit: number = 24
+  ): Promise<{ textiles: Textile[]; total: number }> {
     const supabase = createClient();
+
+    // Calculer l'offset
+    const offset = (page - 1) * limit;
 
     // Utiliser la vue matérialisée textiles_search
     let query = supabase
       .from('textiles_search')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' }) // Demander le count total
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1); // Pagination
 
     // Filtres dynamiques par catégorie
     if (filters.categoryFilters) {
@@ -140,7 +148,7 @@ export const textileRepository = {
       query = query.or(`name.ilike.%${filters.keywords}%,description.ilike.%${filters.keywords}%`);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Error searching textiles:', error);
@@ -148,7 +156,12 @@ export const textileRepository = {
     }
 
     // Mapper les résultats vers le type Textile
-    return (data || []).map(row => mapSearchRowToTextile(row as TextileSearchRow));
+    const textiles = (data || []).map(row => mapSearchRowToTextile(row as TextileSearchRow));
+    
+    return {
+      textiles,
+      total: count ?? 0,
+    };
   },
 
   async findById(id: string): Promise<Textile | null> {
