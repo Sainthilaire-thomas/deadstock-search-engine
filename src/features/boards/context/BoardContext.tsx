@@ -28,6 +28,7 @@ import {
   removeElementAction,
   addNoteToBoard,
   addPaletteToBoard,
+  assignElementToZoneAction,
 } from '../actions/elementActions';
 import {
   updateBoardAction,
@@ -86,7 +87,8 @@ type BoardAction =
   | { type: 'UPDATE_BOARD_NAME'; payload: string }
   | { type: 'RESIZE_ZONE'; payload: { id: string; width: number; height: number } }
   | { type: 'CRYSTALLIZE_ZONE'; payload: { id: string; projectId: string; crystallizedAt: Date } }
-  | { type: 'SET_VIEW_MODE'; payload: ViewMode };
+  | { type: 'SET_VIEW_MODE'; payload: ViewMode }
+  | { type: 'ASSIGN_ELEMENT_TO_ZONE'; payload: { elementId: string; zoneId: string | null } };  // ← AJOUTER
 
 // ============================================
 // REDUCER
@@ -228,6 +230,20 @@ function boardReducer(state: BoardState, action: BoardAction): BoardState {
     case 'SET_VIEW_MODE':
       return { ...state, viewMode: action.payload };
 
+      case 'ASSIGN_ELEMENT_TO_ZONE':
+      return {
+        ...state,
+        elements: state.elements.map((el) =>
+          el.id === action.payload.elementId
+            ? { ...el, zoneId: action.payload.zoneId }
+            : el
+        ),
+      };
+
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload };
+
+
     default:
       return state;
   }
@@ -248,6 +264,7 @@ interface BoardContextValue extends BoardState {
     moveElementLocal: (id: string, x: number, y: number) => void;      // ✅ NEW
   saveElementPosition: (id: string, x: number, y: number) => Promise<void>; // ✅ NEW
   removeElement: (id: string) => Promise<void>;
+  assignElementToZone: (elementId: string, zoneId: string | null) => Promise<void>;  // ← AJOUTER
 
   // Quick add helpers
   addNote: (position?: { x: number; y: number }) => Promise<void>;
@@ -378,11 +395,27 @@ const saveElementPosition = useCallback(async (id: string, x: number, y: number)
   await moveElementAction(id, { positionX: x, positionY: y });
 }, []);
 
-  const removeElement = useCallback(async (id: string) => {
+const removeElement = useCallback(async (id: string) => {
     dispatch({ type: 'REMOVE_ELEMENT', payload: id });
     await removeElementAction(id);
   }, []);
 
+  // ============================================
+  // ASSIGN ELEMENT TO ZONE
+  // ============================================
+
+  const assignElementToZone = useCallback(async (elementId: string, zoneId: string | null) => {
+    // Mise à jour optimiste du state local
+    dispatch({ type: 'ASSIGN_ELEMENT_TO_ZONE', payload: { elementId, zoneId } });
+    
+    // Persistance en base
+    const result = await assignElementToZoneAction(elementId, zoneId);
+    if (!result.success) {
+      dispatch({ type: 'SET_ERROR', payload: result.error || 'Erreur' });
+    }
+  }, []);
+
+  
   // ============================================
   // QUICK ADD HELPERS
   // ============================================
@@ -535,6 +568,7 @@ const value: BoardContextValue = {
     moveElementLocal,      // ✅ NEW
     saveElementPosition,   // ✅ NEW
     removeElement,
+    assignElementToZone,
     addNote,
     addPalette,
     addZone,

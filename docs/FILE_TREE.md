@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-26 15:05:06
+**Generated:** 2026-01-27 12:34:38
 
 ---
 
@@ -8,11 +8,11 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 429 |
+| Total Files | 431 |
 | Total Directories | 145 |
 | TypeScript Files (.ts/.tsx) | 240 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 142 |
+| Markdown Files (.md) | 144 |
 | SQL Files (.sql) | 29 |
 | JSON Files (.json) | 7 |
 | CSS Files (.css) | 2 |
@@ -80,7 +80,8 @@ deadstock-search-engine/
 |   |   |-- AUDIT_PERFORMANCE_V1.md
 |   |   |-- AUDIT_PERFORMANCE_V2.2.md
 |   |   |-- AUDIT_PERFORMANCE_V2_3.md
-|   |   +-- SPRINT_PERFORMANCE.md
+|   |   |-- SPRINT_PERFORMANCE_V1.md
+|   |   +-- SPRINT_PERFORMANCE_V2.md
 |   |-- decisions/
 |   |   |-- ADR_001_database_architecture.md
 |   |   |-- ADR_002_normalization_english_i18n.md
@@ -162,6 +163,7 @@ deadstock-search-engine/
 |   |   |   |-- GLOSSAIRE_V2.md
 |   |   |   |-- GLOSSAIRE_V3_i18n.md
 |   |   |   |-- MIGRATION_JOURNEY_TO_BOARD.md
+|   |   |   |-- ROADMAP_BOARDS_IMBRIQUES.md
 |   |   |   |-- SPEC_BOARD_MODULE.md
 |   |   |   |-- SPEC_BOARD_MOODBOARD_V2.md
 |   |   |   |-- SPEC_CRISTALLISATION.md
@@ -892,7 +894,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-26 15:05:22
+**Date:** 2026-01-27 12:34:54
 
 **Command to regenerate:**
 ```powershell

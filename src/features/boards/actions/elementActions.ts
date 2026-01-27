@@ -256,3 +256,34 @@ export async function addCalculationToBoard(
     height: 120,
   });
 }
+
+// ============================================
+// ASSIGN ELEMENT TO ZONE
+// ============================================
+
+/**
+ * Assigne ou retire un élément d'une zone
+ * @param elementId - ID de l'élément
+ * @param zoneId - ID de la zone (null pour retirer de la zone)
+ */
+export async function assignElementToZoneAction(
+  elementId: string,
+  zoneId: string | null
+): Promise<ActionResult<BoardElement>> {
+  try {
+    const element = await elementsRepository.updateElement(elementId, {
+      zoneId: zoneId,
+    });
+
+    if (!element) {
+      return { success: false, error: 'Élément introuvable' };
+    }
+
+    revalidatePath(`/boards/${element.boardId}`);
+
+    return { success: true, data: element };
+  } catch (error) {
+    console.error('assignElementToZoneAction error:', error);
+    return { success: false, error: "Impossible d'assigner l'élément à la zone" };
+  }
+}

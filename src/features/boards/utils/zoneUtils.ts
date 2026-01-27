@@ -44,3 +44,32 @@ export function isZoneOrdered(zone: BoardZone): boolean {
   // On le détectera via le projet lié plus tard
   return false; // TODO: implémenter quand Sprint C3 sera fait
 }
+
+
+/**
+ * Retourne les éléments appartenant à une zone via zoneId (appartenance explicite)
+ * Utilise le champ zoneId plutôt que le calcul par position
+ */
+export function getElementsByZoneId(
+  elements: BoardElement[],
+  zoneId: string
+): BoardElement[] {
+  return elements.filter(element => element.zoneId === zoneId);
+}
+
+/**
+ * Retourne les éléments libres (sans zone assignée)
+ */
+export function getFreeElements(elements: BoardElement[]): BoardElement[] {
+  return elements.filter(element => element.zoneId === null || element.zoneId === undefined);
+}
+
+/**
+ * Vérifie si un élément appartient à une zone (par zoneId explicite)
+ */
+export function elementBelongsToZone(
+  element: BoardElement,
+  zoneId: string
+): boolean {
+  return element.zoneId === zoneId;
+}
