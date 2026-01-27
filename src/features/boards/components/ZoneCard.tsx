@@ -1,14 +1,19 @@
 // src/features/boards/components/ZoneCard.tsx
-// VERSION ÉPURÉE - Sprint 1 avec bouton × au hover
+// VERSION Sprint 2 - Card compacte avec miniatures
 
 'use client';
 
-import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import { GripVertical, Sparkles, ExternalLink, X } from 'lucide-react';
+import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import { GripVertical, Sparkles, ExternalLink, X, FolderOpen } from 'lucide-react';
 import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
-import type { BoardZone } from '../domain/types';
+import { getElementsByZoneId } from '../utils/zoneUtils';
+import { ZoneElementThumbnail } from './ZoneElementThumbnail';
+import type { BoardZone, BoardElement } from '../domain/types';
 
-type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+// Taille fixe de la card
+const CARD_WIDTH = 280;
+const CARD_HEIGHT = 140;
+const MAX_THUMBNAILS = 6;
 
 export interface ZoneCardHandle {
   setTransform: (x: number, y: number) => void;
@@ -17,44 +22,34 @@ export interface ZoneCardHandle {
 
 interface ZoneCardProps {
   zone: BoardZone;
+  elements: BoardElement[]; // Tous les éléments du board
   position: { x: number; y: number };
-  size: { width: number; height: number };
   isSelected: boolean;
-  isEditing: boolean;
   isVisible?: boolean;
   isDragging?: boolean;
   ghostElementCount?: number;
   style?: React.CSSProperties;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
-  onResizeStart: (e: React.MouseEvent, handle: ResizeHandle) => void;
-  onSaveName: (name: string) => void;
-  onCancelEdit: () => void;
   onCrystallize: () => void;
   onDelete?: () => void;
 }
 
 export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(function ZoneCard({
   zone,
+  elements,
   position,
-  size,
   isSelected,
-  isEditing,
   isVisible = true,
   isDragging = false,
   ghostElementCount = 0,
   style,
   onMouseDown,
   onDoubleClick,
-  onResizeStart,
-  onSaveName,
-  onCancelEdit,
   onCrystallize,
   onDelete,
 }, ref) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [editName, setEditName] = useState(zone.name);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Expose methods for direct DOM manipulation during drag
   useImperativeHandle(ref, () => ({
@@ -69,73 +64,62 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
       }
     },
   }), []);
-    const isCrystallized = isZoneCrystallized(zone);
+
+  const isCrystallized = isZoneCrystallized(zone);
   const isOrdered = isZoneOrdered(zone);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      onSaveName(editName);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setEditName(zone.name);
-      onCancelEdit();
-    }
-  };
+  // Récupérer les éléments de cette zone via zoneId
+  const zoneElements = getElementsByZoneId(elements, zone.id);
+  const elementCount = zoneElements.length;
+  const displayedElements = zoneElements.slice(0, MAX_THUMBNAILS);
+  const remainingCount = elementCount - MAX_THUMBNAILS;
 
-  const handleBlur = () => {
-    onSaveName(editName);
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onDelete?.();
-  };
-
-  
-  // Mode Inspiration : zones invisibles avec animation (sauf si cristallisées)
+  // Mode Inspiration : zones invisibles (sauf si cristallisées)
   const shouldShow = isVisible || isCrystallized;
 
   // Ghost Mode: style spécial pendant le drag avec éléments masqués
   const isGhostMode = isDragging && ghostElementCount > 0;
 
- return (
+  return (
     <div
       ref={cardRef}
       className={`
-        group
-        absolute transition-all duration-300 ease-in-out
-        ${shouldShow
-          ? 'opacity-100 scale-100'
-          : 'opacity-0 scale-95 pointer-events-none'
-        }
+        group absolute
+        transition-opacity duration-300 ease-in-out
+        ${shouldShow ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         ${isGhostMode
-          ? 'border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/30 dark:bg-blue-900/20'
+          ? 'border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/80 dark:bg-blue-900/40'
           : isCrystallized
-            ? 'border border-solid border-gray-400 bg-gray-50/50 dark:bg-gray-800/30'
-            : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-transparent'
+            ? 'border border-solid border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+            : 'border border-solid border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
         }
         ${isSelected
-          ? 'shadow-md ring-1 ring-gray-400 dark:ring-gray-500'
-          : 'hover:border-gray-400 dark:hover:border-gray-500'
+          ? 'ring-2 ring-blue-500 shadow-lg'
+          : 'hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500'
         }
-        rounded
+        rounded-lg shadow-sm
+        cursor-move
       `}
-           style={{
-          left: 0,
-          top: 0,
-          transform: `translate(${position.x}px, ${position.y}px)`,
-          width: size.width,
-          height: size.height,
-        zIndex: isSelected ? 5 : 1,
+      style={{
+        left: 0,
+        top: 0,
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+        zIndex: isSelected ? 10 : 2,
         ...style,
       }}
+      onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
     >
       {/* Bouton × pour supprimer - visible au hover, sauf si cristallisée */}
       {!isCrystallized && onDelete && (
         <button
-          onClick={handleDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onDelete();
+          }}
           className="
             absolute -top-2 -right-2
             w-5 h-5
@@ -154,51 +138,24 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         </button>
       )}
 
-      {/* Header - positionné au-dessus de la zone */}
-      <div
-        className="
-          absolute -top-6 left-0 
-          flex items-center gap-1.5 
-          cursor-move
-          px-1
-        "
-        onMouseDown={onMouseDown}
-        onDoubleClick={onDoubleClick}
-      >
-        <GripVertical className="w-3 h-3 text-gray-400" />
-        
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            className="
-              text-xs font-medium 
-              bg-white dark:bg-gray-800 
-              border border-gray-300 dark:border-gray-600 
-              rounded px-1.5 py-0.5 
-              focus:outline-none focus:ring-1 focus:ring-gray-400
-              w-32
-            "
-            autoFocus
-          />
-        ) : (
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-37.5">
+      {/* Header */}
+      <div className="px-3 pt-2 pb-1 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 min-w-0">
+          <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
             {zone.name}
           </span>
-        )}
-
+        </div>
+        
         {isCrystallized && (
           <span className="
             inline-flex items-center gap-1
-            text-[10px] 
-            bg-gray-200 dark:bg-gray-700 
-            text-gray-600 dark:text-gray-300
-            px-1.5 py-0.5 
+            text-[10px]
+            bg-emerald-100 dark:bg-emerald-900/50
+            text-emerald-700 dark:text-emerald-300
+            px-1.5 py-0.5
             rounded
+            shrink-0
           ">
             <Sparkles className="w-3 h-3" />
             Projet
@@ -206,35 +163,53 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         )}
       </div>
 
-      {/* Ghost Mode indicator - nombre d'éléments masqués */}
-      {isGhostMode && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-blue-500/80 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
-            {ghostElementCount} élément{ghostElementCount > 1 ? 's' : ''}
+      {/* Content - Grille de miniatures ou Ghost Mode */}
+      <div className="px-3 py-2 flex-1">
+        {isGhostMode ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="bg-blue-500/80 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow">
+              {ghostElementCount} élément{ghostElementCount > 1 ? 's' : ''}
+            </div>
           </div>
-        </div>
-      )}
+        ) : elementCount === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-gray-400">
+            <FolderOpen className="w-6 h-6 mb-1" />
+            <span className="text-xs">Zone vide</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {displayedElements.map((element) => (
+              <ZoneElementThumbnail key={element.id} element={element} />
+            ))}
+            {remainingCount > 0 && (
+              <div
+                className="rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300"
+                style={{ width: 40, height: 40 }}
+              >
+                +{remainingCount}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-      {/* Zone content area - pour le drag */}
-      <div
-        className="absolute inset-0 cursor-move"
-        onMouseDown={onMouseDown}
-        onDoubleClick={onDoubleClick}
-      />
-
-      {/* Actions - en bas à droite */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+      {/* Footer - Actions */}
+      <div className="px-3 pb-2 flex items-center justify-between">
+        <span className="text-[10px] text-gray-400">
+          {elementCount} élément{elementCount !== 1 ? 's' : ''}
+        </span>
+        
         {isCrystallized && zone.linkedProjectId ? (
-          <a
-            href={`/journey/projects/${zone.linkedProjectId}`}
+          
+          <a  href={`/journey/projects/${zone.linkedProjectId}`}
             className="
-              text-[10px] 
-              text-gray-500 hover:text-gray-700 
-              dark:text-gray-400 dark:hover:text-gray-200
+              text-[11px]
+              text-blue-600 hover:text-blue-700
+              dark:text-blue-400 dark:hover:text-blue-300
               flex items-center gap-1
-              px-1.5 py-0.5
+              px-2 py-1
               rounded
-              hover:bg-gray-100 dark:hover:bg-gray-700
+              hover:bg-blue-50 dark:hover:bg-blue-900/30
               transition-colors
             "
             onClick={(e) => e.stopPropagation()}
@@ -249,11 +224,11 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
               onCrystallize();
             }}
             className="
-              text-[10px] 
-              text-gray-500 hover:text-gray-700 
+              text-[11px]
+              text-gray-500 hover:text-gray-700
               dark:text-gray-400 dark:hover:text-gray-200
               flex items-center gap-1
-              px-1.5 py-0.5
+              px-2 py-1
               rounded
               hover:bg-gray-100 dark:hover:bg-gray-700
               transition-colors
@@ -264,47 +239,6 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
           </button>
         )}
       </div>
-
-      {/* Resize handles - plus discrets (masqués pour zones commandées) */}
-      {!isOrdered && (
-        <>
-          {/* Corners */}
-          <div
-            className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'nw')}
-          />
-          <div
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'ne')}
-          />
-          <div
-            className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'sw')}
-          />
-          <div
-            className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-gray-400 border border-white rounded-sm cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'se')}
-          />
-
-          {/* Edges */}
-          <div
-            className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-gray-400 border border-white rounded-sm cursor-n-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'n')}
-          />
-          <div
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-gray-400 border border-white rounded-sm cursor-s-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 's')}
-          />
-          <div
-            className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-6 bg-gray-400 border border-white rounded-sm cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'w')}
-          />
-          <div
-            className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-6 bg-gray-400 border border-white rounded-sm cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => onResizeStart(e, 'e')}
-          />
-        </>
-      )}
-        </div>
-   );
+    </div>
+  );
 }));

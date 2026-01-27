@@ -686,51 +686,41 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             
             {/* Zones */}
             {zones.map((zone) => {
-              const isDragging = zoneDragPosition?.id === zone.id;
-              const isResizing = resizeState?.id === zone.id;
-              
-              // Animation auto-arrange (Sprint P2)
-              const arrangeTarget = isArranging ? arrangeTargets?.get(`zone-${zone.id}`) : null;
-              
-              const position = arrangeTarget
-                ? { x: arrangeTarget.x, y: arrangeTarget.y }
-                : isDragging
-                ? { x: zoneDragPosition.x, y: zoneDragPosition.y }
-                : isResizing
-                ? { x: resizeState.x, y: resizeState.y }
-                : { x: zone.positionX, y: zone.positionY };
-              const size = isResizing
-                ? { width: resizeState.width, height: resizeState.height }
-                : { width: zone.width, height: zone.height };
+                const isDragging = zoneDragPosition?.id === zone.id;
 
-              // Ghost Mode: déterminer si cette zone est en cours de drag
-              const isBeingDragged = draggingZoneId === zone.id;
-              const ghostElementCount = isBeingDragged ? draggingElementCount : 0;
+                // Animation auto-arrange (Sprint P2)
+                const arrangeTarget = isArranging ? arrangeTargets?.get(`zone-${zone.id}`) : null;
 
-             return (
-                <ZoneCard
-                  key={zone.id}
-                  zone={zone}
-                  position={position}
-                  size={size}
-                  isSelected={selectedZoneId === zone.id}
-                  style={isArranging && arrangeTarget ? {
-                    transition: 'left 0.5s ease-out, top 0.5s ease-out',
-                  } : undefined}
-                  isEditing={editingZoneId === zone.id}
-                  isVisible={showZones}
-                  isDragging={isBeingDragged}
-                  ghostElementCount={ghostElementCount}
-                  onMouseDown={(e) => handleZoneMouseDown(e, zone)}
-                  onDoubleClick={() => handleZoneDoubleClick(zone)}
-                  onResizeStart={(e, handle) => handleZoneResizeStart(e, zone, handle as ResizeHandle)}
-                  onSaveName={(name) => handleSaveZoneName(zone.id, name)}
-                  onCancelEdit={() => setEditingZoneId(null)}
-                  onCrystallize={() => setCrystallizingZone(zone)}
-                  onDelete={() => removeZone(zone.id)}
-                />
-              );
-            })}
+                const position = arrangeTarget
+                  ? { x: arrangeTarget.x, y: arrangeTarget.y }
+                  : isDragging
+                  ? { x: zoneDragPosition.x, y: zoneDragPosition.y }
+                  : { x: zone.positionX, y: zone.positionY };
+
+                // Ghost Mode: déterminer si cette zone est en cours de drag
+                const isBeingDragged = draggingZoneId === zone.id;
+                const ghostElementCount = isBeingDragged ? draggingElementCount : 0;
+
+                return (
+                  <ZoneCard
+                    key={zone.id}
+                    zone={zone}
+                    elements={elements}
+                    position={position}
+                    isSelected={selectedZoneId === zone.id}
+                    style={isArranging && arrangeTarget ? {
+                      transition: 'transform 0.5s ease-out',
+                    } : undefined}
+                    isVisible={showZones}
+                    isDragging={isBeingDragged}
+                    ghostElementCount={ghostElementCount}
+                    onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+                    onDoubleClick={() => handleZoneDoubleClick(zone)}
+                    onCrystallize={() => setCrystallizingZone(zone)}
+                    onDelete={() => removeZone(zone.id)}
+                  />
+                );
+              })}
 
       {/* Elements */}
             {elements.map((element) => {
