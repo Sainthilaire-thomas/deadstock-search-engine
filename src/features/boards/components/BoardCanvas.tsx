@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 
 import { useBoard } from '../context/BoardContext';
 import { useContextualSearchPanel } from '../context/ContextualSearchContext';
+import { ZoneFocusProvider, useZoneFocus } from '../context/ZoneFocusContext';
+import { ZoneFocusOverlay } from './ZoneFocusOverlay';
 import { useTransform, ZOOM_MIN, ZOOM_MAX } from '../context/TransformContext';
 import { BoardToolbar } from './BoardToolbar';
 import { ZoneCard } from './ZoneCard';
@@ -86,6 +88,7 @@ export function BoardCanvas() {
   } = useBoard();
 
 const { state: panelState } = useContextualSearchPanel();
+const { openFocusMode } = useZoneFocus();
 const { transform, setScale, zoomToFit } = useTransform();
 
 const canvasRef = useRef<HTMLDivElement>(null);
@@ -375,8 +378,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
   }, [zones]);
 
   const handleZoneDoubleClick = useCallback((zone: BoardZone) => {
-    setEditingZoneId(zone.id);
-  }, []);
+    openFocusMode(zone);
+  }, [openFocusMode]);
 
   const handleSaveNote = useCallback(async (elementId: string, content: string) => {
     const element = elements.find((e) => e.id === elementId);
@@ -715,11 +718,14 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                 );
               })}
 
-      {/* Elements */}
-            {elements.map((element) => {
-              // Ghost Mode: masquer les éléments pendant le drag de zone
-              const isHiddenDuringZoneDrag = draggingElementIds.includes(element.id);
-              if (isHiddenDuringZoneDrag) return null;
+     {/* Elements */}
+              {elements.map((element) => {
+                // Masquer les éléments assignés à une zone (ils sont visibles dans la ZoneCard)
+                if (element.zoneId) return null;
+                
+                // Ghost Mode: masquer les éléments pendant le drag de zone
+                const isHiddenDuringZoneDrag = draggingElementIds.includes(element.id);
+                if (isHiddenDuringZoneDrag) return null;
 
               // Animation auto-arrange (Sprint P2)
               const arrangeTarget = isArranging ? arrangeTargets?.get(element.id) : null;
@@ -838,6 +844,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         onCloseSilhouetteModal={() => { setIsSilhouetteModalOpen(false); setEditingSilhouetteId(null); }}
         onSaveSilhouette={handleSaveSilhouette}
       />
+             {/* Zone Focus Mode Overlay */}
+        <ZoneFocusOverlay />
 
   {/* Auto-Arrange Dialog (Sprint P2) */}
       {showAutoArrangeDialog && (

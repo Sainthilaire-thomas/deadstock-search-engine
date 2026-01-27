@@ -13,6 +13,7 @@ import { PaletteElement } from './elements/PaletteElement';
 import { ImageElement } from './elements/ImageElement';
 import { VideoElement } from './elements/VideoElement';
 import { LinkElement } from './elements/LinkElement';
+import { useZoneFocusOptional } from '../context/ZoneFocusContext';
 
 // Sprint 6 imports
 import { PdfElement } from './elements/PdfElement';
@@ -71,6 +72,8 @@ export const ElementCard = React.memo(forwardRef<ElementCardHandle, ElementCardP
   onSavePalette,
 }, ref) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const zoneFocus = useZoneFocusOptional();
+  const isFocusModeOpen = zoneFocus?.isFocusMode ?? false;
 
   // Expose methods for direct DOM manipulation during drag
   useImperativeHandle(ref, () => ({
@@ -244,8 +247,21 @@ export const ElementCard = React.memo(forwardRef<ElementCardHandle, ElementCardP
         cursor: isEditing ? 'default' : 'move',
         ...externalStyle,
       }}
-      onMouseDown={onMouseDown}
+        onMouseDown={(e) => {
+        // Si Focus Mode ouvert, ne pas démarrer le drag custom
+        // (on utilisera le drag natif HTML5 pour dropper dans la zone)
+        if (!isFocusModeOpen) {
+          onMouseDown(e);
+        }
+      }}
       onDoubleClick={onDoubleClick}
+      draggable={isFocusModeOpen}
+      onDragStart={(e) => {
+        if (isFocusModeOpen) {
+          e.dataTransfer.setData('elementId', element.id);
+          e.dataTransfer.effectAllowed = 'move';
+        }
+      }}
     >
       {/* Badge contrainte active - Sprint 7 */}
       {hasConstraintButton && (
