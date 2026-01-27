@@ -19,11 +19,9 @@ import { ZoomControls } from './ZoomControls';
 import {
   useElementDrag,
   useZoneDrag,
-  useZoneResize,
   useKeyboardShortcuts,
   CanvasModals,
   FavoritesSheet,
-  type ResizeHandle,
 } from './canvas';
 
 import { isZoneOrdered } from '../domain/types';
@@ -259,15 +257,7 @@ const {
     setDragging,
   });
 
-const { resizeState, handleZoneResizeStart } = useZoneResize({
-    scale: transform.scale,
-    moveZoneLocal,
-    saveZonePosition,
-    resizeZoneLocal,
-    saveZoneSize,
-    selectZone,
-    setDragging,
-  });
+
 
   const closeAllModals = useCallback(() => {
     setEditingElementId(null);
@@ -703,22 +693,25 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
 
                 return (
                   <ZoneCard
-                    key={zone.id}
-                    zone={zone}
-                    elements={elements}
-                    position={position}
-                    isSelected={selectedZoneId === zone.id}
-                    style={isArranging && arrangeTarget ? {
-                      transition: 'transform 0.5s ease-out',
-                    } : undefined}
-                    isVisible={showZones}
-                    isDragging={isBeingDragged}
-                    ghostElementCount={ghostElementCount}
-                    onMouseDown={(e) => handleZoneMouseDown(e, zone)}
-                    onDoubleClick={() => handleZoneDoubleClick(zone)}
-                    onCrystallize={() => setCrystallizingZone(zone)}
-                    onDelete={() => removeZone(zone.id)}
-                  />
+                      key={zone.id}
+                      zone={zone}
+                      elements={elements}
+                      position={position}
+                      isSelected={selectedZoneId === zone.id}
+                      isEditing={editingZoneId === zone.id}
+                      style={isArranging && arrangeTarget ? {
+                        transition: 'transform 0.5s ease-out',
+                      } : undefined}
+                      isVisible={showZones}
+                      isDragging={isBeingDragged}
+                      ghostElementCount={ghostElementCount}
+                      onMouseDown={(e) => handleZoneMouseDown(e, zone)}
+                      onDoubleClick={() => handleZoneDoubleClick(zone)}
+                      onSaveName={(name) => handleSaveZoneName(zone.id, name)}
+                      onCancelEdit={() => setEditingZoneId(null)}
+                      onCrystallize={() => setCrystallizingZone(zone)}
+                      onDelete={() => removeZone(zone.id)}
+                    />
                 );
               })}
 

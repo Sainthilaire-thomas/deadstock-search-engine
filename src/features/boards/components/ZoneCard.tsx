@@ -1,9 +1,9 @@
 // src/features/boards/components/ZoneCard.tsx
-// VERSION Sprint 2 - Card compacte avec miniatures
+// VERSION Sprint 2 - Card compacte avec miniatures + édition nom
 
 'use client';
 
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { GripVertical, Sparkles, ExternalLink, X, FolderOpen } from 'lucide-react';
 import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
 import { getElementsByZoneId } from '../utils/zoneUtils';
@@ -25,12 +25,15 @@ interface ZoneCardProps {
   elements: BoardElement[]; // Tous les éléments du board
   position: { x: number; y: number };
   isSelected: boolean;
+  isEditing: boolean;
   isVisible?: boolean;
   isDragging?: boolean;
   ghostElementCount?: number;
   style?: React.CSSProperties;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
+  onSaveName: (name: string) => void;
+  onCancelEdit: () => void;
   onCrystallize: () => void;
   onDelete?: () => void;
 }
@@ -40,16 +43,21 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
   elements,
   position,
   isSelected,
+  isEditing,
   isVisible = true,
   isDragging = false,
   ghostElementCount = 0,
   style,
   onMouseDown,
   onDoubleClick,
+  onSaveName,
+  onCancelEdit,
   onCrystallize,
   onDelete,
 }, ref) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [editName, setEditName] = useState(zone.name);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Expose methods for direct DOM manipulation during drag
   useImperativeHandle(ref, () => ({
@@ -79,6 +87,30 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
 
   // Ghost Mode: style spécial pendant le drag avec éléments masqués
   const isGhostMode = isDragging && ghostElementCount > 0;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSaveName(editName);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditName(zone.name);
+      onCancelEdit();
+    }
+  };
+
+  const handleBlur = () => {
+    onSaveName(editName);
+  };
+
+  // Sync editName when zone.name changes or when entering edit mode
+  React.useEffect(() => {
+    if (isEditing) {
+      setEditName(zone.name);
+      // Focus input after a short delay to ensure it's rendered
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isEditing, zone.name]);
 
   return (
     <div
@@ -110,7 +142,6 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         ...style,
       }}
       onMouseDown={onMouseDown}
-      onDoubleClick={onDoubleClick}
     >
       {/* Bouton × pour supprimer - visible au hover, sauf si cristallisée */}
       {!isCrystallized && onDelete && (
@@ -138,15 +169,43 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         </button>
       )}
 
-      {/* Header */}
-      <div className="px-3 pt-2 pb-1 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+      {/* Header - double-clic pour éditer le nom */}
+      <div 
+        className="px-3 pt-2 pb-1 flex items-center justify-between border-b border-gray-100 dark:border-gray-700"
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick();
+        }}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-            {zone.name}
-          </span>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="
+                text-sm font-medium
+                bg-white dark:bg-gray-700
+                border border-gray-300 dark:border-gray-600
+                rounded px-1.5 py-0.5
+                focus:outline-none focus:ring-1 focus:ring-blue-500
+                w-32
+                text-gray-700 dark:text-gray-200
+              "
+            />
+          ) : (
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+              {zone.name}
+            </span>
+          )}
         </div>
-        
+
         {isCrystallized && (
           <span className="
             inline-flex items-center gap-1
@@ -198,10 +257,10 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         <span className="text-[10px] text-gray-400">
           {elementCount} élément{elementCount !== 1 ? 's' : ''}
         </span>
-        
+
         {isCrystallized && zone.linkedProjectId ? (
-          
-          <a  href={`/journey/projects/${zone.linkedProjectId}`}
+          <a 
+            href={`/journey/projects/${zone.linkedProjectId}`}
             className="
               text-[11px]
               text-blue-600 hover:text-blue-700
