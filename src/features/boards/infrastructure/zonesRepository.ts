@@ -56,6 +56,30 @@ export async function getZoneById(zoneId: string): Promise<BoardZone | null> {
 }
 
 // ============================================
+// NEW Sprint 5 - GET ZONE BY LINKED BOARD
+// ============================================
+
+export async function getZoneByLinkedBoard(linkedBoardId: string): Promise<BoardZone | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .select('*')
+    .eq('linked_board_id', linkedBoardId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // No zone linked to this board
+    }
+    console.error('getZoneByLinkedBoard error:', error);
+    throw error;
+  }
+
+  return mapZoneFromRow(data as unknown as BoardZoneRow);
+}
+
+// ============================================
 // CREATE ZONE
 // ============================================
 
@@ -72,6 +96,8 @@ export async function createZone(input: CreateZoneInput): Promise<BoardZone> {
       position_y: input.positionY ?? 50,
       width: input.width ?? 300,
       height: input.height ?? 200,
+      zone_type: input.zoneType || 'piece',           // NEW Sprint 5
+      linked_board_id: input.linkedBoardId || null,   // NEW Sprint 5
     })
     .select()
     .single();
@@ -102,6 +128,9 @@ export async function updateZone(
   if (input.positionY !== undefined) updateData.position_y = input.positionY;
   if (input.width !== undefined) updateData.width = input.width;
   if (input.height !== undefined) updateData.height = input.height;
+  // NEW Sprint 5
+  if (input.zoneType !== undefined) updateData.zone_type = input.zoneType;
+  if (input.linkedBoardId !== undefined) updateData.linked_board_id = input.linkedBoardId;
 
   const { data, error } = await supabase
     .from('board_zones')
@@ -205,6 +234,59 @@ export async function deleteZone(zoneId: string): Promise<string | null> {
 }
 
 // ============================================
+// NEW Sprint 5 - LINK ZONE TO BOARD
+// ============================================
+
+export async function linkZoneToBoard(
+  zoneId: string,
+  linkedBoardId: string
+): Promise<BoardZone | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .update({ linked_board_id: linkedBoardId })
+    .eq('id', zoneId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    console.error('linkZoneToBoard error:', error);
+    throw error;
+  }
+
+  return mapZoneFromRow(data as unknown as BoardZoneRow);
+}
+
+// ============================================
+// NEW Sprint 5 - UNLINK ZONE FROM BOARD
+// ============================================
+
+export async function unlinkZoneFromBoard(zoneId: string): Promise<BoardZone | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .update({ linked_board_id: null })
+    .eq('id', zoneId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    console.error('unlinkZoneFromBoard error:', error);
+    throw error;
+  }
+
+  return mapZoneFromRow(data as unknown as BoardZoneRow);
+}
+
+// ============================================
 // CRYSTALLIZE ZONE
 // ============================================
 
@@ -280,19 +362,69 @@ export async function getActiveZonesByBoard(boardId: string): Promise<BoardZone[
 }
 
 // ============================================
+// NEW Sprint 5 - GET ZONES BY TYPE
+// ============================================
+
+export async function getZonesByType(boardId: string, zoneType: 'piece' | 'category'): Promise<BoardZone[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .select('*')
+    .eq('board_id', boardId)
+    .eq('zone_type', zoneType)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('getZonesByType error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
+}
+
+// ============================================
+// NEW Sprint 5 - GET LINKED ZONES (zones with linked boards)
+// ============================================
+
+export async function getLinkedZones(boardId: string): Promise<BoardZone[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('board_zones')
+    .select('*')
+    .eq('board_id', boardId)
+    .not('linked_board_id', 'is', null)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('getLinkedZones error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
+}
+
+// ============================================
 // EXPORT AS OBJECT
 // ============================================
 
 export const zonesRepository = {
   getZonesByBoard,
   getZoneById,
+  getZoneByLinkedBoard,     // NEW Sprint 5
   createZone,
   updateZone,
   moveZone,
   resizeZone,
   deleteZone,
+  linkZoneToBoard,          // NEW Sprint 5
+  unlinkZoneFromBoard,      // NEW Sprint 5
   // Crystallization
   crystallizeZone,
   getCrystallizedZonesByBoard,
   getActiveZonesByBoard,
+  // NEW Sprint 5
+  getZonesByType,
+  getLinkedZones,
 };

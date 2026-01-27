@@ -4,7 +4,7 @@
 'use client';
 
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import { GripVertical, Sparkles, ExternalLink, X, FolderOpen } from 'lucide-react';
+import { GripVertical, Sparkles, ExternalLink, X, FolderOpen, Pencil } from 'lucide-react';
 import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
 import { getElementsByZoneId } from '../utils/zoneUtils';
 import { ZoneElementThumbnail } from './ZoneElementThumbnail';
@@ -32,6 +32,7 @@ interface ZoneCardProps {
   style?: React.CSSProperties;
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
+  onStartEdit: () => void;
   onSaveName: (name: string) => void;
   onCancelEdit: () => void;
   onCrystallize: () => void;
@@ -51,6 +52,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
   onMouseDown,
   onDoubleClick,
   onSaveName,
+  onStartEdit,
   onCancelEdit,
   onCrystallize,
   onDelete,
@@ -177,7 +179,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
           onDoubleClick();
         }}
       >
-        <div className="flex items-center gap-2 min-w-0">
+       <div className="flex items-center gap-2 min-w-0 flex-1">
           <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
           {isEditing ? (
             <input
@@ -199,10 +201,33 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
                 text-gray-700 dark:text-gray-200
               "
             />
-          ) : (
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-              {zone.name}
-            </span>
+         ) : (
+            <>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+                {zone.name}
+              </span>
+              {!isCrystallized && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onStartEdit();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="
+                    opacity-0 group-hover:opacity-100
+                    p-0.5 rounded
+                    text-gray-400 hover:text-gray-600
+                    dark:text-gray-500 dark:hover:text-gray-300
+                    hover:bg-gray-100 dark:hover:bg-gray-700
+                    transition-all
+                  "
+                  title="Renommer"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+            </>
           )}
         </div>
 

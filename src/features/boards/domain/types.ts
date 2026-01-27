@@ -6,6 +6,10 @@
 
 export type BoardStatus = 'draft' | 'active' | 'archived';
 
+// NEW Sprint 5 - Board hierarchy types
+export type BoardType = 'free' | 'piece' | 'category' | 'collection';
+export type ZoneType = 'piece' | 'category';
+
 // Project status (pour zones cristallisées liées à un projet)
 export type ProjectStatus =
   | 'draft'
@@ -39,6 +43,20 @@ export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
   archived: 'Archivé',
 };
 
+// NEW Sprint 5 - Board type labels
+export const BOARD_TYPE_LABELS: Record<BoardType, string> = {
+  free: 'Libre',
+  piece: 'Pièce',
+  category: 'Catégorie',
+  collection: 'Collection',
+};
+
+// NEW Sprint 5 - Zone type labels
+export const ZONE_TYPE_LABELS: Record<ZoneType, string> = {
+  piece: 'Pièce',
+  category: 'Catégorie',
+};
+
 // ============================================
 // BOARD
 // ============================================
@@ -47,10 +65,12 @@ export interface Board {
   id: string;
   userId: string | null;
   sessionId: string | null;
+  parentBoardId: string | null;  // NEW Sprint 5
   name: string | null;
   description: string | null;
   status: BoardStatus;
-  coverImageUrl: string | null;  // ← AJOUTER
+  boardType: BoardType;          // NEW Sprint 5
+  coverImageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +92,10 @@ export interface BoardWithPreview extends Board {
   zoneCount: number;
 }
 
+// NEW Sprint 5 - Board with ancestors for breadcrumb
+export interface BoardWithAncestors extends Board {
+  ancestors: Board[];
+}
 
 // ============================================
 // BOARD ZONE
@@ -86,7 +110,10 @@ export interface BoardZone {
   positionY: number;
   width: number;
   height: number;
-    // Crystallization fields
+  // NEW Sprint 5 - Hierarchy fields
+  zoneType: ZoneType;
+  linkedBoardId: string | null;
+  // Crystallization fields
   crystallizedAt: Date | null;
   linkedProjectId: string | null;
   linkedProjectStatus?: ProjectStatus;
@@ -168,7 +195,7 @@ export interface CalculationElementData {
   calculationId?: string;
   summary: string;
   garmentType: string;
-  
+
   // Format Journey (legacy)
   size?: string;
   variations?: Record<string, string>;
@@ -177,7 +204,7 @@ export interface CalculationElementData {
     totalYardage: number;
     recommended: number;
   };
-  
+
   // Format Pattern Import (nouveau)
   source?: 'journey' | 'pattern_import' | 'manual';
   patternId?: string;
@@ -315,12 +342,15 @@ export interface CreateBoardInput {
   name?: string;
   description?: string;
   status?: BoardStatus;
+  parentBoardId?: string | null;  // NEW Sprint 5
+  boardType?: BoardType;          // NEW Sprint 5
 }
 
 export interface UpdateBoardInput {
   name?: string;
   description?: string;
   status?: BoardStatus;
+  boardType?: BoardType;          // NEW Sprint 5
 }
 
 export interface CreateZoneInput {
@@ -331,6 +361,8 @@ export interface CreateZoneInput {
   positionY?: number;
   width?: number;
   height?: number;
+  zoneType?: ZoneType;            // NEW Sprint 5
+  linkedBoardId?: string | null;  // NEW Sprint 5
 }
 
 export interface UpdateZoneInput {
@@ -340,6 +372,8 @@ export interface UpdateZoneInput {
   positionY?: number;
   width?: number;
   height?: number;
+  zoneType?: ZoneType;            // NEW Sprint 5
+  linkedBoardId?: string | null;  // NEW Sprint 5
 }
 
 export interface CreateElementInput {
@@ -377,13 +411,16 @@ export interface BoardRow {
   id: string;
   user_id: string | null;
   session_id: string | null;
+  parent_board_id: string | null;  // NEW Sprint 5
   name: string | null;
   description: string | null;
   status: string;
-  cover_image_url: string | null;  // ← AJOUTER
+  board_type: string;              // NEW Sprint 5
+  cover_image_url: string | null;
   created_at: string;
   updated_at: string;
 }
+
 export interface BoardZoneRow {
   id: string;
   board_id: string;
@@ -393,6 +430,9 @@ export interface BoardZoneRow {
   position_y: number;
   width: number;
   height: number;
+  // NEW Sprint 5 - Hierarchy columns
+  zone_type: string;
+  linked_board_id: string | null;
   // Crystallization columns
   crystallized_at: string | null;
   linked_project_id: string | null;
@@ -424,10 +464,12 @@ export function mapBoardFromRow(row: BoardRow): Board {
     id: row.id,
     userId: row.user_id,
     sessionId: row.session_id,
+    parentBoardId: row.parent_board_id,  // NEW Sprint 5
     name: row.name,
     description: row.description,
     status: row.status as BoardStatus,
-    coverImageUrl: row.cover_image_url,  // ← AJOUTER
+    boardType: (row.board_type || 'free') as BoardType,  // NEW Sprint 5
+    coverImageUrl: row.cover_image_url,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -443,7 +485,10 @@ export function mapZoneFromRow(row: BoardZoneRow): BoardZone {
     positionY: row.position_y,
     width: row.width,
     height: row.height,
-        // Crystallization mapping
+    // NEW Sprint 5 - Hierarchy mapping
+    zoneType: (row.zone_type || 'piece') as ZoneType,
+    linkedBoardId: row.linked_board_id,
+    // Crystallization mapping
     crystallizedAt: row.crystallized_at ? new Date(row.crystallized_at) : null,
     linkedProjectId: row.linked_project_id,
     linkedProjectStatus: row.linked_project_status as ProjectStatus | undefined,
@@ -477,6 +522,7 @@ export interface ActionResult<T> {
   data?: T;
   error?: string;
 }
+
 // ============================================
 // CRYSTALLIZATION HELPERS
 // ============================================
@@ -492,4 +538,20 @@ export function isZoneOrdered(zone: BoardZone): boolean {
     zone.linkedProjectStatus !== undefined &&
     zone.linkedProjectStatus !== 'draft'
   );
+}
+
+// ============================================
+// NEW Sprint 5 - HIERARCHY HELPERS
+// ============================================
+
+export function isBoardRoot(board: Board): boolean {
+  return board.parentBoardId === null;
+}
+
+export function isBoardCollection(board: Board): boolean {
+  return board.boardType === 'collection';
+}
+
+export function isZoneLinked(zone: BoardZone): boolean {
+  return zone.linkedBoardId !== null;
 }

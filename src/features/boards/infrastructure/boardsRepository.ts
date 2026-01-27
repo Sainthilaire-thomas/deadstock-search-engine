@@ -19,7 +19,7 @@ import {
 } from '../domain/types';
 
 // ============================================
-// LIST BOARDS
+// LIST BOARDS (all boards for user)
 // ============================================
 
 export async function listBoards(userId: string): Promise<Board[]> {
@@ -40,6 +40,28 @@ export async function listBoards(userId: string): Promise<Board[]> {
 }
 
 // ============================================
+// NEW Sprint 5 - LIST ROOT BOARDS ONLY
+// ============================================
+
+export async function listRootBoards(userId: string): Promise<Board[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('boards')
+    .select('*')
+    .eq('user_id', userId)
+    .is('parent_board_id', null)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('listRootBoards error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapBoardFromRow(row as BoardRow));
+}
+
+// ============================================
 // LIST BOARDS WITH PREVIEW
 // ============================================
 
@@ -47,14 +69,17 @@ export async function listBoardsWithPreview(userId: string): Promise<BoardWithPr
   const supabase = createAdminClient();
 
   // Requête optimisée : counts seulement, pas de element_data
+  // NEW Sprint 5: Filter only root boards (parent_board_id IS NULL)
+  // FIX: Specify relationship explicitly due to linked_board_id FK
   const { data, error } = await supabase
     .from('boards')
     .select(`
       *,
       board_elements (count),
-      board_zones (count)
+      board_zones!board_zones_board_id_fkey (count)
     `)
     .eq('user_id', userId)
+    .is('parent_board_id', null)
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -64,7 +89,7 @@ export async function listBoardsWithPreview(userId: string): Promise<BoardWithPr
 
   return (data || []).map((row) => {
     const board = mapBoardFromRow(row as BoardRow);
-    
+
     // Extraire les counts depuis la réponse Supabase
     const elementCount = (row.board_elements as unknown as { count: number }[])?.[0]?.count ?? 0;
     const zoneCount = (row.board_zones as unknown as { count: number }[])?.[0]?.count ?? 0;
@@ -92,7 +117,7 @@ function extractPreviewUrl(
   }
 
   // 2. Chercher dans les éléments par priorité
-  
+
   // Priorité aux inspirations (images uploadées)
   const inspiration = elements.find(
     (e) => e.element_type === 'inspiration' && e.element_data?.imageUrl
@@ -235,6 +260,81 @@ export async function getBoard(
 }
 
 // ============================================
+// NEW Sprint 5 - GET BOARD ANCESTORS (for breadcrumb)
+// ============================================
+
+export async function getBoardAncestors(boardId: string): Promise<Board[]> {
+  const supabase = createAdminClient();
+  const ancestors: Board[] = [];
+
+  // First get the current board to find its parent
+  const { data: currentBoard } = await supabase
+    .from('boards')
+    .select('*')
+    .eq('id', boardId)
+    .single();
+
+  if (!currentBoard || !currentBoard.parent_board_id) {
+    return ancestors; // No ancestors
+  }
+
+  // Fetch ancestors one by one (max 10 levels to prevent infinite loops)
+  const idsToFetch: string[] = [currentBoard.parent_board_id];
+  
+  // Collect all parent IDs first
+  for (let i = 0; i < 10; i++) {
+    const lastId = idsToFetch[idsToFetch.length - 1];
+    const { data } = await supabase
+      .from('boards')
+      .select('parent_board_id')
+      .eq('id', lastId)
+      .single();
+    
+    if (!data?.parent_board_id) break;
+    idsToFetch.push(data.parent_board_id);
+  }
+
+  // Fetch all ancestors in one query
+  const { data: ancestorsData } = await supabase
+    .from('boards')
+    .select('*')
+    .in('id', idsToFetch);
+
+  if (ancestorsData) {
+    // Sort from root to direct parent
+    for (const id of idsToFetch.reverse()) {
+      const ancestor = ancestorsData.find(a => a.id === id);
+      if (ancestor) {
+        ancestors.push(mapBoardFromRow(ancestor as BoardRow));
+      }
+    }
+  }
+
+  return ancestors;
+}
+
+// ============================================
+// NEW Sprint 5 - GET CHILD BOARDS
+// ============================================
+
+export async function getChildBoards(parentBoardId: string): Promise<Board[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('boards')
+    .select('*')
+    .eq('parent_board_id', parentBoardId)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('getChildBoards error:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => mapBoardFromRow(row as BoardRow));
+}
+
+// ============================================
 // CREATE BOARD
 // ============================================
 
@@ -248,9 +348,11 @@ export async function createBoard(
     .from('boards')
     .insert({
       user_id: userId,
+      parent_board_id: input.parentBoardId || null,  // NEW Sprint 5
       name: input.name || null,
       description: input.description || null,
       status: input.status || 'active',
+      board_type: input.boardType || 'free',         // NEW Sprint 5
     })
     .select()
     .single();
@@ -278,6 +380,7 @@ export async function updateBoard(
   if (input.name !== undefined) updateData.name = input.name;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.status !== undefined) updateData.status = input.status;
+  if (input.boardType !== undefined) updateData.board_type = input.boardType;  // NEW Sprint 5
 
   const { data, error } = await supabase
     .from('boards')
@@ -374,16 +477,42 @@ export async function getBoardsCount(userId: string): Promise<number> {
 }
 
 // ============================================
+// NEW Sprint 5 - GET ROOT BOARDS COUNT
+// ============================================
+
+export async function getRootBoardsCount(userId: string): Promise<number> {
+  const supabase = createAdminClient();
+
+  const { count, error } = await supabase
+    .from('boards')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('parent_board_id', null)
+    .neq('status', 'archived');
+
+  if (error) {
+    console.error('getRootBoardsCount error:', error);
+    throw error;
+  }
+
+  return count || 0;
+}
+
+// ============================================
 // EXPORT AS OBJECT
 // ============================================
 
 export const boardsRepository = {
   listBoards,
+  listRootBoards,           // NEW Sprint 5
   listBoardsWithPreview,
   getBoard,
+  getBoardAncestors,        // NEW Sprint 5
+  getChildBoards,           // NEW Sprint 5
   createBoard,
   updateBoard,
   updateBoardCoverImage,
   deleteBoard,
   getBoardsCount,
+  getRootBoardsCount,       // NEW Sprint 5
 };

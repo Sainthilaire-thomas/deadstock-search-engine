@@ -147,11 +147,13 @@ export type Database = {
           crystallized_at: string | null
           height: number
           id: string
+          linked_board_id: string | null
           linked_project_id: string | null
           name: string
           position_x: number
           position_y: number
           width: number
+          zone_type: string | null
         }
         Insert: {
           board_id: string
@@ -160,11 +162,13 @@ export type Database = {
           crystallized_at?: string | null
           height?: number
           id?: string
+          linked_board_id?: string | null
           linked_project_id?: string | null
           name?: string
           position_x?: number
           position_y?: number
           width?: number
+          zone_type?: string | null
         }
         Update: {
           board_id?: string
@@ -173,16 +177,25 @@ export type Database = {
           crystallized_at?: string | null
           height?: number
           id?: string
+          linked_board_id?: string | null
           linked_project_id?: string | null
           name?: string
           position_x?: number
           position_y?: number
           width?: number
+          zone_type?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "board_zones_board_id_fkey"
             columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_zones_linked_board_id_fkey"
+            columns: ["linked_board_id"]
             isOneToOne: false
             referencedRelation: "boards"
             referencedColumns: ["id"]
@@ -198,39 +211,53 @@ export type Database = {
       }
       boards: {
         Row: {
+          board_type: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
           id: string
           name: string | null
+          parent_board_id: string | null
           session_id: string | null
           status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          board_type?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string | null
+          parent_board_id?: string | null
           session_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          board_type?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string | null
+          parent_board_id?: string | null
           session_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "boards_parent_board_id_fkey"
+            columns: ["parent_board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dictionary_mappings: {
         Row: {

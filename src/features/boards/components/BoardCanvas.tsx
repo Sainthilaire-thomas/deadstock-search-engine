@@ -710,6 +710,7 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                       ghostElementCount={ghostElementCount}
                       onMouseDown={(e) => handleZoneMouseDown(e, zone)}
                       onDoubleClick={() => handleZoneDoubleClick(zone)}
+                      onStartEdit={() => setEditingZoneId(zone.id)}
                       onSaveName={(name) => handleSaveZoneName(zone.id, name)}
                       onCancelEdit={() => setEditingZoneId(null)}
                       onCrystallize={() => setCrystallizingZone(zone)}

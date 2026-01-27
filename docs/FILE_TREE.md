@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-27 12:34:38
+**Generated:** 2026-01-27 18:06:10
 
 ---
 
@@ -8,11 +8,11 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 431 |
+| Total Files | 435 |
 | Total Directories | 145 |
-| TypeScript Files (.ts/.tsx) | 240 |
+| TypeScript Files (.ts/.tsx) | 243 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 144 |
+| Markdown Files (.md) | 145 |
 | SQL Files (.sql) | 29 |
 | JSON Files (.json) | 7 |
 | CSS Files (.css) | 2 |
@@ -164,6 +164,7 @@ deadstock-search-engine/
 |   |   |   |-- GLOSSAIRE_V3_i18n.md
 |   |   |   |-- MIGRATION_JOURNEY_TO_BOARD.md
 |   |   |   |-- ROADMAP_BOARDS_IMBRIQUES.md
+|   |   |   |-- ROADMAP_BOARDS_IMBRIQUES_UPDATED.md
 |   |   |   |-- SPEC_BOARD_MODULE.md
 |   |   |   |-- SPEC_BOARD_MOODBOARD_V2.md
 |   |   |   |-- SPEC_CRISTALLISATION.md
@@ -436,12 +437,15 @@ deadstock-search-engine/
 |   |   |   |   |-- VideoModal.tsx
 |   |   |   |   |-- ViewToggle.tsx
 |   |   |   |   |-- ZoneCard.tsx
+|   |   |   |   |-- ZoneElementThumbnail.tsx
+|   |   |   |   |-- ZoneFocusOverlay.tsx
 |   |   |   |   +-- ZoomControls.tsx
 |   |   |   |-- context/
 |   |   |   |   |-- BoardContext.tsx
 |   |   |   |   |-- ContextualSearchContext.tsx
 |   |   |   |   |-- ImmersiveModeContext.tsx
-|   |   |   |   +-- TransformContext.tsx
+|   |   |   |   |-- TransformContext.tsx
+|   |   |   |   +-- ZoneFocusContext.tsx
 |   |   |   |-- domain/
 |   |   |   |   +-- types.ts
 |   |   |   |-- hooks/
@@ -676,11 +680,14 @@ deadstock-search-engine/
 - `/src/features/boards/components/VideoModal.tsx`
 - `/src/features/boards/components/ViewToggle.tsx`
 - `/src/features/boards/components/ZoneCard.tsx`
+- `/src/features/boards/components/ZoneElementThumbnail.tsx`
+- `/src/features/boards/components/ZoneFocusOverlay.tsx`
 - `/src/features/boards/components/ZoomControls.tsx`
 - `/src/features/boards/context/BoardContext.tsx`
 - `/src/features/boards/context/ContextualSearchContext.tsx`
 - `/src/features/boards/context/ImmersiveModeContext.tsx`
 - `/src/features/boards/context/TransformContext.tsx`
+- `/src/features/boards/context/ZoneFocusContext.tsx`
 - `/src/features/boards/domain/types.ts`
 - `/src/features/boards/hooks/useContextualSearch.ts`
 - `/src/features/boards/infrastructure/boardsRepository.ts`
@@ -894,7 +901,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-27 12:34:54
+**Date:** 2026-01-27 18:06:21
 
 **Command to regenerate:**
 ```powershell
