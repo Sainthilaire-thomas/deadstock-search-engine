@@ -3,22 +3,23 @@ import { createClient } from '@/lib/supabase/server';
 
 /**
  * Récupère l'utilisateur authentifié sans redirection
- * Utilise getSession() pour éviter un appel réseau systématique
+ * Utilise getUser() qui vérifie le JWT auprès du serveur Supabase Auth
  * Retourne null si non connecté
  */
 export async function getAuthUser(): Promise<{ id: string; email: string } | null> {
   try {
     const supabase = await createClient();
-    // getSession() lit le JWT localement (pas d'appel réseau)
-    const { data: { session }, error } = await supabase.auth.getSession();
     
-    if (error || !session?.user) {
+    // getUser() vérifie le JWT côté serveur (recommandé par Supabase)
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error || !user) {
       return null;
     }
     
     return {
-      id: session.user.id,
-      email: session.user.email || '',
+      id: user.id,
+      email: user.email || '',
     };
   } catch {
     return null;
