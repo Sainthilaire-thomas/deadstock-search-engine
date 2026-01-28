@@ -1,14 +1,13 @@
 // src/features/boards/components/ZoneCard.tsx
-// VERSION Sprint 2 - Card compacte avec miniatures + édition nom
+// UB-5: Adapté pour architecture unifiée (Board au lieu de Zone)
 
 'use client';
 
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import { GripVertical, Sparkles, ExternalLink, X, FolderOpen, Pencil } from 'lucide-react';
-import { isZoneCrystallized, isZoneOrdered } from '../domain/types';
-import { getElementsByZoneId } from '../utils/zoneUtils';
+import { isBoardCrystallized, isBoardOrdered } from '../domain/types';
 import { ZoneElementThumbnail } from './ZoneElementThumbnail';
-import type { BoardZone, BoardElement } from '../domain/types';
+import type { Board } from '../domain/types';
 
 // Taille fixe de la card
 const CARD_WIDTH = 280;
@@ -21,8 +20,7 @@ export interface ZoneCardHandle {
 }
 
 interface ZoneCardProps {
-  zone: BoardZone;
-  elements: BoardElement[]; // Tous les éléments du board
+  zone: Board; // Maintenant un Board (child board)
   position: { x: number; y: number };
   isSelected: boolean;
   isEditing: boolean;
@@ -40,8 +38,7 @@ interface ZoneCardProps {
 }
 
 export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(function ZoneCard({
-  zone,
-  elements,
+  zone, // C'est maintenant un Board (child board)
   position,
   isSelected,
   isEditing,
@@ -58,7 +55,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
   onDelete,
 }, ref) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [editName, setEditName] = useState(zone.name);
+  const [editName, setEditName] = useState(zone.name ?? '');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Expose methods for direct DOM manipulation during drag
@@ -75,16 +72,16 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
     },
   }), []);
 
-  const isCrystallized = isZoneCrystallized(zone);
-  const isOrdered = isZoneOrdered(zone);
+  const isCrystallized = isBoardCrystallized(zone);
+  const isOrdered = isBoardOrdered(zone);
 
-  // Récupérer les éléments de cette zone via zoneId
-  const zoneElements = getElementsByZoneId(elements, zone.id);
-  const elementCount = zoneElements.length;
-  const displayedElements = zoneElements.slice(0, MAX_THUMBNAILS);
-  const remainingCount = elementCount - MAX_THUMBNAILS;
+  // UB-5: Utiliser previewElements et elementCount du child board
+  const previewElements = zone.previewElements || [];
+  const elementCount = zone.elementCount ?? 0;
+  const displayedElements = previewElements.slice(0, MAX_THUMBNAILS);
+  const remainingCount = elementCount - displayedElements.length;
 
-  // Mode Inspiration : zones invisibles (sauf si cristallisées)
+  // Mode Inspiration : boards invisibles (sauf si cristallisés)
   const shouldShow = isVisible || isCrystallized;
 
   // Ghost Mode: style spécial pendant le drag avec éléments masqués
@@ -96,7 +93,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
       onSaveName(editName);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      setEditName(zone.name);
+      setEditName(zone.name ?? '');
       onCancelEdit();
     }
   };
@@ -108,7 +105,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
   // Sync editName when zone.name changes or when entering edit mode
   React.useEffect(() => {
     if (isEditing) {
-      setEditName(zone.name);
+      setEditName(zone.name ?? '');
       // Focus input after a short delay to ensure it's rendered
       setTimeout(() => inputRef.current?.focus(), 0);
     }
@@ -141,6 +138,8 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
         zIndex: isSelected ? 10 : 2,
+        borderLeftColor: zone.color,
+        borderLeftWidth: '4px',
         ...style,
       }}
       onMouseDown={onMouseDown}
@@ -165,21 +164,21 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
             shadow-sm
             z-20
           "
-          title="Supprimer la zone"
+          title="Supprimer"
         >
           <X className="w-3 h-3" strokeWidth={2.5} />
         </button>
       )}
 
-      {/* Header - double-clic pour éditer le nom */}
-      <div 
+      {/* Header - double-clic pour ouvrir le Focus Mode */}
+      <div
         className="px-3 pt-2 pb-1 flex items-center justify-between border-b border-gray-100 dark:border-gray-700"
         onDoubleClick={(e) => {
           e.stopPropagation();
           onDoubleClick();
         }}
       >
-       <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
           {isEditing ? (
             <input
@@ -201,10 +200,10 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
                 text-gray-700 dark:text-gray-200
               "
             />
-         ) : (
+          ) : (
             <>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                {zone.name}
+                {zone.name ?? 'Sans nom'}
               </span>
               {!isCrystallized && (
                 <button
@@ -258,7 +257,7 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         ) : elementCount === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
             <FolderOpen className="w-6 h-6 mb-1" />
-            <span className="text-xs">Zone vide</span>
+            <span className="text-xs">Pièce vide</span>
           </div>
         ) : (
           <div className="flex flex-wrap gap-1.5">
@@ -284,8 +283,8 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
         </span>
 
         {isCrystallized && zone.linkedProjectId ? (
-          <a 
-            href={`/journey/projects/${zone.linkedProjectId}`}
+          
+         <a   href={`/journey/projects/${zone.linkedProjectId}`}
             className="
               text-[11px]
               text-blue-600 hover:text-blue-700
@@ -326,3 +325,6 @@ export const ZoneCard = React.memo(forwardRef<ZoneCardHandle, ZoneCardProps>(fun
     </div>
   );
 }));
+
+// Alias pour compatibilité
+export const ChildBoardCard = ZoneCard;

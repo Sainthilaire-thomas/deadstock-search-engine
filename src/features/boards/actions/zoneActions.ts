@@ -1,156 +1,110 @@
 ﻿// src/features/boards/actions/zoneActions.ts
+// DEPRECATED: UB-4 - Unified Boards Architecture (ADR-032)
+// This file provides backward compatibility aliases
+// All functions redirect to boardActions.ts - DO NOT ADD NEW CODE HERE
 
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { zonesRepository } from '../infrastructure/zonesRepository';
-import { boardsRepository } from '../infrastructure/boardsRepository';
-import { requireUserId } from '@/lib/auth/getAuthUser';
+import {
+  createChildBoardAction,
+  updateBoardAction,
+  moveChildBoardAction,
+  resizeChildBoardAction,
+  deleteChildBoardAction,
+} from './boardActions';
 import type {
-  BoardZone,
-  CreateZoneInput,
-  UpdateZoneInput,
+  Board,
+  UpdateBoardInput,
   ActionResult,
 } from '../domain/types';
 
 // ============================================
-// CREATE ZONE
+// DEPRECATED ALIASES - Use boardActions instead
 // ============================================
 
+/**
+ * @deprecated Use createChildBoardAction from boardActions instead
+ */
 export async function createZoneAction(
-  input: CreateZoneInput
-): Promise<ActionResult<BoardZone>> {
-  try {
-    // Verify board ownership
-    const userId = await requireUserId();
-    const board = await boardsRepository.getBoard(input.boardId, userId);
-
-    if (!board) {
-      return { success: false, error: 'Board introuvable' };
-    }
-
-    const zone = await zonesRepository.createZone(input);
-
-    revalidatePath(`/boards/${input.boardId}`);
-
-    return { success: true, data: zone };
-  } catch (error) {
-    console.error('createZoneAction error:', error);
-    return { success: false, error: 'Impossible de créer la zone' };
-  }
+  input: { boardId: string; name?: string; color?: string; positionX?: number; positionY?: number; width?: number; height?: number }
+): Promise<ActionResult<Board>> {
+  return createChildBoardAction(input.boardId, {
+    name: input.name,
+    positionX: input.positionX,
+    positionY: input.positionY,
+    width: input.width,
+    height: input.height,
+    color: input.color,
+  });
 }
 
-// ============================================
-// UPDATE ZONE
-// ============================================
-
+/**
+ * @deprecated Use updateBoardAction from boardActions instead
+ */
 export async function updateZoneAction(
   zoneId: string,
-  input: UpdateZoneInput
-): Promise<ActionResult<BoardZone>> {
-  try {
-    const zone = await zonesRepository.updateZone(zoneId, input);
-
-    if (!zone) {
-      return { success: false, error: 'Zone introuvable' };
-    }
-
-    revalidatePath(`/boards/${zone.boardId}`);
-
-    return { success: true, data: zone };
-  } catch (error) {
-    console.error('updateZoneAction error:', error);
-    return { success: false, error: 'Impossible de mettre à jour la zone' };
-  }
+  input: UpdateBoardInput
+): Promise<ActionResult<Board>> {
+  // Note: We need userId but don't have it here
+  // This is a limitation of the deprecated API
+  return updateBoardAction(zoneId, input);
 }
 
-// ============================================
-// MOVE ZONE
-// ============================================
-
+/**
+ * @deprecated Use moveChildBoardAction from boardActions instead
+ */
 export async function moveZoneAction(
   zoneId: string,
   positionX: number,
   positionY: number
 ): Promise<ActionResult<void>> {
-  try {
-    await zonesRepository.moveZone(zoneId, positionX, positionY);
-    return { success: true };
-  } catch (error) {
-    console.error('moveZoneAction error:', error);
-    return { success: false, error: 'Impossible de déplacer la zone' };
-  }
+  return moveChildBoardAction(zoneId, positionX, positionY);
 }
 
-// ============================================
-// RESIZE ZONE
-// ============================================
-
+/**
+ * @deprecated Use resizeChildBoardAction from boardActions instead
+ */
 export async function resizeZoneAction(
   zoneId: string,
   width: number,
   height: number
 ): Promise<ActionResult<void>> {
-  try {
-    await zonesRepository.resizeZone(zoneId, width, height);
-    return { success: true };
-  } catch (error) {
-    console.error('resizeZoneAction error:', error);
-    return { success: false, error: 'Impossible de redimensionner la zone' };
-  }
+  return resizeChildBoardAction(zoneId, width, height);
 }
 
-// ============================================
-// DELETE ZONE
-// ============================================
-
+/**
+ * @deprecated Use deleteChildBoardAction from boardActions instead
+ */
 export async function deleteZoneAction(
   zoneId: string
 ): Promise<ActionResult<void>> {
-  try {
-    const boardId = await zonesRepository.deleteZone(zoneId);
-
-    if (boardId) {
-      revalidatePath(`/boards/${boardId}`);
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('deleteZoneAction error:', error);
-    return { success: false, error: 'Impossible de supprimer la zone' };
-  }
+  return deleteChildBoardAction(zoneId);
 }
 
-// ============================================
-// QUICK CREATE ZONE
-// ============================================
-
-const ZONE_COLORS = [
-  '#6366F1', // Indigo
-  '#8B5CF6', // Violet
-  '#EC4899', // Pink
-  '#F59E0B', // Amber
-  '#10B981', // Emerald
-  '#3B82F6', // Blue
-  '#EF4444', // Red
-  '#06B6D4', // Cyan
-];
-
+/**
+ * @deprecated Use createChildBoardAction from boardActions instead
+ */
 export async function addZoneToBoard(
   boardId: string,
-  name: string = 'Nouvelle zone',
+  name: string = 'Nouvelle pièce',
   position?: { x: number; y: number }
-): Promise<ActionResult<BoardZone>> {
-  // Pick a random color
-  const color = ZONE_COLORS[Math.floor(Math.random() * ZONE_COLORS.length)];
-
-  return createZoneAction({
-    boardId,
+): Promise<ActionResult<Board>> {
+  return createChildBoardAction(boardId, {
     name,
-    color,
     positionX: position?.x ?? 50,
     positionY: position?.y ?? 50,
-    width: 300,
-    height: 200,
   });
+}
+
+/**
+ * @deprecated This function is no longer needed - child boards are boards
+ */
+export async function createLinkedBoardAction(
+  _zoneId: string,
+  _parentBoardId: string,
+  _name: string
+): Promise<ActionResult<Board>> {
+  // In unified architecture, child boards ARE boards
+  // This function is no longer meaningful
+  return { success: false, error: 'Cette fonction est obsolète. Les pièces sont maintenant des boards.' };
 }

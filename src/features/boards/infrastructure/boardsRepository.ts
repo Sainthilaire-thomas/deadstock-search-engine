@@ -1,13 +1,14 @@
 ﻿// src/features/boards/infrastructure/boardsRepository.ts
+// UPDATED: UB-3 - Unified Boards Architecture (ADR-032)
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import type {
   Board,
+  BoardElement,
   BoardWithDetails,
   BoardWithPreview,
   BoardRow,
   BoardElementRow,
-  BoardZoneRow,
   CreateBoardInput,
   UpdateBoardInput,
 } from '../domain/types';
@@ -15,8 +16,26 @@ import type {
 import {
   mapBoardFromRow,
   mapElementFromRow,
-  mapZoneFromRow,
 } from '../domain/types';
+
+// ============================================
+// HELPER - Random color for new child boards
+// ============================================
+
+const BOARD_COLORS = [
+  '#6366F1', // Indigo
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#F59E0B', // Amber
+  '#10B981', // Emerald
+  '#3B82F6', // Blue
+  '#EF4444', // Red
+  '#06B6D4', // Cyan
+];
+
+function getRandomBoardColor(): string {
+  return BOARD_COLORS[Math.floor(Math.random() * BOARD_COLORS.length)];
+}
 
 // ============================================
 // LIST BOARDS (all boards for user)
@@ -40,7 +59,7 @@ export async function listBoards(userId: string): Promise<Board[]> {
 }
 
 // ============================================
-// NEW Sprint 5 - LIST ROOT BOARDS ONLY
+// LIST ROOT BOARDS ONLY
 // ============================================
 
 export async function listRootBoards(userId: string): Promise<Board[]> {
@@ -63,20 +82,18 @@ export async function listRootBoards(userId: string): Promise<Board[]> {
 
 // ============================================
 // LIST BOARDS WITH PREVIEW
+// UPDATED UB-3: childBoardCount instead of zoneCount
 // ============================================
 
 export async function listBoardsWithPreview(userId: string): Promise<BoardWithPreview[]> {
   const supabase = createAdminClient();
 
-  // Requête optimisée : counts seulement, pas de element_data
-  // NEW Sprint 5: Filter only root boards (parent_board_id IS NULL)
-  // FIX: Specify relationship explicitly due to linked_board_id FK
+  // UPDATED UB-3: Count child boards instead of zones
   const { data, error } = await supabase
     .from('boards')
     .select(`
       *,
-      board_elements (count),
-      board_zones!board_zones_board_id_fkey (count)
+      board_elements (count)
     `)
     .eq('user_id', userId)
     .is('parent_board_id', null)
@@ -87,86 +104,42 @@ export async function listBoardsWithPreview(userId: string): Promise<BoardWithPr
     throw error;
   }
 
+  // Get child board counts in a separate query
+  const boardIds = (data || []).map(b => b.id);
+  
+  let childBoardCounts: Record<string, number> = {};
+  if (boardIds.length > 0) {
+    const { data: childData } = await supabase
+      .from('boards')
+      .select('parent_board_id')
+      .in('parent_board_id', boardIds);
+    
+    if (childData) {
+      childData.forEach(child => {
+        if (child.parent_board_id) {
+          childBoardCounts[child.parent_board_id] = (childBoardCounts[child.parent_board_id] || 0) + 1;
+        }
+      });
+    }
+  }
+
   return (data || []).map((row) => {
     const board = mapBoardFromRow(row as BoardRow);
-
-    // Extraire les counts depuis la réponse Supabase
     const elementCount = (row.board_elements as unknown as { count: number }[])?.[0]?.count ?? 0;
-    const zoneCount = (row.board_zones as unknown as { count: number }[])?.[0]?.count ?? 0;
+    const childBoardCount = childBoardCounts[row.id] || 0;
 
     return {
       ...board,
       previewUrl: row.cover_image_url || null,
       elementCount,
-      zoneCount,
+      childBoardCount,  // UPDATED UB-3: renamed from zoneCount
     };
   });
 }
 
-/**
- * Extrait l'URL de preview d'un board
- * Priorité: cover_image_url > inspiration > textile > silhouette > pattern
- */
-function extractPreviewUrl(
-  coverImageUrl: string | null,
-  elements: Array<{ element_type: string; element_data: Record<string, unknown> }>
-): string | null {
-  // 1. Cover explicite définie par l'utilisateur
-  if (coverImageUrl) {
-    return coverImageUrl;
-  }
-
-  // 2. Chercher dans les éléments par priorité
-
-  // Priorité aux inspirations (images uploadées)
-  const inspiration = elements.find(
-    (e) => e.element_type === 'inspiration' && e.element_data?.imageUrl
-  );
-  if (inspiration?.element_data?.imageUrl) {
-    return inspiration.element_data.imageUrl as string;
-  }
-
-  // Textiles avec image (depuis snapshot)
-  const textile = elements.find(
-    (e) => e.element_type === 'textile' && e.element_data?.snapshot
-  );
-  if (textile?.element_data?.snapshot) {
-    const snapshot = textile.element_data.snapshot as Record<string, unknown>;
-    if (snapshot.imageUrl) {
-      return snapshot.imageUrl as string;
-    }
-  }
-
-  // Silhouettes
-  const silhouette = elements.find(
-    (e) => e.element_type === 'silhouette' && e.element_data?.url
-  );
-  if (silhouette?.element_data?.url) {
-    return silhouette.element_data.url as string;
-  }
-
-  // Patterns (thumbnail)
-  const pattern = elements.find(
-    (e) => e.element_type === 'pattern' && e.element_data?.thumbnailUrl
-  );
-  if (pattern?.element_data?.thumbnailUrl) {
-    return pattern.element_data.thumbnailUrl as string;
-  }
-
-  // Pattern (url directe si pas de thumbnail)
-  const patternDirect = elements.find(
-    (e) => e.element_type === 'pattern' && e.element_data?.url && e.element_data?.fileType === 'image'
-  );
-  if (patternDirect?.element_data?.url) {
-    return patternDirect.element_data.url as string;
-  }
-
-  // 3. Pas d'image trouvée
-  return null;
-}
-
 // ============================================
 // GET BOARD WITH DETAILS
+// UPDATED UB-3: childBoards instead of zones
 // ============================================
 
 export async function getBoard(
@@ -203,21 +176,54 @@ export async function getBoard(
     throw elementsError;
   }
 
- // Get zones
-  const { data: zonesData, error: zonesError } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
+// UPDATED UB-3: Get child boards instead of zones
+  // UB-5: Include element count for each child board
+  const { data: childBoardsData, error: childBoardsError } = await supabase
+    .from('boards')
+    .select(`
+      *,
+      board_elements (count)
+    `)
+    .eq('parent_board_id', boardId)
     .order('created_at', { ascending: true });
 
-  if (zonesError) {
-    console.error('getBoard zones error:', zonesError);
-    throw zonesError;
+  if (childBoardsError) {
+    console.error('getBoard childBoards error:', childBoardsError);
+    throw childBoardsError;
   }
 
-  // Get project statuses for crystallized zones
-  const linkedProjectIds = (zonesData || [])
-    .map((z) => z.linked_project_id)
+  // UB-5: Get preview elements for each child board (max 6 per board)
+  const childBoardIds = (childBoardsData || []).map(cb => cb.id);
+  let previewElementsMap: Record<string, BoardElement[]> = {};
+
+  if (childBoardIds.length > 0) {
+    // Fetch elements for all child boards in one query
+    const { data: previewData, error: previewError } = await supabase
+      .from('board_elements')
+      .select('*')
+      .in('board_id', childBoardIds)
+      .order('z_index', { ascending: true });
+
+    if (previewError) {
+      console.error('getBoard preview elements error:', previewError);
+      // Non-blocking: continue without preview elements
+    } else if (previewData) {
+      // Group by board_id and limit to 6 per board
+      for (const row of previewData) {
+        const boardId = row.board_id;
+        if (!previewElementsMap[boardId]) {
+          previewElementsMap[boardId] = [];
+        }
+        if (previewElementsMap[boardId].length < 6) {
+          previewElementsMap[boardId].push(mapElementFromRow(row as BoardElementRow));
+        }
+      }
+    }
+  }
+
+  // Get project statuses for crystallized child boards
+  const linkedProjectIds = (childBoardsData || [])
+    .map((cb) => cb.linked_project_id)
     .filter((id): id is string => id !== null);
 
   let projectStatusMap: Record<string, string> = {};
@@ -241,26 +247,37 @@ export async function getBoard(
   const board = mapBoardFromRow(boardData as BoardRow);
   const elements = (elementsData || []).map((row) => mapElementFromRow(row as BoardElementRow));
 
-  // Map zones with project status
-  const zones = (zonesData || []).map((row) => {
-    const zoneRow = row as BoardZoneRow;
+  // UPDATED UB-3: Map child boards with project status
+  // UB-5: Include element count and preview elements
+  const childBoards = (childBoardsData || []).map((row) => {
+    const childBoardRow = row as BoardRow;
     // Inject project status into the row before mapping
-    if (zoneRow.linked_project_id && projectStatusMap[zoneRow.linked_project_id]) {
-      zoneRow.linked_project_status = projectStatusMap[zoneRow.linked_project_id];
+    if (childBoardRow.linked_project_id && projectStatusMap[childBoardRow.linked_project_id]) {
+      childBoardRow.linked_project_status = projectStatusMap[childBoardRow.linked_project_id];
     }
-    return mapZoneFromRow(zoneRow);
+    const mappedBoard = mapBoardFromRow(childBoardRow);
+    // UB-5: Extract element count from the joined query
+    const elementCount = (row as unknown as { board_elements: { count: number }[] }).board_elements?.[0]?.count ?? 0;
+    // UB-5: Get preview elements for this child board
+    const previewElements = previewElementsMap[mappedBoard.id] || [];
+    return {
+      ...mappedBoard,
+      elementCount,
+      previewElements,
+    };
   });
 
   return {
     ...board,
     elements,
-    zones,
+    childBoards,  // UPDATED UB-3: renamed from zones
     elementCount: elements.length,
+    childBoardCount: childBoards.length,  // UPDATED UB-3: renamed from zoneCount
   };
 }
 
 // ============================================
-// NEW Sprint 5 - GET BOARD ANCESTORS (for breadcrumb)
+// GET BOARD ANCESTORS (for breadcrumb)
 // ============================================
 
 export async function getBoardAncestors(boardId: string): Promise<Board[]> {
@@ -280,7 +297,7 @@ export async function getBoardAncestors(boardId: string): Promise<Board[]> {
 
   // Fetch ancestors one by one (max 10 levels to prevent infinite loops)
   const idsToFetch: string[] = [currentBoard.parent_board_id];
-  
+
   // Collect all parent IDs first
   for (let i = 0; i < 10; i++) {
     const lastId = idsToFetch[idsToFetch.length - 1];
@@ -289,7 +306,7 @@ export async function getBoardAncestors(boardId: string): Promise<Board[]> {
       .select('parent_board_id')
       .eq('id', lastId)
       .single();
-    
+
     if (!data?.parent_board_id) break;
     idsToFetch.push(data.parent_board_id);
   }
@@ -314,7 +331,7 @@ export async function getBoardAncestors(boardId: string): Promise<Board[]> {
 }
 
 // ============================================
-// NEW Sprint 5 - GET CHILD BOARDS
+// GET CHILD BOARDS
 // ============================================
 
 export async function getChildBoards(parentBoardId: string): Promise<Board[]> {
@@ -324,7 +341,7 @@ export async function getChildBoards(parentBoardId: string): Promise<Board[]> {
     .from('boards')
     .select('*')
     .eq('parent_board_id', parentBoardId)
-    .order('updated_at', { ascending: false });
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('getChildBoards error:', error);
@@ -336,6 +353,7 @@ export async function getChildBoards(parentBoardId: string): Promise<Board[]> {
 
 // ============================================
 // CREATE BOARD
+// UPDATED UB-3: Support position/size/color for child boards
 // ============================================
 
 export async function createBoard(
@@ -348,11 +366,17 @@ export async function createBoard(
     .from('boards')
     .insert({
       user_id: userId,
-      parent_board_id: input.parentBoardId || null,  // NEW Sprint 5
+      parent_board_id: input.parentBoardId || null,
       name: input.name || null,
       description: input.description || null,
-      status: input.status || 'active',
-      board_type: input.boardType || 'free',         // NEW Sprint 5
+      status: input.status || 'draft',  // UPDATED UB-3: default to 'draft'
+      board_type: input.boardType || 'free',
+      // NEW UB-3: Position/size/color for child boards
+      position_x: input.positionX ?? null,
+      position_y: input.positionY ?? null,
+      width: input.width ?? 280,
+      height: input.height ?? 140,
+      color: input.color || getRandomBoardColor(),
     })
     .select()
     .single();
@@ -366,7 +390,52 @@ export async function createBoard(
 }
 
 // ============================================
+// NEW UB-3: CREATE CHILD BOARD (replaces createZone)
+// ============================================
+
+export async function createChildBoard(
+  parentBoardId: string,
+  input: {
+    name?: string;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    color?: string;
+    boardType?: 'piece' | 'category';
+  },
+  userId: string
+): Promise<Board> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('boards')
+    .insert({
+      user_id: userId,
+      parent_board_id: parentBoardId,
+      name: input.name || 'Nouvelle pièce',
+      status: 'draft',
+      board_type: input.boardType || 'piece',
+      position_x: input.positionX ?? 50,
+      position_y: input.positionY ?? 50,
+      width: input.width ?? 280,
+      height: input.height ?? 140,
+      color: input.color || getRandomBoardColor(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createChildBoard error:', error);
+    throw error;
+  }
+
+  return mapBoardFromRow(data as BoardRow);
+}
+
+// ============================================
 // UPDATE BOARD
+// UPDATED UB-3: Support all new fields
 // ============================================
 
 export async function updateBoard(
@@ -380,7 +449,13 @@ export async function updateBoard(
   if (input.name !== undefined) updateData.name = input.name;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.status !== undefined) updateData.status = input.status;
-  if (input.boardType !== undefined) updateData.board_type = input.boardType;  // NEW Sprint 5
+  if (input.boardType !== undefined) updateData.board_type = input.boardType;
+  // NEW UB-3: Position/size/color
+  if (input.positionX !== undefined) updateData.position_x = input.positionX;
+  if (input.positionY !== undefined) updateData.position_y = input.positionY;
+  if (input.width !== undefined) updateData.width = input.width;
+  if (input.height !== undefined) updateData.height = input.height;
+  if (input.color !== undefined) updateData.color = input.color;
 
   const { data, error } = await supabase
     .from('boards')
@@ -395,6 +470,83 @@ export async function updateBoard(
       return null; // Not found
     }
     console.error('updateBoard error:', error);
+    throw error;
+  }
+
+  return mapBoardFromRow(data as BoardRow);
+}
+
+// ============================================
+// NEW UB-3: MOVE CHILD BOARD (replaces moveZone)
+// ============================================
+
+export async function moveChildBoard(
+  boardId: string,
+  positionX: number,
+  positionY: number
+): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('boards')
+    .update({ position_x: positionX, position_y: positionY })
+    .eq('id', boardId);
+
+  if (error) {
+    console.error('moveChildBoard error:', error);
+    throw error;
+  }
+
+  return true;
+}
+
+// ============================================
+// NEW UB-3: RESIZE CHILD BOARD (replaces resizeZone)
+// ============================================
+
+export async function resizeChildBoard(
+  boardId: string,
+  width: number,
+  height: number
+): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('boards')
+    .update({ width, height })
+    .eq('id', boardId);
+
+  if (error) {
+    console.error('resizeChildBoard error:', error);
+    throw error;
+  }
+
+  return true;
+}
+
+// ============================================
+// NEW UB-3: CRYSTALLIZE BOARD (replaces crystallizeZone)
+// ============================================
+
+export async function crystallizeBoard(
+  boardId: string,
+  projectId: string
+): Promise<Board | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from('boards')
+    .update({
+      crystallized_at: new Date().toISOString(),
+      linked_project_id: projectId,
+      status: 'ordered',  // UPDATED UB-3: Use new status
+    })
+    .eq('id', boardId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('crystallizeBoard error:', error);
     throw error;
   }
 
@@ -477,7 +629,7 @@ export async function getBoardsCount(userId: string): Promise<number> {
 }
 
 // ============================================
-// NEW Sprint 5 - GET ROOT BOARDS COUNT
+// GET ROOT BOARDS COUNT
 // ============================================
 
 export async function getRootBoardsCount(userId: string): Promise<number> {
@@ -504,15 +656,19 @@ export async function getRootBoardsCount(userId: string): Promise<number> {
 
 export const boardsRepository = {
   listBoards,
-  listRootBoards,           // NEW Sprint 5
+  listRootBoards,
   listBoardsWithPreview,
   getBoard,
-  getBoardAncestors,        // NEW Sprint 5
-  getChildBoards,           // NEW Sprint 5
+  getBoardAncestors,
+  getChildBoards,
   createBoard,
+  createChildBoard,      // NEW UB-3
   updateBoard,
+  moveChildBoard,        // NEW UB-3
+  resizeChildBoard,      // NEW UB-3
+  crystallizeBoard,      // NEW UB-3
   updateBoardCoverImage,
   deleteBoard,
   getBoardsCount,
-  getRootBoardsCount,       // NEW Sprint 5
+  getRootBoardsCount,
 };

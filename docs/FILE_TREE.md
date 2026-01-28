@@ -1,6 +1,6 @@
 # Project File Tree
 
-**Generated:** 2026-01-27 18:06:10
+**Generated:** 2026-01-28 15:55:58
 
 ---
 
@@ -8,12 +8,12 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Files | 435 |
+| Total Files | 441 |
 | Total Directories | 145 |
-| TypeScript Files (.ts/.tsx) | 243 |
+| TypeScript Files (.ts/.tsx) | 242 |
 | JavaScript Files (.js/.jsx) | 0 |
-| Markdown Files (.md) | 145 |
-| SQL Files (.sql) | 29 |
+| Markdown Files (.md) | 149 |
+| SQL Files (.sql) | 32 |
 | JSON Files (.json) | 7 |
 | CSS Files (.css) | 2 |
 | Other Files | 9 |
@@ -54,6 +54,9 @@ deadstock-search-engine/
 |   |   |-- 030_user_creation_trigger.sql
 |   |   |-- 031_add_project_order_fields.sql
 |   |   |-- 032_add_board_cover_image.sql
+|   |   |-- 033_add_board_hierarchy.sql
+|   |   |-- 034_add_zone_linked_board.sql
+|   |   |-- 035_unified_boards.sql
 |   |   +-- MIGRATIONS.md
 |   |-- seeds/
 |   |   +-- enrich_dictionaries.sql
@@ -114,6 +117,7 @@ deadstock-search-engine/
 |   |   |-- ADR_029_BOARD_JOURNEY_COMPLEMENTARITY.md
 |   |   |-- ADR_030_AUTH_MULTI_SCHEMA_V2.md
 |   |   |-- ADR_031_SIGNOUT_SERVER_SIDE.md
+|   |   |-- ADR_032_UNIFIED_BOARD_ARCHITECTURE.md
 |   |   |-- ADR_TEMPLATE.md
 |   |   +-- ARCHITECTURE_DECISION_SUMMARY.md
 |   |-- market/
@@ -165,11 +169,14 @@ deadstock-search-engine/
 |   |   |   |-- MIGRATION_JOURNEY_TO_BOARD.md
 |   |   |   |-- ROADMAP_BOARDS_IMBRIQUES.md
 |   |   |   |-- ROADMAP_BOARDS_IMBRIQUES_UPDATED.md
+|   |   |   |-- ROADMAP_ZONES_IMBRIQUEES_V2.md
 |   |   |   |-- SPEC_BOARD_MODULE.md
 |   |   |   |-- SPEC_BOARD_MOODBOARD_V2.md
 |   |   |   |-- SPEC_CRISTALLISATION.md
 |   |   |   |-- SPRINT_BOARD_1_2_COMPLETE.md
 |   |   |   |-- SPRINT_BOARD_3_PALETTE_COMPLETE.md
+|   |   |   |-- SPRINT_UNIFIED_BOARDS.md
+|   |   |   |-- SPRINT_UNIFIED_BOARDS_V2.md
 |   |   |   |-- SPRINT4_COMPLETE.md
 |   |   |   +-- SPRINT5_COMPLETE.md
 |   |   |-- consumer/
@@ -570,7 +577,6 @@ deadstock-search-engine/
 |   |   |   |-- auth.ts
 |   |   |   |-- browser.ts
 |   |   |   |-- client.ts
-|   |   |   |-- database.types.ts
 |   |   |   |-- scraper.ts
 |   |   |   +-- server.ts
 |   |   +-- utils.ts
@@ -807,6 +813,9 @@ deadstock-search-engine/
 - `030_user_creation_trigger.sql`
 - `031_add_project_order_fields.sql`
 - `032_add_board_cover_image.sql`
+- `033_add_board_hierarchy.sql`
+- `034_add_zone_linked_board.sql`
+- `035_unified_boards.sql`
 
 ### Seeds
 
@@ -901,7 +910,7 @@ The following directories are excluded from this documentation:
 
 ## Last Updated
 
-**Date:** 2026-01-27 18:06:21
+**Date:** 2026-01-28 15:56:24
 
 **Command to regenerate:**
 ```powershell

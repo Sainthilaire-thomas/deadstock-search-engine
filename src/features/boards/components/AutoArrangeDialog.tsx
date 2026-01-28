@@ -18,7 +18,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import type { BoardElement, BoardZone } from '../domain/types';
+import type { Board, BoardElement } from '../domain/types';
 import {
   getArrangePreview,
   countMovableItems,
@@ -40,7 +40,7 @@ interface AutoArrangeDialogProps {
   onClose: () => void;
   onConfirm: (options: AutoArrangeDialogResult) => void;
   elements: BoardElement[];
-  zones: BoardZone[];
+  childBoards: Board[];
   initialShowPhaseColumns?: boolean;
 }
 
@@ -69,7 +69,7 @@ export function AutoArrangeDialog({
   onClose,
   onConfirm,
   elements,
-  zones,
+  childBoards,
   initialShowPhaseColumns = true,
 }: AutoArrangeDialogProps) {
   const [spacing, setSpacing] = useState(DEFAULT_ARRANGE_OPTIONS.spacing);
@@ -78,13 +78,13 @@ export function AutoArrangeDialog({
 
   // Calculer l'aperçu
   const preview = useMemo(
-    () => getArrangePreview(elements, zones),
-    [elements, zones]
+    () => getArrangePreview(elements, childBoards),
+    [elements, childBoards]
   );
 
   const counts = useMemo(
-    () => countMovableItems(elements, zones),
-    [elements, zones]
+    () => countMovableItems(elements, childBoards),
+    [elements, childBoards]
   );
 
   const handleConfirm = () => {
@@ -113,7 +113,7 @@ export function AutoArrangeDialog({
             <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
               <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Aucun élément libre à ranger. Les éléments dans des zones ne sont pas déplacés.
+                Aucun élément libre à ranger. Les éléments dans des pièces ne sont pas déplacés.
               </p>
             </div>
           ) : (
@@ -134,7 +134,7 @@ export function AutoArrangeDialog({
                         {label}
                       </span>
                       <span className="text-sm">
-                        {count} {phase === 'execution' ? (count > 1 ? 'zones' : 'zone') : (count > 1 ? 'éléments' : 'élément')}
+                        {count} {phase === 'execution' ? (count > 1 ? 'pièces' : 'pièce') : (count > 1 ? 'éléments' : 'élément')}
                       </span>
                     </div>
                   ))}
@@ -198,8 +198,8 @@ export function AutoArrangeDialog({
                   checked={showPhaseColumns}
                   onCheckedChange={(checked) => setShowPhaseColumns(checked === true)}
                 />
-                <Label 
-                  htmlFor="showPhaseColumns" 
+                <Label
+                  htmlFor="showPhaseColumns"
                   className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                 >
                   Afficher les colonnes de phase (Mode Projet)
@@ -208,7 +208,7 @@ export function AutoArrangeDialog({
 
               {/* Info */}
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Les éléments déjà placés dans une zone resteront à leur position relative.
+                Les éléments déjà placés dans une pièce resteront à leur position relative.
               </p>
             </>
           )}

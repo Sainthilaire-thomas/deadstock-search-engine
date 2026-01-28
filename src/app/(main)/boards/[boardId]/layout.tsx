@@ -1,6 +1,7 @@
 // src/app/(main)/boards/[boardId]/layout.tsx
 import { notFound } from 'next/navigation';
 import { getBoardAction } from '@/features/boards/actions/boardActions';
+import { boardsRepository } from '@/features/boards/infrastructure/boardsRepository';
 import { BoardProvider } from '@/features/boards/context/BoardContext';
 import { TransformProvider } from '@/features/boards/context/TransformContext';
 import { ZoneFocusProvider } from '@/features/boards/context/ZoneFocusContext';
@@ -19,11 +20,14 @@ export default async function BoardLayout({ params, children }: BoardLayoutProps
     notFound();
   }
 
+  // Charger les ancêtres pour le breadcrumb (Sprint 5)
+  const ancestors = await boardsRepository.getBoardAncestors(boardId);
+
   return (
     <BoardProvider initialBoard={result.data}>
       <TransformProvider boardId={boardId}>
         <ZoneFocusProvider>
-          <BoardLayoutClient>
+          <BoardLayoutClient ancestors={ancestors}>
             {children}
           </BoardLayoutClient>
         </ZoneFocusProvider>

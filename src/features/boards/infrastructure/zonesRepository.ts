@@ -1,430 +1,183 @@
 // src/features/boards/infrastructure/zonesRepository.ts
+// DEPRECATED: UB-4 - Unified Boards Architecture (ADR-032)
+// This file provides backward compatibility aliases
+// All functions redirect to boardsRepository.ts - DO NOT ADD NEW CODE HERE
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import type {
-  BoardZone,
-  BoardZoneRow,
-  CreateZoneInput,
-  UpdateZoneInput,
-} from '../domain/types';
-
-import { mapZoneFromRow } from '../domain/types';
+import { boardsRepository } from './boardsRepository';
+import type { Board } from '../domain/types';
 
 // ============================================
-// GET ZONES BY BOARD
+// DEPRECATED TYPE ALIAS
 // ============================================
 
-export async function getZonesByBoard(boardId: string): Promise<BoardZone[]> {
-  const supabase = createAdminClient();
+// BoardZone is now Board - use Board directly
+export type BoardZone = Board;
 
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
-    .order('created_at', { ascending: true });
+// ============================================
+// DEPRECATED FUNCTIONS - Use boardsRepository instead
+// ============================================
 
-  if (error) {
-    console.error('getZonesByBoard error:', error);
-    throw error;
-  }
-
-  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
+/**
+ * @deprecated Use boardsRepository.getChildBoards instead
+ */
+export async function getZonesByBoard(boardId: string): Promise<Board[]> {
+  return boardsRepository.getChildBoards(boardId);
 }
 
-// ============================================
-// GET ZONE BY ID
-// ============================================
-
-export async function getZoneById(zoneId: string): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('id', zoneId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('getZoneById error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+/**
+ * @deprecated Use boardsRepository.getBoard instead (child boards are just boards)
+ */
+export async function getZoneById(zoneId: string): Promise<Board | null> {
+  // We can't get a board without userId in the new architecture
+  // This is a limitation - callers should migrate to use boardsRepository directly
+  console.warn('zonesRepository.getZoneById is deprecated - use boardsRepository.getBoard instead');
+  return null;
 }
 
-// ============================================
-// NEW Sprint 5 - GET ZONE BY LINKED BOARD
-// ============================================
-
-export async function getZoneByLinkedBoard(linkedBoardId: string): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('linked_board_id', linkedBoardId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // No zone linked to this board
-    }
-    console.error('getZoneByLinkedBoard error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+/**
+ * @deprecated Child boards are boards - this concept is obsolete
+ */
+export async function getZoneByLinkedBoard(_linkedBoardId: string): Promise<Board | null> {
+  console.warn('zonesRepository.getZoneByLinkedBoard is deprecated - child boards ARE boards now');
+  return null;
 }
 
-// ============================================
-// CREATE ZONE
-// ============================================
-
-export async function createZone(input: CreateZoneInput): Promise<BoardZone> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .insert({
-      board_id: input.boardId,
-      name: input.name,
-      color: input.color || '#6366F1', // Indigo par défaut
-      position_x: input.positionX ?? 50,
-      position_y: input.positionY ?? 50,
-      width: input.width ?? 300,
-      height: input.height ?? 200,
-      zone_type: input.zoneType || 'piece',           // NEW Sprint 5
-      linked_board_id: input.linkedBoardId || null,   // NEW Sprint 5
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('createZone error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+/**
+ * @deprecated Use boardsRepository.createChildBoard instead
+ */
+export async function createZone(input: {
+  boardId: string;
+  name?: string;
+  color?: string;
+  positionX?: number;
+  positionY?: number;
+  width?: number;
+  height?: number;
+  zoneType?: string;
+  linkedBoardId?: string | null;
+}): Promise<Board> {
+  // We need userId but don't have it - this is a breaking change
+  throw new Error('createZone is deprecated - use boardsRepository.createChildBoard with userId');
 }
 
-// ============================================
-// UPDATE ZONE
-// ============================================
-
+/**
+ * @deprecated Use boardsRepository.updateBoard instead
+ */
 export async function updateZone(
-  zoneId: string,
-  input: UpdateZoneInput
-): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
-
-  const updateData: Record<string, unknown> = {};
-
-  if (input.name !== undefined) updateData.name = input.name;
-  if (input.color !== undefined) updateData.color = input.color;
-  if (input.positionX !== undefined) updateData.position_x = input.positionX;
-  if (input.positionY !== undefined) updateData.position_y = input.positionY;
-  if (input.width !== undefined) updateData.width = input.width;
-  if (input.height !== undefined) updateData.height = input.height;
-  // NEW Sprint 5
-  if (input.zoneType !== undefined) updateData.zone_type = input.zoneType;
-  if (input.linkedBoardId !== undefined) updateData.linked_board_id = input.linkedBoardId;
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .update(updateData)
-    .eq('id', zoneId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('updateZone error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+  _zoneId: string,
+  _input: Record<string, unknown>
+): Promise<Board | null> {
+  throw new Error('updateZone is deprecated - use boardsRepository.updateBoard with userId');
 }
 
-// ============================================
-// MOVE ZONE
-// ============================================
-
+/**
+ * @deprecated Use boardsRepository.moveChildBoard instead
+ */
 export async function moveZone(
   zoneId: string,
   positionX: number,
   positionY: number
 ): Promise<boolean> {
-  const supabase = createAdminClient();
-
-  const { error } = await supabase
-    .from('board_zones')
-    .update({
-      position_x: positionX,
-      position_y: positionY,
-    })
-    .eq('id', zoneId);
-
-  if (error) {
-    console.error('moveZone error:', error);
-    throw error;
-  }
-
-  return true;
+  return boardsRepository.moveChildBoard(zoneId, positionX, positionY);
 }
 
-// ============================================
-// RESIZE ZONE
-// ============================================
-
+/**
+ * @deprecated Use boardsRepository.resizeChildBoard instead
+ */
 export async function resizeZone(
   zoneId: string,
   width: number,
   height: number
 ): Promise<boolean> {
-  const supabase = createAdminClient();
-
-  const { error } = await supabase
-    .from('board_zones')
-    .update({
-      width,
-      height,
-    })
-    .eq('id', zoneId);
-
-  if (error) {
-    console.error('resizeZone error:', error);
-    throw error;
-  }
-
-  return true;
+  return boardsRepository.resizeChildBoard(zoneId, width, height);
 }
 
-// ============================================
-// DELETE ZONE
-// ============================================
-
-export async function deleteZone(zoneId: string): Promise<string | null> {
-  const supabase = createAdminClient();
-
-  // Get board_id before deletion for revalidation
-  const { data: zone } = await supabase
-    .from('board_zones')
-    .select('board_id')
-    .eq('id', zoneId)
-    .single();
-
-  const boardId = zone?.board_id || null;
-
-  const { error } = await supabase
-    .from('board_zones')
-    .delete()
-    .eq('id', zoneId);
-
-  if (error) {
-    console.error('deleteZone error:', error);
-    throw error;
-  }
-
-  return boardId;
+/**
+ * @deprecated Use boardsRepository.deleteBoard instead
+ */
+export async function deleteZone(_zoneId: string): Promise<string | null> {
+  throw new Error('deleteZone is deprecated - use boardsRepository.deleteBoard with userId');
 }
 
-// ============================================
-// NEW Sprint 5 - LINK ZONE TO BOARD
-// ============================================
-
+/**
+ * @deprecated Child boards are boards - linking is obsolete
+ */
 export async function linkZoneToBoard(
-  zoneId: string,
-  linkedBoardId: string
-): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .update({ linked_board_id: linkedBoardId })
-    .eq('id', zoneId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('linkZoneToBoard error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+  _zoneId: string,
+  _linkedBoardId: string
+): Promise<Board | null> {
+  console.warn('linkZoneToBoard is deprecated - child boards ARE boards now');
+  return null;
 }
 
-// ============================================
-// NEW Sprint 5 - UNLINK ZONE FROM BOARD
-// ============================================
-
-export async function unlinkZoneFromBoard(zoneId: string): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .update({ linked_board_id: null })
-    .eq('id', zoneId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('unlinkZoneFromBoard error:', error);
-    throw error;
-  }
-
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+/**
+ * @deprecated Child boards are boards - linking is obsolete
+ */
+export async function unlinkZoneFromBoard(_zoneId: string): Promise<Board | null> {
+  console.warn('unlinkZoneFromBoard is deprecated - child boards ARE boards now');
+  return null;
 }
 
-// ============================================
-// CRYSTALLIZE ZONE
-// ============================================
-
+/**
+ * @deprecated Use boardsRepository.crystallizeBoard instead
+ */
 export async function crystallizeZone(
   zoneId: string,
   projectId: string
-): Promise<BoardZone | null> {
-  const supabase = createAdminClient();
+): Promise<Board | null> {
+  return boardsRepository.crystallizeBoard(zoneId, projectId);
+}
 
-  const { data, error } = await supabase
-    .from('board_zones')
-    .update({
-      crystallized_at: new Date().toISOString(),
-      linked_project_id: projectId,
-    })
-    .eq('id', zoneId)
-    .select()
-    .single();
+/**
+ * @deprecated Query boards with status filter instead
+ */
+export async function getCrystallizedZonesByBoard(_boardId: string): Promise<Board[]> {
+  console.warn('getCrystallizedZonesByBoard is deprecated - query boards with crystallized_at filter');
+  return [];
+}
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('crystallizeZone error:', error);
-    throw error;
-  }
+/**
+ * @deprecated Query boards with status filter instead
+ */
+export async function getActiveZonesByBoard(_boardId: string): Promise<Board[]> {
+  console.warn('getActiveZonesByBoard is deprecated - query boards with status filter');
+  return [];
+}
 
-  return mapZoneFromRow(data as unknown as BoardZoneRow);
+/**
+ * @deprecated Use boardType filter on boards instead
+ */
+export async function getZonesByType(_boardId: string, _zoneType: string): Promise<Board[]> {
+  console.warn('getZonesByType is deprecated - use boardType filter on boards');
+  return [];
+}
+
+/**
+ * @deprecated Child boards are boards - all child boards are "linked"
+ */
+export async function getLinkedZones(_boardId: string): Promise<Board[]> {
+  console.warn('getLinkedZones is deprecated - child boards ARE boards');
+  return [];
 }
 
 // ============================================
-// GET CRYSTALLIZED ZONES BY BOARD
-// ============================================
-
-export async function getCrystallizedZonesByBoard(boardId: string): Promise<BoardZone[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
-    .not('crystallized_at', 'is', null)
-    .order('crystallized_at', { ascending: false });
-
-  if (error) {
-    console.error('getCrystallizedZonesByBoard error:', error);
-    throw error;
-  }
-
-  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
-}
-
-// ============================================
-// GET ACTIVE ZONES BY BOARD
-// ============================================
-
-export async function getActiveZonesByBoard(boardId: string): Promise<BoardZone[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
-    .is('crystallized_at', null)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('getActiveZonesByBoard error:', error);
-    throw error;
-  }
-
-  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
-}
-
-// ============================================
-// NEW Sprint 5 - GET ZONES BY TYPE
-// ============================================
-
-export async function getZonesByType(boardId: string, zoneType: 'piece' | 'category'): Promise<BoardZone[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
-    .eq('zone_type', zoneType)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('getZonesByType error:', error);
-    throw error;
-  }
-
-  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
-}
-
-// ============================================
-// NEW Sprint 5 - GET LINKED ZONES (zones with linked boards)
-// ============================================
-
-export async function getLinkedZones(boardId: string): Promise<BoardZone[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('board_zones')
-    .select('*')
-    .eq('board_id', boardId)
-    .not('linked_board_id', 'is', null)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('getLinkedZones error:', error);
-    throw error;
-  }
-
-  return (data || []).map((row) => mapZoneFromRow(row as unknown as BoardZoneRow));
-}
-
-// ============================================
-// EXPORT AS OBJECT
+// DEPRECATED EXPORT
 // ============================================
 
 export const zonesRepository = {
   getZonesByBoard,
   getZoneById,
-  getZoneByLinkedBoard,     // NEW Sprint 5
+  getZoneByLinkedBoard,
   createZone,
   updateZone,
   moveZone,
   resizeZone,
   deleteZone,
-  linkZoneToBoard,          // NEW Sprint 5
-  unlinkZoneFromBoard,      // NEW Sprint 5
-  // Crystallization
+  linkZoneToBoard,
+  unlinkZoneFromBoard,
   crystallizeZone,
   getCrystallizedZonesByBoard,
   getActiveZonesByBoard,
-  // NEW Sprint 5
   getZonesByType,
   getLinkedZones,
 };

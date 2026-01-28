@@ -6,29 +6,29 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { crystallizeZoneAction } from '../actions/crystallizationActions';
+import { crystallizeBoardAction } from '../actions/crystallizationActions';
 import { useBoard } from '../context/BoardContext';
-import type { BoardZone } from '../domain/types';
+import type { Board } from '../domain/types';
 import type { ProjectType } from '@/features/journey/domain/types';
 
 interface CrystallizationDialogProps {
-  zone: BoardZone;
-  boardId: string;
+  childBoard: Board;
+  parentBoardId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (projectId: string) => void;
 }
 
 export function CrystallizationDialog({
-  zone,
-  boardId,
+  childBoard,
+  parentBoardId,
   isOpen,
   onClose,
   onSuccess,
 }: CrystallizationDialogProps) {
   const router = useRouter();
-   const { crystallizeZone } = useBoard();
-  const [projectName, setProjectName] = useState(zone.name);
+  const { crystallizeChildBoard } = useBoard();
+  const [projectName, setProjectName] = useState(childBoard.name ?? '');
   const [projectType, setProjectType] = useState<ProjectType>('single_piece');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +36,7 @@ export function CrystallizationDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!projectName.trim()) {
       toast.error('Le nom du projet est requis');
       return;
@@ -44,9 +44,9 @@ export function CrystallizationDialog({
 
     setIsSubmitting(true);
 
-    const result = await crystallizeZoneAction({
-      zoneId: zone.id,
-      boardId,
+    const result = await crystallizeBoardAction({
+      boardId: childBoard.id,
+      parentBoardId,
       projectName: projectName.trim(),
       projectType,
     });
@@ -55,7 +55,7 @@ export function CrystallizationDialog({
 
     if (result.success && result.data) {
       toast.success('Projet créé avec succès !');
-      crystallizeZone(zone.id, result.data.projectId);
+      crystallizeChildBoard(childBoard.id, result.data.projectId);
       onSuccess(result.data.projectId);
       onClose();
     } else {
@@ -65,7 +65,7 @@ export function CrystallizationDialog({
 
   const handleGoToProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!projectName.trim()) {
       toast.error('Le nom du projet est requis');
       return;
@@ -73,9 +73,9 @@ export function CrystallizationDialog({
 
     setIsSubmitting(true);
 
-    const result = await crystallizeZoneAction({
-      zoneId: zone.id,
-      boardId,
+    const result = await crystallizeBoardAction({
+      boardId: childBoard.id,
+      parentBoardId,
       projectName: projectName.trim(),
       projectType,
     });
@@ -84,7 +84,7 @@ export function CrystallizationDialog({
 
     if (result.success && result.data) {
       toast.success('Projet créé avec succès !');
-      crystallizeZone(zone.id, result.data.projectId);
+      crystallizeChildBoard(childBoard.id, result.data.projectId);
       router.push(`/journey/${result.data.projectId}/idea`);
     } else {
       toast.error(result.error || 'Erreur lors de la création');
@@ -98,7 +98,7 @@ export function CrystallizationDialog({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Cristalliser la zone</h2>
+            <h2 className="text-lg font-semibold">Cristalliser en projet</h2>
           </div>
           <button
             onClick={onClose}
@@ -110,10 +110,10 @@ export function CrystallizationDialog({
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Zone info */}
+          {/* Board info */}
           <div className="bg-muted/50 rounded-lg p-3">
             <p className="text-sm text-muted-foreground">
-              Zone sélectionnée : <span className="font-medium text-foreground">{zone.name}</span>
+              Pièce sélectionnée : <span className="font-medium text-foreground">{childBoard.name}</span>
             </p>
           </div>
 
@@ -168,7 +168,7 @@ export function CrystallizationDialog({
 
           {/* Info */}
           <p className="text-xs text-muted-foreground">
-            La zone sera marquée comme cristallisée et restera visible sur le board.
+            La pièce sera marquée comme cristallisée et restera visible sur le board.
           </p>
 
           {/* Actions */}

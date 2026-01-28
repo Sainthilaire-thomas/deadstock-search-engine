@@ -1,16 +1,17 @@
 'use client';
-
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { SharedBoardHeader } from './SharedBoardHeader';
 import { useBoard } from '@/features/boards/context/BoardContext';
 import { useNavigation } from '@/features/navigation/context/NavigationContext';
+import type { Board } from '../domain/types';
 
 interface BoardLayoutClientProps {
   children: React.ReactNode;
+  ancestors?: Board[];
 }
 
-export function BoardLayoutClient({ children }: BoardLayoutClientProps) {
+export function BoardLayoutClient({ children, ancestors = [] }: BoardLayoutClientProps) {
   const pathname = usePathname();
   const { board } = useBoard();
   const { setActiveBoard } = useNavigation();
@@ -30,7 +31,7 @@ export function BoardLayoutClient({ children }: BoardLayoutClientProps) {
 
   return (
     <div className="flex flex-col h-screen">
-      <SharedBoardHeader currentView={currentView} />
+      <SharedBoardHeader currentView={currentView} ancestors={ancestors} />
       <div className="flex-1 overflow-hidden">
         {children}
       </div>

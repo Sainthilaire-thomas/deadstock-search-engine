@@ -1,16 +1,20 @@
 // src/features/boards/context/ZoneFocusContext.tsx
+// NOTE: Fichier garde son nom pour compatibilité, mais utilise Board (ex-Zone)
 'use client';
-
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import type { BoardZone } from '../domain/types';
+import type { Board } from '../domain/types';
 
 interface ZoneFocusContextValue {
-  focusedZone: BoardZone | null;
+  // Nouveau nom (Board unifié)
+  focusedChildBoard: Board | null;
   isFocusMode: boolean;
   overlayPosition: { x: number; y: number };
-  openFocusMode: (zone: BoardZone) => void;
+  openFocusMode: (childBoard: Board) => void;
   closeFocusMode: () => void;
   setOverlayPosition: (pos: { x: number; y: number }) => void;
+  // Alias deprecated pour migration progressive
+  /** @deprecated Use focusedChildBoard instead */
+  focusedZone: Board | null;
 }
 
 const ZoneFocusContext = createContext<ZoneFocusContextValue | null>(null);
@@ -20,26 +24,27 @@ interface ZoneFocusProviderProps {
 }
 
 export function ZoneFocusProvider({ children }: ZoneFocusProviderProps) {
-  const [focusedZone, setFocusedZone] = useState<BoardZone | null>(null);
-  const [overlayPosition, setOverlayPosition] = useState({ x: 50, y: 50 }); // Position en % du viewport
+  const [focusedChildBoard, setFocusedChildBoard] = useState<Board | null>(null);
+  const [overlayPosition, setOverlayPosition] = useState({ x: 50, y: 50 });
 
-  const openFocusMode = useCallback((zone: BoardZone) => {
-    setFocusedZone(zone);
-    // Reset position au centre
+  const openFocusMode = useCallback((childBoard: Board) => {
+    setFocusedChildBoard(childBoard);
     setOverlayPosition({ x: 50, y: 50 });
   }, []);
 
   const closeFocusMode = useCallback(() => {
-    setFocusedZone(null);
+    setFocusedChildBoard(null);
   }, []);
 
   const value: ZoneFocusContextValue = {
-    focusedZone,
-    isFocusMode: focusedZone !== null,
+    focusedChildBoard,
+    isFocusMode: focusedChildBoard !== null,
     overlayPosition,
     openFocusMode,
     closeFocusMode,
     setOverlayPosition,
+    // Alias deprecated
+    focusedZone: focusedChildBoard,
   };
 
   return (
@@ -57,7 +62,6 @@ export function useZoneFocus() {
   return context;
 }
 
-// Hook optionnel pour les composants qui peuvent être hors du provider
 export function useZoneFocusOptional() {
   return useContext(ZoneFocusContext);
 }

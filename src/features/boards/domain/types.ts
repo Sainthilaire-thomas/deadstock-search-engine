@@ -1,16 +1,20 @@
 // src/features/boards/domain/types.ts
+// UPDATED: UB-2 - Unified Boards Architecture (ADR-032)
 
 // ============================================
 // ENUMS & CONSTANTS
 // ============================================
 
-export type BoardStatus = 'draft' | 'active' | 'archived';
+// UPDATED UB-2 - Nouveau cycle de vie des boards
+export type BoardStatus = 'draft' | 'ordered' | 'in_progress' | 'completed' | 'cancelled' | 'archived';
 
-// NEW Sprint 5 - Board hierarchy types
+// Board type (unchanged)
 export type BoardType = 'free' | 'piece' | 'category' | 'collection';
-export type ZoneType = 'piece' | 'category';
 
-// Project status (pour zones cristallisées liées à un projet)
+// REMOVED UB-2 - ZoneType n'existe plus (fusionné dans BoardType)
+// export type ZoneType = 'piece' | 'category';
+
+// Project status (pour compatibilité avec projets existants)
 export type ProjectStatus =
   | 'draft'
   | 'in_progress'
@@ -21,7 +25,6 @@ export type ProjectStatus =
   | 'completed'
   | 'archived';
 
-// UPDATED Sprint 5 - Ajout video et link
 export type ElementType = 'textile' | 'palette' | 'inspiration' | 'calculation' | 'note' | 'video' | 'link' | 'pdf' | 'pattern' | 'silhouette';
 
 export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
@@ -37,13 +40,36 @@ export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
   silhouette: 'Silhouette',
 };
 
+// UPDATED UB-2 - Labels du cycle de vie
 export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
   draft: 'Brouillon',
-  active: 'Actif',
+  ordered: 'Commandé',
+  in_progress: 'En cours',
+  completed: 'Terminé',
+  cancelled: 'Annulé',
   archived: 'Archivé',
 };
 
-// NEW Sprint 5 - Board type labels
+// UPDATED UB-2 - Icônes et couleurs du cycle de vie
+export const BOARD_STATUS_CONFIG: Record<BoardStatus, { label: string; icon: string; color: string }> = {
+  draft: { label: 'Brouillon', icon: '📝', color: 'gray' },
+  ordered: { label: 'Commandé', icon: '📦', color: 'orange' },
+  in_progress: { label: 'En cours', icon: '🔨', color: 'blue' },
+  completed: { label: 'Terminé', icon: '🎉', color: 'green' },
+  cancelled: { label: 'Annulé', icon: '❌', color: 'red' },
+  archived: { label: 'Archivé', icon: '📁', color: 'purple' },
+};
+
+// UPDATED UB-2 - Transitions autorisées du cycle de vie
+export const BOARD_STATUS_TRANSITIONS: Record<BoardStatus, { next: BoardStatus[]; prev: BoardStatus[] }> = {
+  draft: { next: ['ordered', 'cancelled'], prev: [] },
+  ordered: { next: ['in_progress', 'cancelled'], prev: ['draft'] },
+  in_progress: { next: ['completed', 'cancelled'], prev: ['ordered'] },
+  completed: { next: ['archived'], prev: [] },
+  cancelled: { next: [], prev: [] },
+  archived: { next: [], prev: [] },
+};
+
 export const BOARD_TYPE_LABELS: Record<BoardType, string> = {
   free: 'Libre',
   piece: 'Pièce',
@@ -51,34 +77,48 @@ export const BOARD_TYPE_LABELS: Record<BoardType, string> = {
   collection: 'Collection',
 };
 
-// NEW Sprint 5 - Zone type labels
-export const ZONE_TYPE_LABELS: Record<ZoneType, string> = {
-  piece: 'Pièce',
-  category: 'Catégorie',
-};
+// REMOVED UB-2 - Zone type labels n'existe plus
+// export const ZONE_TYPE_LABELS: Record<ZoneType, string> = { ... };
 
 // ============================================
-// BOARD
+// BOARD (UPDATED UB-2 - Inclut les champs des ex-zones)
 // ============================================
 
 export interface Board {
   id: string;
   userId: string | null;
   sessionId: string | null;
-  parentBoardId: string | null;  // NEW Sprint 5
+  parentBoardId: string | null;
   name: string | null;
   description: string | null;
   status: BoardStatus;
-  boardType: BoardType;          // NEW Sprint 5
+  boardType: BoardType;
   coverImageUrl: string | null;
+  // NEW UB-2 - Champs de positionnement (depuis zones)
+  positionX: number | null;      // null si board racine
+  positionY: number | null;      // null si board racine
+  width: number;
+  height: number;
+  color: string;
+  // NEW UB-2 - Champs de cristallisation (depuis zones)
+  crystallizedAt: Date | null;
+  linkedProjectId: string | null;
+  linkedProjectStatus?: ProjectStatus;
+  // Timestamps
+    
+  // UB-5: Optional fields for child boards (populated in getBoard)
+  elementCount?: number;
+  previewElements?: BoardElement[];
   createdAt: Date;
   updatedAt: Date;
 }
 
+// UPDATED UB-2 - BoardWithDetails utilise childBoards au lieu de zones
 export interface BoardWithDetails extends Board {
   elements: BoardElement[];
-  zones: BoardZone[];
+  childBoards: Board[];          // CHANGED: zones → childBoards
   elementCount: number;
+  childBoardCount: number;       // CHANGED: zoneCount → childBoardCount
 }
 
 // ============================================
@@ -86,48 +126,30 @@ export interface BoardWithDetails extends Board {
 // ============================================
 
 export interface BoardWithPreview extends Board {
-  coverImageUrl: string | null;
-  previewUrl: string | null;  // URL finale (cover ou auto-extrait)
+  previewUrl: string | null;
   elementCount: number;
-  zoneCount: number;
+  childBoardCount: number;       // CHANGED: zoneCount → childBoardCount
 }
 
-// NEW Sprint 5 - Board with ancestors for breadcrumb
+// Board with ancestors for breadcrumb (unchanged)
 export interface BoardWithAncestors extends Board {
   ancestors: Board[];
 }
 
 // ============================================
-// BOARD ZONE
+// REMOVED UB-2 - BoardZone n'existe plus
 // ============================================
 
-export interface BoardZone {
-  id: string;
-  boardId: string;
-  name: string;
-  color: string;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  // NEW Sprint 5 - Hierarchy fields
-  zoneType: ZoneType;
-  linkedBoardId: string | null;
-  // Crystallization fields
-  crystallizedAt: Date | null;
-  linkedProjectId: string | null;
-  linkedProjectStatus?: ProjectStatus;
-  createdAt: Date;
-}
+// export interface BoardZone { ... }
 
 // ============================================
-// BOARD ELEMENT
+// BOARD ELEMENT (UPDATED UB-2 - zoneId supprimé)
 // ============================================
 
 export interface BoardElement {
   id: string;
   boardId: string;
-  zoneId: string | null;
+  // REMOVED UB-2: zoneId: string | null;
   elementType: ElementType;
   elementData: ElementData;
   positionX: number;
@@ -140,10 +162,9 @@ export interface BoardElement {
 }
 
 // ============================================
-// ELEMENT DATA (polymorphe)
+// ELEMENT DATA (polymorphe) - UNCHANGED
 // ============================================
 
-// UPDATED Sprint 5 - Ajout VideoElementData et LinkElementData
 export type ElementData =
   | TextileElementData
   | PaletteElementData
@@ -175,7 +196,7 @@ export interface TextileElementData {
 // Type: palette
 export interface PaletteElementData {
   name: string;
-  colors: string[]; // hex codes
+  colors: string[];
   source?: 'manual' | 'extracted';
   sourceImageUrl?: string;
 }
@@ -190,13 +211,10 @@ export interface InspirationElementData {
 }
 
 // Type: calculation
-// Type: calculation (supporte Journey ET Pattern Import)
 export interface CalculationElementData {
   calculationId?: string;
   summary: string;
   garmentType: string;
-
-  // Format Journey (legacy)
   size?: string;
   variations?: Record<string, string>;
   result?: {
@@ -204,8 +222,6 @@ export interface CalculationElementData {
     totalYardage: number;
     recommended: number;
   };
-
-  // Format Pattern Import (nouveau)
   source?: 'journey' | 'pattern_import' | 'manual';
   patternId?: string;
   patternName?: string;
@@ -226,12 +242,8 @@ export interface CalculationElementData {
 export interface NoteElementData {
   content: string;
   format?: 'plain' | 'markdown';
-  color?: string; // background color
+  color?: string;
 }
-
-// ============================================
-// NEW Sprint 5 - Video & Link Element Data
-// ============================================
 
 // Type: video
 export interface VideoElementData {
@@ -252,41 +264,37 @@ export interface LinkElementData {
   siteName?: string;
 }
 
-// ============================================
-// NEW Sprint 6 - PDF, Pattern, Silhouette Element Data
-// ============================================
-
 // Type: pdf
 export interface PdfElementData {
-  url: string;              // URL du fichier (Supabase Storage ou base64)
-  filename: string;         // Nom original du fichier
-  pageCount?: number;       // Nombre de pages (si détecté)
-  thumbnailUrl?: string;    // Image de la première page
-  fileSize?: number;        // Taille en bytes
+  url: string;
+  filename: string;
+  pageCount?: number;
+  thumbnailUrl?: string;
+  fileSize?: number;
 }
 
-// Type: pattern (patron de couture)
+// Type: pattern
 export interface PatternElementData {
-  url: string;              // URL du fichier (PDF ou image)
-  name?: string;            // Nom du patron
-  brand?: string;           // Marque (Vogue, Burda, etc.)
+  url: string;
+  name?: string;
+  brand?: string;
   fileType: 'pdf' | 'image';
-  pageCount?: number;       // Si PDF
-  thumbnailUrl?: string;    // Preview
-  garmentType?: string;     // Type de vêtement détecté
-  sizes?: string[];         // Tailles disponibles
+  pageCount?: number;
+  thumbnailUrl?: string;
+  garmentType?: string;
+  sizes?: string[];
 }
 
-// Type: silhouette (croquis de mode)
+// Type: silhouette
 export interface SilhouetteElementData {
-  url: string;              // URL de l'image
-  name?: string;            // Nom/description
+  url: string;
+  name?: string;
   source: 'upload' | 'library';
-  category?: string;        // Catégorie (femme, homme, enfant, etc.)
+  category?: string;
 }
 
 // ============================================
-// TYPE GUARDS
+// TYPE GUARDS - UNCHANGED
 // ============================================
 
 export function isTextileElement(data: ElementData): data is TextileElementData {
@@ -309,76 +317,66 @@ export function isNoteElement(data: ElementData): data is NoteElementData {
   return 'content' in data && !('garmentType' in data);
 }
 
-// NEW Sprint 5
 export function isVideoElement(data: ElementData): data is VideoElementData {
   return 'platform' in data && 'url' in data;
 }
 
-// NEW Sprint 5
 export function isLinkElement(data: ElementData): data is LinkElementData {
   return 'url' in data && !('platform' in data) && !('imageUrl' in data && 'textileId' in data);
 }
 
-// NEW Sprint 6
 export function isPdfElement(data: ElementData): data is PdfElementData {
   return 'filename' in data && 'url' in data && !('platform' in data) && !('fileType' in data);
 }
 
-// NEW Sprint 6
 export function isPatternElement(data: ElementData): data is PatternElementData {
   return 'fileType' in data && 'url' in data;
 }
 
-// NEW Sprint 6
 export function isSilhouetteElement(data: ElementData): data is SilhouetteElementData {
   return 'source' in data && (data as SilhouetteElementData).source !== undefined;
 }
 
 // ============================================
-// INPUT TYPES (création/mise à jour)
+// INPUT TYPES (UPDATED UB-2)
 // ============================================
 
+// UPDATED UB-2 - CreateBoardInput inclut les champs de positionnement
 export interface CreateBoardInput {
   name?: string;
   description?: string;
   status?: BoardStatus;
-  parentBoardId?: string | null;  // NEW Sprint 5
-  boardType?: BoardType;          // NEW Sprint 5
+  parentBoardId?: string | null;
+  boardType?: BoardType;
+  // NEW UB-2 - Champs pour boards enfants (affichage sur canvas parent)
+  positionX?: number;
+  positionY?: number;
+  width?: number;
+  height?: number;
+  color?: string;
 }
 
+// UPDATED UB-2 - UpdateBoardInput inclut tous les champs modifiables
 export interface UpdateBoardInput {
   name?: string;
   description?: string;
   status?: BoardStatus;
-  boardType?: BoardType;          // NEW Sprint 5
-}
-
-export interface CreateZoneInput {
-  boardId: string;
-  name?: string;
-  color?: string;
+  boardType?: BoardType;
   positionX?: number;
   positionY?: number;
   width?: number;
   height?: number;
-  zoneType?: ZoneType;            // NEW Sprint 5
-  linkedBoardId?: string | null;  // NEW Sprint 5
-}
-
-export interface UpdateZoneInput {
-  name?: string;
   color?: string;
-  positionX?: number;
-  positionY?: number;
-  width?: number;
-  height?: number;
-  zoneType?: ZoneType;            // NEW Sprint 5
-  linkedBoardId?: string | null;  // NEW Sprint 5
 }
 
+// REMOVED UB-2 - CreateZoneInput et UpdateZoneInput n'existent plus
+// export interface CreateZoneInput { ... }
+// export interface UpdateZoneInput { ... }
+
+// UPDATED UB-2 - CreateElementInput sans zoneId
 export interface CreateElementInput {
   boardId: string;
-  zoneId?: string;
+  // REMOVED UB-2: zoneId?: string;
   elementType: ElementType;
   elementData: ElementData;
   positionX?: number;
@@ -388,8 +386,9 @@ export interface CreateElementInput {
   zIndex?: number;
 }
 
+// UPDATED UB-2 - UpdateElementInput sans zoneId
 export interface UpdateElementInput {
-  zoneId?: string | null;
+  // REMOVED UB-2: zoneId?: string | null;
   elementData?: ElementData;
   positionX?: number;
   positionY?: number;
@@ -404,46 +403,42 @@ export interface MoveElementInput {
 }
 
 // ============================================
-// DATABASE ROW TYPES (snake_case)
+// DATABASE ROW TYPES (UPDATED UB-2)
 // ============================================
 
+// UPDATED UB-2 - BoardRow inclut les nouveaux champs
 export interface BoardRow {
   id: string;
   user_id: string | null;
   session_id: string | null;
-  parent_board_id: string | null;  // NEW Sprint 5
+  parent_board_id: string | null;
   name: string | null;
   description: string | null;
   status: string;
-  board_type: string;              // NEW Sprint 5
+  board_type: string;
   cover_image_url: string | null;
+  // NEW UB-2 - Champs depuis zones
+  position_x: number | null;
+  position_y: number | null;
+  width: number;
+  height: number;
+  color: string;
+  crystallized_at: string | null;
+  linked_project_id: string | null;
+  linked_project_status?: string;
+  // Timestamps
   created_at: string;
   updated_at: string;
 }
 
-export interface BoardZoneRow {
-  id: string;
-  board_id: string;
-  name: string;
-  color: string;
-  position_x: number;
-  position_y: number;
-  width: number;
-  height: number;
-  // NEW Sprint 5 - Hierarchy columns
-  zone_type: string;
-  linked_board_id: string | null;
-  // Crystallization columns
-  crystallized_at: string | null;
-  linked_project_id: string | null;
-  linked_project_status?: string;
-  created_at: string;
-}
+// REMOVED UB-2 - BoardZoneRow n'existe plus
+// export interface BoardZoneRow { ... }
 
+// UPDATED UB-2 - BoardElementRow sans zone_id
 export interface BoardElementRow {
   id: string;
   board_id: string;
-  zone_id: string | null;
+  // REMOVED UB-2: zone_id: string | null;
   element_type: string;
   element_data: Record<string, unknown>;
   position_x: number;
@@ -456,51 +451,46 @@ export interface BoardElementRow {
 }
 
 // ============================================
-// MAPPERS
+// MAPPERS (UPDATED UB-2)
 // ============================================
 
+// UPDATED UB-2 - mapBoardFromRow inclut les nouveaux champs
 export function mapBoardFromRow(row: BoardRow): Board {
   return {
     id: row.id,
     userId: row.user_id,
     sessionId: row.session_id,
-    parentBoardId: row.parent_board_id,  // NEW Sprint 5
+    parentBoardId: row.parent_board_id,
     name: row.name,
     description: row.description,
     status: row.status as BoardStatus,
-    boardType: (row.board_type || 'free') as BoardType,  // NEW Sprint 5
+    boardType: (row.board_type || 'free') as BoardType,
     coverImageUrl: row.cover_image_url,
+    // NEW UB-2 - Champs de positionnement
+    positionX: row.position_x,
+    positionY: row.position_y,
+    width: row.width ?? 280,
+    height: row.height ?? 140,
+    color: row.color ?? '#6366F1',
+    // NEW UB-2 - Champs de cristallisation
+    crystallizedAt: row.crystallized_at ? new Date(row.crystallized_at) : null,
+    linkedProjectId: row.linked_project_id,
+    linkedProjectStatus: row.linked_project_status as ProjectStatus | undefined,
+    // Timestamps
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
 }
 
-export function mapZoneFromRow(row: BoardZoneRow): BoardZone {
-  return {
-    id: row.id,
-    boardId: row.board_id,
-    name: row.name,
-    color: row.color,
-    positionX: row.position_x,
-    positionY: row.position_y,
-    width: row.width,
-    height: row.height,
-    // NEW Sprint 5 - Hierarchy mapping
-    zoneType: (row.zone_type || 'piece') as ZoneType,
-    linkedBoardId: row.linked_board_id,
-    // Crystallization mapping
-    crystallizedAt: row.crystallized_at ? new Date(row.crystallized_at) : null,
-    linkedProjectId: row.linked_project_id,
-    linkedProjectStatus: row.linked_project_status as ProjectStatus | undefined,
-    createdAt: new Date(row.created_at),
-  };
-}
+// REMOVED UB-2 - mapZoneFromRow n'existe plus
+// export function mapZoneFromRow(row: BoardZoneRow): BoardZone { ... }
 
+// UPDATED UB-2 - mapElementFromRow sans zoneId
 export function mapElementFromRow(row: BoardElementRow): BoardElement {
   return {
     id: row.id,
     boardId: row.board_id,
-    zoneId: row.zone_id,
+    // REMOVED UB-2: zoneId: row.zone_id,
     elementType: row.element_type as ElementType,
     elementData: row.element_data as unknown as ElementData,
     positionX: row.position_x,
@@ -514,7 +504,7 @@ export function mapElementFromRow(row: BoardElementRow): BoardElement {
 }
 
 // ============================================
-// ACTION RESULT TYPE
+// ACTION RESULT TYPE - UNCHANGED
 // ============================================
 
 export interface ActionResult<T> {
@@ -524,34 +514,54 @@ export interface ActionResult<T> {
 }
 
 // ============================================
-// CRYSTALLIZATION HELPERS
+// BOARD HELPERS (UPDATED UB-2)
 // ============================================
 
-export function isZoneCrystallized(zone: BoardZone): boolean {
-  return zone.crystallizedAt !== null;
-}
-
-export function isZoneOrdered(zone: BoardZone): boolean {
-  // Une zone est "commandée" si elle est cristallisée ET le projet lié n'est plus en brouillon
-  return (
-    zone.crystallizedAt !== null &&
-    zone.linkedProjectStatus !== undefined &&
-    zone.linkedProjectStatus !== 'draft'
-  );
-}
-
-// ============================================
-// NEW Sprint 5 - HIERARCHY HELPERS
-// ============================================
+// UPDATED UB-2 - Helpers pour boards (remplacent les helpers zones)
 
 export function isBoardRoot(board: Board): boolean {
   return board.parentBoardId === null;
+}
+
+export function isBoardChildBoard(board: Board): boolean {
+  return board.parentBoardId !== null;
+}
+
+export function isBoardCrystallized(board: Board): boolean {
+  return board.crystallizedAt !== null;
+}
+
+export function isBoardOrdered(board: Board): boolean {
+  return board.status === 'ordered' || board.status === 'in_progress' || board.status === 'completed';
 }
 
 export function isBoardCollection(board: Board): boolean {
   return board.boardType === 'collection';
 }
 
-export function isZoneLinked(zone: BoardZone): boolean {
-  return zone.linkedBoardId !== null;
+export function isBoardPiece(board: Board): boolean {
+  return board.boardType === 'piece';
 }
+
+export function isBoardCategory(board: Board): boolean {
+  return board.boardType === 'category';
+}
+
+// UPDATED UB-2 - Vérifier si une transition de status est autorisée
+export function canTransitionTo(board: Board, newStatus: BoardStatus): boolean {
+  const transitions = BOARD_STATUS_TRANSITIONS[board.status];
+  return transitions.next.includes(newStatus);
+}
+
+export function canRollbackTo(board: Board, previousStatus: BoardStatus): boolean {
+  const transitions = BOARD_STATUS_TRANSITIONS[board.status];
+  return transitions.prev.includes(previousStatus);
+}
+
+// ============================================
+// REMOVED UB-2 - Anciens helpers zones
+// ============================================
+
+// export function isZoneCrystallized(zone: BoardZone): boolean { ... }
+// export function isZoneOrdered(zone: BoardZone): boolean { ... }
+// export function isZoneLinked(zone: BoardZone): boolean { ... }

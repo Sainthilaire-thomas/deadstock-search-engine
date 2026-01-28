@@ -6,13 +6,10 @@ import { useBoard } from "@/features/boards/context/BoardContext";
 import { JourneyNavigation } from "@/features/journey/components/JourneyNavigation";
 import { TextileJourneyView } from "@/features/journey/components/views/TextileJourneyView";
 import { ELEMENT_TYPE_CONFIGS, JOURNEY_PHASES } from "@/features/journey/config/steps";
-import { getElementsInZone } from "@/features/boards/utils/zoneUtils";
-import type { ElementType, BoardElement } from "@/features/boards/domain/types";
-import type { SearchResult } from "@/features/search/domain/types";
+import type { ElementType, BoardElement, Board, ProjectStatus } from "@/features/boards/domain/types";
 import type { FavoriteWithTextile } from "@/features/favorites/domain/types";
 import { OrderForm } from "./OrderForm";
 import { ShoppingCart, FileText, Package, CheckCircle, Trophy } from "lucide-react";
-import type { ProjectStatus, BoardZone } from "@/features/boards/domain/types";
 
 interface JourneyClientWrapperProps {
   initialFavorites: FavoriteWithTextile[];
@@ -100,18 +97,18 @@ function ElementListItem({ element }: { element: BoardElement }) {
   );
 }
 
-// Composant pour les zones cristallisées
-function CrystallizedZoneItem({
-  zone,
+// Composant pour les child boards cristallisés (anciennement zones)
+function CrystallizedChildBoardItem({
+  childBoard,
   isSelected,
   onClick
 }: {
-  zone: { id: string; name: string; crystallizedAt: Date | null; linkedProjectStatus?: ProjectStatus };
+  childBoard: Board;
   isSelected?: boolean;
   onClick?: () => void;
 }) {
   return (
-    <div 
+    <div
       className={`flex items-center gap-3 rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
         isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
       }`}
@@ -121,9 +118,9 @@ function CrystallizedZoneItem({
         <span className="text-lg">⚡</span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{zone.name}</p>
+        <p className="text-sm font-medium text-foreground truncate">{childBoard.name ?? 'Sans nom'}</p>
         <p className="text-xs text-muted-foreground">
-          Cristallisé le {zone.crystallizedAt?.toLocaleDateString("fr-FR")}
+          Cristallisé le {childBoard.crystallizedAt?.toLocaleDateString("fr-FR")}
         </p>
       </div>
       {isSelected && (
@@ -139,9 +136,9 @@ export function JourneyClientWrapper({
   const searchParams = useSearchParams();
   const selectedType = searchParams.get("type");
 
-  const { elements, zones } = useBoard();
-const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const { elements, childBoards } = useBoard();
+  const [selectedChildBoardId, setSelectedChildBoardId] = useState<string | null>(null);
+  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
 
   // Filtrer les éléments selon le type sélectionné
   const filteredElements = useMemo(() => {
@@ -151,13 +148,13 @@ const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
     return elements.filter((el) => el.elementType === selectedType);
   }, [elements, selectedType]);
 
- // Filtrer les zones cristallisées
-  const crystallizedZones = useMemo(() => {
+  // Filtrer les child boards cristallisés
+  const crystallizedChildBoards = useMemo(() => {
     if (selectedType !== "zones") {
       return [];
     }
-    return zones.filter((z) => z.crystallizedAt !== null);
-  }, [zones, selectedType]);
+    return childBoards.filter((cb) => cb.crystallizedAt !== null);
+  }, [childBoards, selectedType]);
 
   // Configuration des colonnes par statut
   const STATUS_COLUMNS = [
@@ -195,46 +192,45 @@ const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
     },
   ];
 
-  // Grouper les zones par statut du projet
-  const zonesByStatus = useMemo(() => {
-    const grouped: Record<string, BoardZone[]> = {
+  // Grouper les child boards par statut du projet
+  const childBoardsByStatus = useMemo(() => {
+    const grouped: Record<string, Board[]> = {
       draft: [],
       ordered: [],
       received: [],
       completed: [],
     };
 
-    crystallizedZones.forEach((zone) => {
-      const status = zone.linkedProjectStatus || 'draft';
-      
+    crystallizedChildBoards.forEach((childBoard) => {
+      const status = childBoard.linkedProjectStatus || 'draft';
+
       if (['draft', 'in_progress'].includes(status)) {
-        grouped.draft.push(zone);
+        grouped.draft.push(childBoard);
       } else if (['ordered', 'shipped'].includes(status)) {
-        grouped.ordered.push(zone);
+        grouped.ordered.push(childBoard);
       } else if (['received', 'in_production'].includes(status)) {
-        grouped.received.push(zone);
+        grouped.received.push(childBoard);
       } else if (status === 'completed') {
-        grouped.completed.push(zone);
+        grouped.completed.push(childBoard);
       } else {
         // Par défaut, mettre dans brouillons
-        grouped.draft.push(zone);
+        grouped.draft.push(childBoard);
       }
     });
 
     return grouped;
-  }, [crystallizedZones]);
+  }, [crystallizedChildBoards]);
 
-  // Éléments de la zone cristallisée sélectionnée
-const selectedZone = useMemo(() => {
-  if (!selectedZoneId) return null;
-  return zones.find(z => z.id === selectedZoneId) || null;
-}, [zones, selectedZoneId]);
+  // Child board cristallisé sélectionné
+  const selectedChildBoard = useMemo(() => {
+    if (!selectedChildBoardId) return null;
+    return childBoards.find(cb => cb.id === selectedChildBoardId) || null;
+  }, [childBoards, selectedChildBoardId]);
 
-const zoneElements = useMemo(() => {
-  if (!selectedZone) return [];
-  return getElementsInZone(elements, selectedZone);
-}, [elements, selectedZone]);
-
+  // UB-5: Les éléments d'un child board ne sont plus accessibles via getElementsInZone
+  // Ils sont dans le child board lui-même (boardId = childBoard.id)
+  // Pour l'instant, on affiche un message - UB-7 ajoutera le chargement des éléments
+  const childBoardElements: BoardElement[] = [];
 
   // Obtenir le titre de la section
   const getSectionTitle = (): string => {
@@ -287,7 +283,7 @@ const zoneElements = useMemo(() => {
   const renderContent = () => {
     // Cas spécial : type=textile → vue avec tabs
     if (selectedType === "textile") {
-       return (
+      return (
         <div className="p-6 h-full">
           <TextileJourneyView
             initialFavorites={initialFavorites}
@@ -301,7 +297,7 @@ const zoneElements = useMemo(() => {
       return renderDefaultContent();
     }
 
-   // Zones cristallisées - Vue par statut
+    // Child boards cristallisés - Vue par statut
     if (selectedType === "zones") {
       return (
         <div className="p-6">
@@ -310,22 +306,22 @@ const zoneElements = useMemo(() => {
               {getSectionTitle()}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {crystallizedZones.length} projet(s) cristallisé(s)
+              {crystallizedChildBoards.length} projet(s) cristallisé(s)
             </p>
           </div>
 
-          {crystallizedZones.length === 0 ? (
+          {crystallizedChildBoards.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <div className="text-4xl mb-3">⚡</div>
-              <p>Aucune zone cristallisée</p>
+              <p>Aucune pièce cristallisée</p>
               <p className="text-sm mt-1">
-                Cristallisez une zone depuis le Board pour la voir ici
+                Cristallisez une pièce depuis le Board pour la voir ici
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {STATUS_COLUMNS.map((column) => {
-                const zonesInColumn = zonesByStatus[column.key];
+                const childBoardsInColumn = childBoardsByStatus[column.key];
                 const Icon = column.icon;
 
                 return (
@@ -336,25 +332,25 @@ const zoneElements = useMemo(() => {
                         <Icon className={`w-5 h-5 ${column.color}`} />
                         <span className="font-medium">{column.title}</span>
                         <span className="ml-auto text-sm text-muted-foreground">
-                          {zonesInColumn.length}
+                          {childBoardsInColumn.length}
                         </span>
                       </div>
                     </div>
 
                     {/* Liste des projets */}
                     <div className="space-y-2 min-h-25">
-                      {zonesInColumn.length === 0 ? (
+                      {childBoardsInColumn.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-4">
                           Aucun projet
                         </p>
                       ) : (
-                        zonesInColumn.map((zone) => (
-                          <CrystallizedZoneItem
-                            key={zone.id}
-                            zone={zone}
-                            isSelected={selectedZoneId === zone.id}
-                            onClick={() => setSelectedZoneId(
-                              selectedZoneId === zone.id ? null : zone.id
+                        childBoardsInColumn.map((childBoard) => (
+                          <CrystallizedChildBoardItem
+                            key={childBoard.id}
+                            childBoard={childBoard}
+                            isSelected={selectedChildBoardId === childBoard.id}
+                            onClick={() => setSelectedChildBoardId(
+                              selectedChildBoardId === childBoard.id ? null : childBoard.id
                             )}
                           />
                         ))
@@ -367,29 +363,25 @@ const zoneElements = useMemo(() => {
           )}
 
           {/* Contenu du projet sélectionné */}
-          {selectedZone && (
+          {selectedChildBoard && (
             <div className="border-t pt-6">
               <h2 className="text-lg font-medium mb-4">
-                Contenu de &quot;{selectedZone.name}&quot;
+                Contenu de &quot;{selectedChildBoard.name ?? 'Sans nom'}&quot;
               </h2>
 
-              {zoneElements.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {zoneElements.map((element) => (
-                    <ElementListItem key={element.id} element={element} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                  <p>Aucun élément dans cette zone</p>
-                  <p className="text-sm mt-1">
-                    Ajoutez des éléments dans la zone sur le Board
-                  </p>
-                </div>
-              )}
+              {/* UB-7 TODO: Charger les éléments du child board */}
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                <p>Ouvrez cette pièce pour voir son contenu</p>
+                <a 
+                  href={`/boards/${selectedChildBoard.id}`}
+                  className="text-sm mt-2 text-primary hover:underline inline-block"
+                >
+                  Ouvrir la pièce →
+                </a>
+              </div>
 
               {/* Bouton Passer commande - uniquement pour les brouillons */}
-              {selectedZone.linkedProjectId && selectedZone.linkedProjectStatus === 'draft' && (
+              {selectedChildBoard.linkedProjectId && selectedChildBoard.linkedProjectStatus === 'draft' && (
                 <div className="mt-6 pt-4 border-t">
                   <button
                     onClick={() => setIsOrderFormOpen(true)}
@@ -439,7 +431,7 @@ const zoneElements = useMemo(() => {
     );
   };
 
- return (
+  return (
     <div className="flex h-full bg-background">
       {/* Sidebar Navigation */}
       <JourneyNavigation />
@@ -449,14 +441,14 @@ const zoneElements = useMemo(() => {
       </main>
 
       {/* Order Form Modal */}
-      {isOrderFormOpen && selectedZone?.linkedProjectId && (
+      {isOrderFormOpen && selectedChildBoard?.linkedProjectId && (
         <OrderForm
-          projectId={selectedZone.linkedProjectId}
-          zoneElements={zoneElements}
+          projectId={selectedChildBoard.linkedProjectId}
+          zoneElements={childBoardElements}
           onCancel={() => setIsOrderFormOpen(false)}
           onSuccess={() => {
             setIsOrderFormOpen(false);
-            setSelectedZoneId(null);
+            setSelectedChildBoardId(null);
           }}
         />
       )}

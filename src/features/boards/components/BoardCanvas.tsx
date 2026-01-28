@@ -1,5 +1,6 @@
 ﻿// src/features/boards/components/BoardCanvas.tsx
 // VERSION REFACTORISÉE - Hooks et composants extraits
+// UB-5: Adapté pour architecture unifiée (childBoards au lieu de zones)
 
 'use client';
 
@@ -9,7 +10,7 @@ import { toast } from 'sonner';
 
 import { useBoard } from '../context/BoardContext';
 import { useContextualSearchPanel } from '../context/ContextualSearchContext';
-import { ZoneFocusProvider, useZoneFocus } from '../context/ZoneFocusContext';
+import { useZoneFocus } from '../context/ZoneFocusContext';
 import { ZoneFocusOverlay } from './ZoneFocusOverlay';
 import { useTransform, ZOOM_MIN, ZOOM_MAX } from '../context/TransformContext';
 import { BoardToolbar } from './BoardToolbar';
@@ -20,20 +21,20 @@ import { ZoomControls } from './ZoomControls';
 
 import {
   useElementDrag,
-  useZoneDrag,
+  useChildBoardDrag,
   useKeyboardShortcuts,
   CanvasModals,
   FavoritesSheet,
 } from './canvas';
 
-import { isZoneOrdered } from '../domain/types';
+import { isBoardOrdered } from '../domain/types';
 import { AutoArrangeDialog, type AutoArrangeDialogResult } from './AutoArrangeDialog';
 import { autoArrangeByPhase, calculatePhaseBounds, type ArrangeOptions, type PhaseBounds } from '../utils/autoArrange';
 import { PhaseColumns } from './PhaseColumns';
-import { isElementInZone } from '../utils/zoneUtils';
+import { isElementInChildBoard } from '../utils/boardUtils';
 import type {
+  Board,
   BoardElement,
-  BoardZone,
   CalculationElementData,
   TextileElementData,
   PaletteElementData,
@@ -45,6 +46,7 @@ import type {
   SilhouetteElementData,
 } from '../domain/types';
 import type { PatternCalculationElementData } from '@/features/pattern/domain/types';
+
 
 type ToolType =
   | 'image'
@@ -61,39 +63,45 @@ type ToolType =
 
 export function BoardCanvas() {
   const {
+    board,
     elements,
-    zones,
+    childBoards,
     viewMode,
     selectedElementIds,
-    selectedZoneId,
+    selectedChildBoardId,
     toggleElementSelection,
     clearSelection,
     moveElementLocal,
     saveElementPosition,
     updateElement,
     removeElement,
-    selectZone,
-    moveZoneLocal,
-    saveZonePosition,
-    resizeZoneLocal,
-    saveZoneSize,
-    updateZone,
-    removeZone,
+    selectChildBoard,
+    moveChildBoardLocal,
+    saveChildBoardPosition,
+    resizeChildBoardLocal,
+    saveChildBoardSize,
+    updateChildBoard,
+    removeChildBoard,
     setDragging,
     toggleViewMode,
     addNote,
     addPalette,
-    addZone,
+    addChildBoard,
     addElement,
   } = useBoard();
 
-const { state: panelState } = useContextualSearchPanel();
-const { openFocusMode } = useZoneFocus();
-const { transform, setScale, zoomToFit } = useTransform();
+  // Dans BoardCanvas.tsx, après les destructurations du useBoard()
+console.log('BoardCanvas - board:', board?.id, board?.name);
+console.log('BoardCanvas - elements:', elements.length, elements.map(e => e.elementType));
+console.log('BoardCanvas - childBoards:', childBoards.length);
 
-const canvasRef = useRef<HTMLDivElement>(null);
+  const { state: panelState } = useContextualSearchPanel();
+  const { openFocusMode } = useZoneFocus();
+  const { transform, setScale, zoomToFit } = useTransform();
+
+  const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  
+
   // ============================================
   // PAN MODE STATE (Space+Drag)
   // ============================================
@@ -107,7 +115,7 @@ const canvasRef = useRef<HTMLDivElement>(null);
   const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      
+
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newScale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, transform.scale + delta));
       // Arrondir à 2 décimales pour éviter les erreurs de floating point
@@ -129,8 +137,8 @@ const canvasRef = useRef<HTMLDivElement>(null);
   // ============================================
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat && 
-          !(e.target instanceof HTMLInputElement) && 
+      if (e.code === 'Space' && !e.repeat &&
+          !(e.target instanceof HTMLInputElement) &&
           !(e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault();
         setIsPanMode(true);
@@ -184,9 +192,9 @@ const canvasRef = useRef<HTMLDivElement>(null);
   // EDITING STATE
   // ============================================
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
-  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [editingChildBoardId, setEditingChildBoardId] = useState<string | null>(null);
   const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
-  const [crystallizingZone, setCrystallizingZone] = useState<BoardZone | null>(null);
+  const [crystallizingChildBoard, setCrystallizingChildBoard] = useState<Board | null>(null);
 
   // ============================================
   // MODAL STATE
@@ -200,17 +208,17 @@ const canvasRef = useRef<HTMLDivElement>(null);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [isSilhouetteModalOpen, setIsSilhouetteModalOpen] = useState(false);
 
- const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [editingPdfId, setEditingPdfId] = useState<string | null>(null);
   const [editingPatternId, setEditingPatternId] = useState<string | null>(null);
   const [editingSilhouetteId, setEditingSilhouetteId] = useState<string | null>(null);
 
-// Auto-arrange state (Sprint P2)
+  // Auto-arrange state (Sprint P2)
   const [showAutoArrangeDialog, setShowAutoArrangeDialog] = useState(false);
   const [isArranging, setIsArranging] = useState(false);
   const [arrangeTargets, setArrangeTargets] = useState<Map<string, { x: number; y: number }> | null>(null);
-  
+
   // Phase columns state (Sprint P2.5)
   const [phaseBounds, setPhaseBounds] = useState<PhaseBounds[]>([]);
   const [showPhaseColumns, setShowPhaseColumns] = useState(false);
@@ -218,7 +226,7 @@ const canvasRef = useRef<HTMLDivElement>(null);
   // ============================================
   // DERIVED STATE
   // ============================================
-  const boardId = zones[0]?.boardId || elements[0]?.boardId || '';
+  const boardId = board?.id || elements[0]?.boardId || '';
 
   const textileIdsOnBoard = useMemo(() => new Set(
     elements
@@ -227,14 +235,12 @@ const canvasRef = useRef<HTMLDivElement>(null);
       .filter(Boolean)
   ), [elements]);
 
- 
-
-  const isEditing = !!(editingElementId || editingZoneId || editingPaletteId);
+  const isEditing = !!(editingElementId || editingChildBoardId || editingPaletteId);
 
   // ============================================
   // HOOKS
   // ============================================
-const { dragPosition: elementDragPosition, handleElementMouseDown } = useElementDrag({
+  const { dragPosition: elementDragPosition, handleElementMouseDown } = useElementDrag({
     scale: transform.scale,
     moveElementLocal,
     saveElementPosition,
@@ -243,28 +249,26 @@ const { dragPosition: elementDragPosition, handleElementMouseDown } = useElement
     setDragging,
   });
 
-const {
-    dragPosition: zoneDragPosition,
-    zoneDragElementPositions,
-    draggingZoneId,
+  const {
+    dragPosition: childBoardDragPosition,
+    childBoardDragElementPositions,
+    draggingChildBoardId,
     draggingElementIds,
     draggingElementCount,
-    handleZoneMouseDown
-  } = useZoneDrag({
+    handleChildBoardMouseDown
+  } = useChildBoardDrag({
     scale: transform.scale,
     elements,
-    moveZoneLocal,
-    saveZonePosition,
+    moveChildBoardLocal,
+    saveChildBoardPosition,
     moveElementLocal,
-    selectZone,
+    selectChildBoard,
     setDragging,
   });
 
-
-
   const closeAllModals = useCallback(() => {
     setEditingElementId(null);
-    setEditingZoneId(null);
+    setEditingChildBoardId(null);
     setEditingPaletteId(null);
     setShowFavoritesSheet(false);
     setShowPatternModal(false);
@@ -283,10 +287,10 @@ const {
 
   useKeyboardShortcuts({
     selectedElementIds,
-    selectedZoneId,
+    selectedChildBoardId,
     isEditing,
     removeElement,
-    removeZone,
+    removeChildBoard,
     clearSelection,
     onEscape: closeAllModals,
   });
@@ -296,16 +300,16 @@ const {
   // ============================================
 
   // Callback mémorisé pour ContextualSearchPanel (REACT-3)
-  const handleAddTextileToBoard = useCallback(async (textile: { 
-    id: string; 
-    name: string; 
-    supplier_name?: string | null; 
-    price_value?: number | null; 
-    price_currency?: string | null; 
-    image_url?: string | null; 
-    quantity_value?: number | null; 
-    fiber?: string | null; 
-    color?: string | null; 
+  const handleAddTextileToBoard = useCallback(async (textile: {
+    id: string;
+    name: string;
+    supplier_name?: string | null;
+    price_value?: number | null;
+    price_currency?: string | null;
+    image_url?: string | null;
+    quantity_value?: number | null;
+    fiber?: string | null;
+    color?: string | null;
   }) => {
     const position = { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 };
     const elementData: TextileElementData = {
@@ -333,7 +337,7 @@ const {
       case 'palette': await addPalette(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'], position); break;
       case 'textile': setShowFavoritesSheet(true); break;
       case 'calculation': setShowPatternModal(true); break;
-      case 'zone': await addZone('Nouvelle zone', position); break;
+      case 'zone': await addChildBoard('Nouvelle pièce', position); break;
       case 'image': setShowImageModal(true); break;
       case 'video': setShowVideoModal(true); break;
       case 'link': setShowLinkModal(true); break;
@@ -341,27 +345,28 @@ const {
       case 'pattern': setIsPatternModalOpen(true); break;
       case 'silhouette': setIsSilhouetteModalOpen(true); break;
     }
-  }, [addNote, addPalette, addZone]);
+  }, [addNote, addPalette, addChildBoard]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // Ne pas traiter le clic si on est en mode pan
     if (isPanMode) return;
-    
+
     if (e.target === canvasRef.current) {
       clearSelection();
       setEditingElementId(null);
-      setEditingZoneId(null);
+      setEditingChildBoardId(null);
       setEditingPaletteId(null);
     }
- }, [clearSelection, isPanMode]);
+  }, [clearSelection, isPanMode]);
 
-const handleDoubleClick = useCallback((element: BoardElement) => {
-    // Vérifier si l'élément est dans une zone commandée
-    const parentOrderedZone = zones.find(z => 
-      isZoneOrdered(z) && isElementInZone(element, z)
+  const handleDoubleClick = useCallback((element: BoardElement) => {
+    // Vérifier si l'élément est dans un child board commandé
+    const parentOrderedChildBoard = childBoards.find(cb =>
+      cb.positionX !== null && cb.positionY !== null &&
+      isBoardOrdered(cb) && isElementInChildBoard(element, cb)
     );
 
-    if (parentOrderedZone) {
+    if (parentOrderedChildBoard) {
       toast.info('Cet élément fait partie d\'un projet commandé et ne peut pas être modifié.');
       return;
     }
@@ -375,10 +380,10 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
       case 'pattern': setEditingPatternId(element.id); setIsPatternModalOpen(true); break;
       case 'silhouette': setEditingSilhouetteId(element.id); setIsSilhouetteModalOpen(true); break;
     }
-  }, [zones]);
+  }, [childBoards]);
 
-  const handleZoneDoubleClick = useCallback((zone: BoardZone) => {
-    openFocusMode(zone);
+  const handleChildBoardDoubleClick = useCallback((childBoard: Board) => {
+    openFocusMode(childBoard);
   }, [openFocusMode]);
 
   const handleSaveNote = useCallback(async (elementId: string, content: string) => {
@@ -389,12 +394,12 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
     setEditingElementId(null);
   }, [elements, updateElement]);
 
-  const handleSaveZoneName = useCallback(async (zoneId: string, name: string) => {
+  const handleSaveChildBoardName = useCallback(async (childBoardId: string, name: string) => {
     if (name.trim()) {
-      await updateZone(zoneId, { name: name.trim() });
+      await updateChildBoard(childBoardId, { name: name.trim() });
     }
-    setEditingZoneId(null);
-  }, [updateZone]);
+    setEditingChildBoardId(null);
+  }, [updateChildBoard]);
 
   // ============================================
   // MODAL HANDLERS
@@ -497,50 +502,51 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
     setEditingPaletteId(null);
   }, [updateElement]);
 
- const handleAddTextileFromFavorites = useCallback(async (elementData: TextileElementData, name: string) => {
+  const handleAddTextileFromFavorites = useCallback(async (elementData: TextileElementData, name: string) => {
     const position = { x: 100 + Math.random() * 300, y: 100 + Math.random() * 200 };
     await addElement({ elementType: 'textile', elementData, positionX: position.x, positionY: position.y });
   }, [addElement]);
 
-// ============================================
+  // ============================================
   // AUTO-ARRANGE HANDLER (Sprint P2)
   // ============================================
   const handleAutoArrange = useCallback(async (options: AutoArrangeDialogResult) => {
     const { showPhaseColumns: shouldShowColumns, ...arrangeOptions } = options;
-    
+
     // Calculer les nouvelles positions
-    const result = autoArrangeByPhase(elements, zones, arrangeOptions);
-    
-    if (result.elementMoves.length === 0 && result.zoneMoves.length === 0) {
+    const result = autoArrangeByPhase(elements, childBoards, arrangeOptions);
+
+    if (result.elementMoves.length === 0 && result.childBoardMoves.length === 0) {
       return;
     }
-    
+
     // Créer la map des positions cibles pour l'animation
     const targets = new Map<string, { x: number; y: number }>();
-    
+
     // Éléments libres
     for (const move of result.elementMoves) {
       targets.set(move.id, { x: move.x, y: move.y });
     }
-    
-    // Zones + calculer le delta pour les éléments à l'intérieur
-    for (const move of result.zoneMoves) {
-      const zone = zones.find(z => z.id === move.id);
-      if (!zone) continue;
-      
-      targets.set(`zone-${move.id}`, { x: move.x, y: move.y });
-      
-      // Calculer le delta de déplacement de la zone
-      const deltaX = move.x - zone.positionX;
-      const deltaY = move.y - zone.positionY;
-      
-      // Trouver les éléments dans cette zone et les déplacer avec elle
+
+    // Child boards + calculer le delta pour les éléments à l'intérieur
+    for (const move of result.childBoardMoves) {
+      const childBoard = childBoards.find(cb => cb.id === move.id);
+      if (!childBoard || childBoard.positionX === null || childBoard.positionY === null) continue;
+
+      targets.set(`childBoard-${move.id}`, { x: move.x, y: move.y });
+
+      // Calculer le delta de déplacement du child board
+      const deltaX = move.x - childBoard.positionX;
+      const deltaY = move.y - childBoard.positionY;
+
+      // Trouver les éléments visuellement dans ce child board et les déplacer avec lui
       for (const element of elements) {
-        const inX = element.positionX >= zone.positionX && 
-                    element.positionX < zone.positionX + zone.width;
-        const inY = element.positionY >= zone.positionY && 
-                    element.positionY < zone.positionY + zone.height;
-        
+        if (childBoard.positionX === null || childBoard.positionY === null) continue;
+        const inX = element.positionX >= childBoard.positionX &&
+                    element.positionX < childBoard.positionX + childBoard.width;
+        const inY = element.positionY >= childBoard.positionY &&
+                    element.positionY < childBoard.positionY + childBoard.height;
+
         if (inX && inY && !targets.has(element.id)) {
           targets.set(element.id, {
             x: element.positionX + deltaX,
@@ -549,39 +555,40 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         }
       }
     }
-    
+
     // Démarrer l'animation
     setArrangeTargets(targets);
     setIsArranging(true);
-    
+
     // Attendre la fin de l'animation CSS (500ms)
     await new Promise(resolve => setTimeout(resolve, 550));
-    
+
     // Appliquer les positions finales et sauvegarder en DB
     // D'abord les éléments libres
     for (const move of result.elementMoves) {
       moveElementLocal(move.id, move.x, move.y);
       saveElementPosition(move.id, move.x, move.y);
     }
-    
-    // Ensuite les zones
-    for (const move of result.zoneMoves) {
-      const zone = zones.find(z => z.id === move.id);
-      if (!zone) continue;
-      
-      moveZoneLocal(move.id, move.x, move.y);
-      saveZonePosition(move.id, move.x, move.y);
-      
-      // Déplacer les éléments dans la zone
-      const deltaX = move.x - zone.positionX;
-      const deltaY = move.y - zone.positionY;
-      
+
+    // Ensuite les child boards
+    for (const move of result.childBoardMoves) {
+      const childBoard = childBoards.find(cb => cb.id === move.id);
+      if (!childBoard || childBoard.positionX === null || childBoard.positionY === null) continue;
+
+      moveChildBoardLocal(move.id, move.x, move.y);
+      saveChildBoardPosition(move.id, move.x, move.y);
+
+      // Déplacer les éléments visuellement dans le child board
+      const deltaX = move.x - childBoard.positionX;
+      const deltaY = move.y - childBoard.positionY;
+
       for (const element of elements) {
-        const inX = element.positionX >= zone.positionX && 
-                    element.positionX < zone.positionX + zone.width;
-        const inY = element.positionY >= zone.positionY && 
-                    element.positionY < zone.positionY + zone.height;
-        
+        if (childBoard.positionX === null || childBoard.positionY === null) continue;
+        const inX = element.positionX >= childBoard.positionX &&
+                    element.positionX < childBoard.positionX + childBoard.width;
+        const inY = element.positionY >= childBoard.positionY &&
+                    element.positionY < childBoard.positionY + childBoard.height;
+
         if (inX && inY) {
           const newX = element.positionX + deltaX;
           const newY = element.positionY + deltaY;
@@ -590,46 +597,50 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         }
       }
     }
-    
+
     // Calculer et stocker les bounds des phases pour l'affichage des colonnes
-    const bounds = calculatePhaseBounds(result, elements, zones, arrangeOptions);
+    const bounds = calculatePhaseBounds(result, elements, childBoards, arrangeOptions);
     setPhaseBounds(bounds);
     setShowPhaseColumns(shouldShowColumns);
-    
+
     // Terminer l'animation
     setIsArranging(false);
     setArrangeTargets(null);
-    
+
     toast.success('Éléments rangés par phase');
-  }, [elements, zones, moveElementLocal, saveElementPosition, moveZoneLocal, saveZonePosition]);
+  }, [elements, childBoards, moveElementLocal, saveElementPosition, moveChildBoardLocal, saveChildBoardPosition]);
+
   // ============================================
   // RENDER CALCULATIONS
   // ============================================
+  // Filtrer les child boards avec des positions valides
+  const positionedChildBoards = childBoards.filter(cb => cb.positionX !== null && cb.positionY !== null);
+
   const allPositions = [
     ...elements.map((e) => ({ x: e.positionX + (e.width || 200), y: e.positionY + (e.height || 150) })),
-    ...zones.map((z) => ({ x: z.positionX + z.width, y: z.positionY + z.height })),
+    ...positionedChildBoards.map((cb) => ({ x: (cb.positionX ?? 0) + cb.width, y: (cb.positionY ?? 0) + cb.height })),
   ];
- const baseCanvasWidth = Math.max(1200, ...allPositions.map((p) => p.x + 100));
+  const baseCanvasWidth = Math.max(1200, ...allPositions.map((p) => p.x + 100));
   const baseCanvasHeight = Math.max(800, ...allPositions.map((p) => p.y + 100));
   // Dimensions ajustées pour le zoom
   const canvasWidth = baseCanvasWidth * transform.scale;
   const canvasHeight = baseCanvasHeight * transform.scale;
-  const isEmpty = elements.length === 0 && zones.length === 0;
-  const showZones = viewMode === 'project';
+  const isEmpty = elements.length === 0 && childBoards.length === 0;
+  const showChildBoards = viewMode === 'project';
 
   // ============================================
   // RENDER
   // ============================================
   return (
     <div className="flex h-full">
-        <BoardToolbar
+      <BoardToolbar
         onAddElement={handleAddElement}
         onToggleViewMode={toggleViewMode}
         viewMode={viewMode}
         onAutoArrange={() => setShowAutoArrangeDialog(true)}
       />
 
-     <div
+      <div
         ref={canvasRef}
         className={`flex-1 relative overflow-auto bg-gray-100 dark:bg-gray-700 ${
           isPanMode ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''
@@ -651,16 +662,16 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             </p>
           </div>
         ) : (
-          <div 
-            className="relative" 
-            style={{ 
-              width: canvasWidth, 
-              height: canvasHeight, 
-              minWidth: '100%', 
-              minHeight: '100%' 
+          <div
+            className="relative"
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+              minWidth: '100%',
+              minHeight: '100%'
             }}
           >
-          {/* Contenu zoomable */}
+            {/* Contenu zoomable */}
             <div
               ref={contentRef}
               className="absolute origin-top-left"
@@ -670,91 +681,87 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
                 height: baseCanvasHeight,
               }}
             >
-            {/* Phase Columns Background (Sprint P2.5) */}
-            <PhaseColumns
-              phaseBounds={phaseBounds}
-              canvasHeight={baseCanvasHeight}
-              isVisible={showPhaseColumns && viewMode === 'project'}
-            />
-            
-            {/* Zones */}
-            {zones.map((zone) => {
-                const isDragging = zoneDragPosition?.id === zone.id;
+              {/* Phase Columns Background (Sprint P2.5) */}
+              <PhaseColumns
+                phaseBounds={phaseBounds}
+                canvasHeight={baseCanvasHeight}
+                isVisible={showPhaseColumns && viewMode === 'project'}
+              />
+
+              {/* Child Boards (anciennement Zones) */}
+              {positionedChildBoards.map((childBoard) => {
+                const isDragging = childBoardDragPosition?.id === childBoard.id;
 
                 // Animation auto-arrange (Sprint P2)
-                const arrangeTarget = isArranging ? arrangeTargets?.get(`zone-${zone.id}`) : null;
+                const arrangeTarget = isArranging ? arrangeTargets?.get(`childBoard-${childBoard.id}`) : null;
 
                 const position = arrangeTarget
                   ? { x: arrangeTarget.x, y: arrangeTarget.y }
                   : isDragging
-                  ? { x: zoneDragPosition.x, y: zoneDragPosition.y }
-                  : { x: zone.positionX, y: zone.positionY };
+                  ? { x: childBoardDragPosition.x, y: childBoardDragPosition.y }
+                  : { x: childBoard.positionX ?? 0, y: childBoard.positionY ?? 0 };
 
-                // Ghost Mode: déterminer si cette zone est en cours de drag
-                const isBeingDragged = draggingZoneId === zone.id;
+                // Ghost Mode: déterminer si ce child board est en cours de drag
+                const isBeingDragged = draggingChildBoardId === childBoard.id;
                 const ghostElementCount = isBeingDragged ? draggingElementCount : 0;
 
                 return (
                   <ZoneCard
-                      key={zone.id}
-                      zone={zone}
-                      elements={elements}
-                      position={position}
-                      isSelected={selectedZoneId === zone.id}
-                      isEditing={editingZoneId === zone.id}
-                      style={isArranging && arrangeTarget ? {
-                        transition: 'transform 0.5s ease-out',
-                      } : undefined}
-                      isVisible={showZones}
-                      isDragging={isBeingDragged}
-                      ghostElementCount={ghostElementCount}
-                      onMouseDown={(e) => handleZoneMouseDown(e, zone)}
-                      onDoubleClick={() => handleZoneDoubleClick(zone)}
-                      onStartEdit={() => setEditingZoneId(zone.id)}
-                      onSaveName={(name) => handleSaveZoneName(zone.id, name)}
-                      onCancelEdit={() => setEditingZoneId(null)}
-                      onCrystallize={() => setCrystallizingZone(zone)}
-                      onDelete={() => removeZone(zone.id)}
-                    />
+                    key={childBoard.id}
+                    zone={childBoard}
+                    position={position}
+                    isSelected={selectedChildBoardId === childBoard.id}
+                    isEditing={editingChildBoardId === childBoard.id}
+                    style={isArranging && arrangeTarget ? {
+                      transition: 'transform 0.5s ease-out',
+                    } : undefined}
+                    isVisible={showChildBoards}
+                    isDragging={isBeingDragged}
+                    ghostElementCount={ghostElementCount}
+                    onMouseDown={(e) => handleChildBoardMouseDown(e, childBoard)}
+                    onDoubleClick={() => handleChildBoardDoubleClick(childBoard)}
+                    onStartEdit={() => setEditingChildBoardId(childBoard.id)}
+                    onSaveName={(name) => handleSaveChildBoardName(childBoard.id, name)}
+                    onCancelEdit={() => setEditingChildBoardId(null)}
+                    onCrystallize={() => setCrystallizingChildBoard(childBoard)}
+                    onDelete={() => removeChildBoard(childBoard.id)}
+                  />
                 );
               })}
 
-     {/* Elements */}
+              {/* Elements */}
               {elements.map((element) => {
-                // Masquer les éléments assignés à une zone (ils sont visibles dans la ZoneCard)
-                if (element.zoneId) return null;
-                
-                // Ghost Mode: masquer les éléments pendant le drag de zone
-                const isHiddenDuringZoneDrag = draggingElementIds.includes(element.id);
-                if (isHiddenDuringZoneDrag) return null;
+                // Ghost Mode: masquer les éléments pendant le drag de child board
+                const isHiddenDuringChildBoardDrag = draggingElementIds.includes(element.id);
+                if (isHiddenDuringChildBoardDrag) return null;
 
-              // Animation auto-arrange (Sprint P2)
-              const arrangeTarget = isArranging ? arrangeTargets?.get(element.id) : null;
+                // Animation auto-arrange (Sprint P2)
+                const arrangeTarget = isArranging ? arrangeTargets?.get(element.id) : null;
 
-              const individualDragPos = elementDragPosition?.id === element.id ? { x: elementDragPosition.x, y: elementDragPosition.y } : null;
-              const zoneDragPos = zoneDragElementPositions[element.id];
-              const position = arrangeTarget 
-                ? { x: arrangeTarget.x, y: arrangeTarget.y }
-                : individualDragPos || zoneDragPos || { x: element.positionX, y: element.positionY };
+                const individualDragPos = elementDragPosition?.id === element.id ? { x: elementDragPosition.x, y: elementDragPosition.y } : null;
+                const childBoardDragPos = childBoardDragElementPositions[element.id];
+                const position = arrangeTarget
+                  ? { x: arrangeTarget.x, y: arrangeTarget.y }
+                  : individualDragPos || childBoardDragPos || { x: element.positionX, y: element.positionY };
 
-              return (
-                <ElementCard
-                  key={element.id}
-                  element={element}
-                  position={position}
-                  isSelected={selectedElementIds.includes(element.id)}
-                  isEditing={editingElementId === element.id}
-                  style={isArranging && arrangeTarget ? {
-                    transition: 'left 0.5s ease-out, top 0.5s ease-out',
-                  } : undefined}
-                  onMouseDown={(e) => handleElementMouseDown(e, element)}
-                  onDoubleClick={() => handleDoubleClick(element)}
-                  onSaveNote={(content) => handleSaveNote(element.id, content)}
-                  onCancelEdit={() => setEditingElementId(null)}
-                  onDelete={() => removeElement(element.id)}
-                />
-              );
-            })}
+                return (
+                  <ElementCard
+                    key={element.id}
+                    element={element}
+                    position={position}
+                    isSelected={selectedElementIds.includes(element.id)}
+                    isEditing={editingElementId === element.id}
+                    style={isArranging && arrangeTarget ? {
+                      transition: 'left 0.5s ease-out, top 0.5s ease-out',
+                    } : undefined}
+                    onMouseDown={(e) => handleElementMouseDown(e, element)}
+                    onDoubleClick={() => handleDoubleClick(element)}
+                    onSaveNote={(content) => handleSaveNote(element.id, content)}
+                    onCancelEdit={() => setEditingElementId(null)}
+                    onDelete={() => removeElement(element.id)}
+                  />
+                );
+              })}
             </div>
             {/* Fin du contenu zoomable */}
           </div>
@@ -767,16 +774,20 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             Cliquer • Glisser • Double-clic éditer • Suppr supprimer
           </div>
         )}
-       {/* Zoom Controls */}
+
+        {/* Zoom Controls */}
         <ZoomControls
           onRequestFit={() => {
-            if (elements.length === 0 && zones.length === 0) return;
-            
+            if (elements.length === 0 && childBoards.length === 0) return;
+
+            const validChildBoards = childBoards.filter(cb => cb.positionX !== null && cb.positionY !== null);
             const allItems = [
               ...elements.map(e => ({ x: e.positionX, y: e.positionY, w: e.width || 200, h: e.height || 150 })),
-              ...zones.map(z => ({ x: z.positionX, y: z.positionY, w: z.width, h: z.height })),
+              ...validChildBoards.map(cb => ({ x: cb.positionX ?? 0, y: cb.positionY ?? 0, w: cb.width, h: cb.height })),
             ];
-            
+
+            if (allItems.length === 0) return;
+
             const contentBounds = {
               minX: Math.min(...allItems.map(i => i.x)),
               minY: Math.min(...allItems.map(i => i.y)),
@@ -787,7 +798,7 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
             };
             contentBounds.width = contentBounds.maxX - contentBounds.minX;
             contentBounds.height = contentBounds.maxY - contentBounds.minY;
-            
+
             zoomToFit(contentBounds);
           }}
         />
@@ -795,8 +806,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         {/* View mode indicator */}
         <div className="absolute top-4 right-4 text-xs px-2 py-1 rounded bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
           Mode {viewMode === 'inspiration' ? 'Inspiration' : 'Projet'}
-          {viewMode === 'project' && zones.length > 0 && (
-            <span className="ml-1 text-gray-400">• {zones.length} zone{zones.length > 1 ? 's' : ''}</span>
+          {viewMode === 'project' && childBoards.length > 0 && (
+            <span className="ml-1 text-gray-400">• {childBoards.length} pièce{childBoards.length > 1 ? 's' : ''}</span>
           )}
         </div>
       </div>
@@ -813,8 +824,8 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
       <CanvasModals
         elements={elements}
         boardId={boardId}
-        crystallizingZone={crystallizingZone}
-        onCloseCrystallization={() => setCrystallizingZone(null)}
+        crystallizingChildBoard={crystallizingChildBoard}
+        onCloseCrystallization={() => setCrystallizingChildBoard(null)}
         showPatternModal={showPatternModal}
         onClosePatternImportModal={() => setShowPatternModal(false)}
         onAddPatternCalculation={handleAddPatternCalculation}
@@ -845,22 +856,23 @@ const handleDoubleClick = useCallback((element: BoardElement) => {
         onCloseSilhouetteModal={() => { setIsSilhouetteModalOpen(false); setEditingSilhouetteId(null); }}
         onSaveSilhouette={handleSaveSilhouette}
       />
-             {/* Zone Focus Mode Overlay */}
-        <ZoneFocusOverlay />
 
-  {/* Auto-Arrange Dialog (Sprint P2) */}
+      {/* Zone Focus Mode Overlay */}
+      <ZoneFocusOverlay />
+
+      {/* Auto-Arrange Dialog (Sprint P2) */}
       {showAutoArrangeDialog && (
         <AutoArrangeDialog
           isOpen={showAutoArrangeDialog}
           onClose={() => setShowAutoArrangeDialog(false)}
           onConfirm={handleAutoArrange}
           elements={elements}
-          zones={zones}
+          childBoards={childBoards}
           initialShowPhaseColumns={showPhaseColumns}
         />
       )}
 
-    {/* Contextual Search Panel */}
+      {/* Contextual Search Panel */}
       <ContextualSearchPanel
         boardId={boardId}
         onAddToBoard={handleAddTextileToBoard}

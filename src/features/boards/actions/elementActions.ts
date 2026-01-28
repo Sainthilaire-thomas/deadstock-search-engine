@@ -1,4 +1,6 @@
 ﻿// src/features/boards/actions/elementActions.ts
+// UPDATED: UB-4 - Unified Boards Architecture (ADR-032)
+// Removed zoneId, replaced assignElementToZone with moveElementToBoard
 
 'use server';
 
@@ -25,15 +27,15 @@ export async function addElementAction(
     // Verify board ownership
     const userId = await requireUserId();
     const board = await boardsRepository.getBoard(input.boardId, userId);
-    
+
     if (!board) {
       return { success: false, error: 'Board introuvable' };
     }
 
     const element = await elementsRepository.addElement(input);
-    
+
     revalidatePath(`/boards/${input.boardId}`);
-    
+
     return { success: true, data: element };
   } catch (error) {
     console.error('addElementAction error:', error);
@@ -51,13 +53,13 @@ export async function updateElementAction(
 ): Promise<ActionResult<BoardElement>> {
   try {
     const element = await elementsRepository.updateElement(elementId, input);
-    
+
     if (!element) {
       return { success: false, error: 'Élément introuvable' };
     }
-    
+
     revalidatePath(`/boards/${element.boardId}`);
-    
+
     return { success: true, data: element };
   } catch (error) {
     console.error('updateElementAction error:', error);
@@ -66,7 +68,7 @@ export async function updateElementAction(
 }
 
 // ============================================
-// MOVE ELEMENT
+// MOVE ELEMENT (position)
 // ============================================
 
 export async function moveElementAction(
@@ -83,6 +85,38 @@ export async function moveElementAction(
 }
 
 // ============================================
+// NEW UB-4: MOVE ELEMENT TO BOARD (replaces assignElementToZone)
+// ============================================
+
+export async function moveElementToBoardAction(
+  elementId: string,
+  targetBoardId: string
+): Promise<ActionResult<BoardElement>> {
+  try {
+    // Get current element to know source board
+    const currentElement = await elementsRepository.getElementById(elementId);
+    const sourceBoardId = currentElement?.boardId;
+
+    const element = await elementsRepository.moveElementToBoard(elementId, targetBoardId);
+
+    if (!element) {
+      return { success: false, error: 'Élément introuvable' };
+    }
+
+    // Revalidate both source and target boards
+    if (sourceBoardId) {
+      revalidatePath(`/boards/${sourceBoardId}`);
+    }
+    revalidatePath(`/boards/${targetBoardId}`);
+
+    return { success: true, data: element };
+  } catch (error) {
+    console.error('moveElementToBoardAction error:', error);
+    return { success: false, error: 'Impossible de déplacer l\'élément vers le board' };
+  }
+}
+
+// ============================================
 // REMOVE ELEMENT
 // ============================================
 
@@ -91,11 +125,11 @@ export async function removeElementAction(
 ): Promise<ActionResult<void>> {
   try {
     const boardId = await elementsRepository.removeElement(elementId);
-    
+
     if (boardId) {
       revalidatePath(`/boards/${boardId}`);
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error('removeElementAction error:', error);
@@ -258,32 +292,6 @@ export async function addCalculationToBoard(
 }
 
 // ============================================
-// ASSIGN ELEMENT TO ZONE
+// REMOVED UB-4: assignElementToZoneAction
+// Use moveElementToBoardAction instead
 // ============================================
-
-/**
- * Assigne ou retire un élément d'une zone
- * @param elementId - ID de l'élément
- * @param zoneId - ID de la zone (null pour retirer de la zone)
- */
-export async function assignElementToZoneAction(
-  elementId: string,
-  zoneId: string | null
-): Promise<ActionResult<BoardElement>> {
-  try {
-    const element = await elementsRepository.updateElement(elementId, {
-      zoneId: zoneId,
-    });
-
-    if (!element) {
-      return { success: false, error: 'Élément introuvable' };
-    }
-
-    revalidatePath(`/boards/${element.boardId}`);
-
-    return { success: true, data: element };
-  } catch (error) {
-    console.error('assignElementToZoneAction error:', error);
-    return { success: false, error: "Impossible d'assigner l'élément à la zone" };
-  }
-}

@@ -14,8 +14,8 @@ import { PatternModal } from '../PatternModal';
 import { SilhouetteModal } from '../SilhouetteModal';
 
 import type {
+  Board,
   BoardElement,
-  BoardZone,
   PaletteElementData,
   InspirationElementData,
   VideoElementData,
@@ -30,50 +30,50 @@ interface CanvasModalsProps {
   // Data
   elements: BoardElement[];
   boardId: string;
-  
+
   // Crystallization
-  crystallizingZone: BoardZone | null;
+  crystallizingChildBoard: Board | null;
   onCloseCrystallization: () => void;
-  
+
   // Pattern Import
   showPatternModal: boolean;
   onClosePatternImportModal: () => void;
   onAddPatternCalculation: (data: PatternCalculationElementData) => void;
-  
+
   // Palette Editor
   editingPaletteId: string | null;
   onSavePalette: (id: string, data: PaletteElementData) => void;
   onClosePaletteEditor: () => void;
-  
+
   // Image Modal
   showImageModal: boolean;
   onCloseImageModal: () => void;
   onSaveImage: (data: InspirationElementData) => void;
-  
+
   // Video Modal
   showVideoModal: boolean;
   editingVideoId: string | null;
   onCloseVideoModal: () => void;
   onSaveVideo: (data: VideoElementData) => void;
-  
+
   // Link Modal
   showLinkModal: boolean;
   editingLinkId: string | null;
   onCloseLinkModal: () => void;
   onSaveLink: (data: LinkElementData) => void;
-  
+
   // PDF Modal
   isPdfModalOpen: boolean;
   editingPdfId: string | null;
   onClosePdfModal: () => void;
   onSavePdf: (data: PdfElementData) => void;
-  
+
   // Pattern Modal
   isPatternModalOpen: boolean;
   editingPatternId: string | null;
   onClosePatternElementModal: () => void;
   onSavePattern: (data: PatternElementData) => void;
-  
+
   // Silhouette Modal
   isSilhouetteModalOpen: boolean;
   editingSilhouetteId: string | null;
@@ -84,7 +84,7 @@ interface CanvasModalsProps {
 export function CanvasModals({
   elements,
   boardId,
-  crystallizingZone,
+  crystallizingChildBoard,
   onCloseCrystallization,
   showPatternModal,
   onClosePatternImportModal,
@@ -125,11 +125,11 @@ export function CanvasModals({
   return (
     <>
       {/* Crystallization Dialog */}
-      {crystallizingZone && (
+      {crystallizingChildBoard && (
         <CrystallizationDialog
-          zone={crystallizingZone}
-          boardId={boardId}
-          isOpen={!!crystallizingZone}
+          childBoard={crystallizingChildBoard}
+          parentBoardId={boardId}
+          isOpen={!!crystallizingChildBoard}
           onClose={onCloseCrystallization}
           onSuccess={onCloseCrystallization}
         />

@@ -92,7 +92,6 @@ export type Database = {
           updated_at: string
           width: number | null
           z_index: number
-          zone_id: string | null
         }
         Insert: {
           board_id: string
@@ -106,7 +105,6 @@ export type Database = {
           updated_at?: string
           width?: number | null
           z_index?: number
-          zone_id?: string | null
         }
         Update: {
           board_id?: string
@@ -120,7 +118,6 @@ export type Database = {
           updated_at?: string
           width?: number | null
           z_index?: number
-          zone_id?: string | null
         }
         Relationships: [
           {
@@ -128,13 +125,6 @@ export type Database = {
             columns: ["board_id"]
             isOneToOne: false
             referencedRelation: "boards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "board_elements_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "board_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -212,44 +202,72 @@ export type Database = {
       boards: {
         Row: {
           board_type: string | null
+          color: string | null
           cover_image_url: string | null
           created_at: string
+          crystallized_at: string | null
           description: string | null
+          height: number | null
           id: string
+          linked_project_id: string | null
           name: string | null
           parent_board_id: string | null
+          position_x: number | null
+          position_y: number | null
           session_id: string | null
           status: string
           updated_at: string
           user_id: string | null
+          width: number | null
         }
         Insert: {
           board_type?: string | null
+          color?: string | null
           cover_image_url?: string | null
           created_at?: string
+          crystallized_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
+          linked_project_id?: string | null
           name?: string | null
           parent_board_id?: string | null
+          position_x?: number | null
+          position_y?: number | null
           session_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
+          width?: number | null
         }
         Update: {
           board_type?: string | null
+          color?: string | null
           cover_image_url?: string | null
           created_at?: string
+          crystallized_at?: string | null
           description?: string | null
+          height?: number | null
           id?: string
+          linked_project_id?: string | null
           name?: string | null
           parent_board_id?: string | null
+          position_x?: number | null
+          position_y?: number | null
           session_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
+          width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "boards_linked_project_id_fkey"
+            columns: ["linked_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "boards_parent_board_id_fkey"
             columns: ["parent_board_id"]

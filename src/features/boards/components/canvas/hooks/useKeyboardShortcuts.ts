@@ -1,27 +1,38 @@
 // src/features/boards/components/canvas/hooks/useKeyboardShortcuts.ts
 // Hook pour les raccourcis clavier du board
+// UB-5: Adapté pour architecture unifiée (childBoards au lieu de zones)
 
 import { useEffect, useCallback } from 'react';
 
-interface UseKeyboardShortcutsProps {
+export interface UseKeyboardShortcutsProps {
   selectedElementIds: string[];
-  selectedZoneId: string | null;
+  selectedChildBoardId: string | null;
   isEditing: boolean;
   removeElement: (id: string) => void;
-  removeZone: (id: string) => void;
+  removeChildBoard: (id: string) => void;
   clearSelection: () => void;
   onEscape?: () => void;
+  // Deprecated aliases for backward compatibility
+  selectedZoneId?: string | null;
+  removeZone?: (id: string) => void;
 }
 
 export function useKeyboardShortcuts({
   selectedElementIds,
-  selectedZoneId,
+  selectedChildBoardId,
   isEditing,
   removeElement,
-  removeZone,
+  removeChildBoard,
   clearSelection,
   onEscape,
+  // Deprecated aliases
+  selectedZoneId,
+  removeZone,
 }: UseKeyboardShortcutsProps): void {
+  // Support both new and deprecated names
+  const actualSelectedChildBoardId = selectedChildBoardId ?? selectedZoneId ?? null;
+  const actualRemoveChildBoard = removeChildBoard ?? removeZone ?? (() => {});
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ne pas intercepter si on est en mode édition
     if (isEditing) return;
@@ -32,13 +43,11 @@ export function useKeyboardShortcuts({
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-
       if (selectedElementIds.length > 0) {
         selectedElementIds.forEach(id => removeElement(id));
       }
-
-      if (selectedZoneId) {
-        removeZone(selectedZoneId);
+      if (actualSelectedChildBoardId) {
+        actualRemoveChildBoard(actualSelectedChildBoardId);
       }
     }
 
@@ -46,7 +55,7 @@ export function useKeyboardShortcuts({
       clearSelection();
       onEscape?.();
     }
-  }, [selectedElementIds, selectedZoneId, isEditing, removeElement, removeZone, clearSelection, onEscape]);
+  }, [selectedElementIds, actualSelectedChildBoardId, isEditing, removeElement, actualRemoveChildBoard, clearSelection, onEscape]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);

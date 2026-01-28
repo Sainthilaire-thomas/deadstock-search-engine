@@ -1,21 +1,22 @@
 'use client';
-
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Share, Check, X } from 'lucide-react';
+import { ChevronRight, Share, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useBoard } from '../context/BoardContext';
 import { ViewToggle } from './ViewToggle';
 import { JOURNEY_PHASES } from '@/features/journey/config/steps';
 import type { PhaseId } from '@/features/journey/config/steps';
+import type { Board } from '../domain/types';
 
 interface SharedBoardHeaderProps {
   currentView: 'board' | 'journey';
+  ancestors?: Board[];
 }
 
-export function SharedBoardHeader({ currentView }: SharedBoardHeaderProps) {
+export function SharedBoardHeader({ currentView, ancestors = [] }: SharedBoardHeaderProps) {
   const params = useParams();
   const boardId = params.boardId as string;
   const { board, elements, zones, updateBoardName } = useBoard();
@@ -77,13 +78,32 @@ export function SharedBoardHeader({ currentView }: SharedBoardHeaderProps) {
 
   return (
     <header className="border-b bg-background px-4 py-3 flex items-center justify-between shrink-0">
-      {/* Left section */}
+     {/* Left section */}
       <div className="flex items-center gap-4">
-        {/* <Link href="/boards">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        </Link> */}
+        {/* Breadcrumb (Sprint 5) */}
+        <nav className="flex items-center gap-1 text-sm">
+          <Link 
+            href="/boards" 
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Projets
+          </Link>
+          {ancestors.map((ancestor) => (
+            <span key={ancestor.id} className="flex items-center gap-1">
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <Link
+                href={`/boards/${ancestor.id}`}
+                className="text-muted-foreground hover:text-foreground transition-colors truncate max-w-30"
+                title={ancestor.name || 'Sans titre'}
+              >
+                {ancestor.name || 'Sans titre'}
+              </Link>
+            </span>
+          ))}
+          {ancestors.length > 0 && (
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          )}
+        </nav>
 
         <div>
           {isEditing ? (

@@ -124,7 +124,7 @@ function BoardCard({ board, locale, t }: { board: BoardWithPreview; locale: stri
     ? `${board.elementCount} element${board.elementCount > 1 ? 's' : ''}`
     : `${board.elementCount} élément${board.elementCount > 1 ? 's' : ''}`;
   
-  const zoneLabel = `${board.zoneCount} zone${board.zoneCount > 1 ? 's' : ''}`;
+  const pieceLabel = `${board.childBoardCount} pièce${board.childBoardCount > 1 ? 's' : ''}`;
 
   const modifiedLabel = locale === 'en' ? 'Modified' : 'Modifié le';
 
@@ -155,11 +155,11 @@ function BoardCard({ board, locale, t }: { board: BoardWithPreview; locale: stri
                   {elementLabel}
                 </span>
               )}
-              {board.zoneCount > 0 && (
-                <span className="bg-primary/80 text-white text-xs px-2 py-0.5 rounded-full">
-                  {zoneLabel}
-                </span>
-              )}
+              {board.childBoardCount > 0 && (
+  <span className="bg-primary/80 text-white text-xs px-2 py-0.5 rounded-full">
+    {pieceLabel}
+  </span>
+)}
             </div>
           </div>
 

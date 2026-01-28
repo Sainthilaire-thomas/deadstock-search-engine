@@ -1,26 +1,27 @@
 // src/features/boards/components/canvas/hooks/useZoneDrag.ts
-// Hook pour le drag & drop des zones (avec Ghost Mode pour performance)
+// Hook pour le drag & drop des child boards (avec Ghost Mode pour performance)
 // Sprint P0.4 - Ghost Mode: éléments masqués pendant le drag
 // SCALE-2: Optimisé avec requestAnimationFrame pour 60fps max
+// UB-5: Adapté pour architecture unifiée (Board au lieu de Zone)
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { bulkMoveElementsAction } from '../../../actions/elementActions';
-import { getElementsInZone } from '../../../utils/zoneUtils';
-import type { BoardElement, BoardZone } from '../../../domain/types';
+import { getElementsVisuallyInChildBoard } from '../../../utils/boardUtils';
+import type { Board, BoardElement } from '../../../domain/types';
 
 interface DragPosition {
-  type: 'zone';
+  type: 'childBoard';
   id: string;
   x: number;
   y: number;
 }
 
-interface ZoneDragRef {
-  zoneId: string;
+interface ChildBoardDragRef {
+  childBoardId: string;
   startX: number;
   startY: number;
-  zoneStartX: number;
-  zoneStartY: number;
+  childBoardStartX: number;
+  childBoardStartY: number;
   containedElements?: Array<{
     id: string;
     startX: number;
@@ -28,46 +29,46 @@ interface ZoneDragRef {
   }>;
 }
 
-interface UseZoneDragProps {
+interface UseChildBoardDragProps {
   scale?: number;
   elements: BoardElement[];
-  moveZoneLocal: (id: string, x: number, y: number) => void;
-  saveZonePosition: (id: string, x: number, y: number) => Promise<void>;
+  moveChildBoardLocal: (id: string, x: number, y: number) => void;
+  saveChildBoardPosition: (id: string, x: number, y: number) => Promise<void>;
   moveElementLocal: (id: string, x: number, y: number) => void;
-  selectZone: (id: string | null) => void;
+  selectChildBoard: (id: string | null) => void;
   setDragging: (isDragging: boolean) => void;
 }
 
-interface UseZoneDragReturn {
+interface UseChildBoardDragReturn {
   dragPosition: DragPosition | null;
-  zoneDragElementPositions: Record<string, { x: number; y: number }>;
-  draggingZoneId: string | null;
+  childBoardDragElementPositions: Record<string, { x: number; y: number }>;
+  draggingChildBoardId: string | null;
   draggingElementIds: string[];
   draggingElementCount: number;
-  handleZoneMouseDown: (e: React.MouseEvent, zone: BoardZone) => void;
+  handleChildBoardMouseDown: (e: React.MouseEvent, childBoard: Board) => void;
 }
 
-export function useZoneDrag({
+export function useChildBoardDrag({
   scale = 1,
   elements,
-  moveZoneLocal,
-  saveZonePosition,
+  moveChildBoardLocal,
+  saveChildBoardPosition,
   moveElementLocal,
-  selectZone,
+  selectChildBoard,
   setDragging,
-}: UseZoneDragProps): UseZoneDragReturn {
+}: UseChildBoardDragProps): UseChildBoardDragReturn {
   const [dragPosition, setDragPosition] = useState<DragPosition | null>(null);
-  const [zoneDragElementPositions, setZoneDragElementPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [childBoardDragElementPositions, setChildBoardDragElementPositions] = useState<Record<string, { x: number; y: number }>>({});
 
   // Ghost Mode states
-  const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
+  const [draggingChildBoardId, setDraggingChildBoardId] = useState<string | null>(null);
   const [draggingElementIds, setDraggingElementIds] = useState<string[]>([]);
   const [draggingElementCount, setDraggingElementCount] = useState<number>(0);
 
   const dragPositionRef = useRef(dragPosition);
   dragPositionRef.current = dragPosition;
 
-  const zoneDragRef = useRef<ZoneDragRef | null>(null);
+  const childBoardDragRef = useRef<ChildBoardDragRef | null>(null);
 
   // SCALE-2: RAF throttling refs
   const rafIdRef = useRef<number | null>(null);
@@ -91,31 +92,31 @@ export function useZoneDrag({
     rafIdRef.current = null;
   }, []);
 
-  const handleZoneMouseMove = useCallback((e: MouseEvent) => {
-    if (!zoneDragRef.current) return;
+  const handleChildBoardMouseMove = useCallback((e: MouseEvent) => {
+    if (!childBoardDragRef.current) return;
 
     // Diviser par scale pour compenser le zoom
-    const dx = (e.clientX - zoneDragRef.current.startX) / scale;
-    const dy = (e.clientY - zoneDragRef.current.startY) / scale;
-    const newX = Math.max(0, zoneDragRef.current.zoneStartX + dx);
-    const newY = Math.max(0, zoneDragRef.current.zoneStartY + dy);
+    const dx = (e.clientX - childBoardDragRef.current.startX) / scale;
+    const dy = (e.clientY - childBoardDragRef.current.startY) / scale;
+    const newX = Math.max(0, childBoardDragRef.current.childBoardStartX + dx);
+    const newY = Math.max(0, childBoardDragRef.current.childBoardStartY + dy);
 
     // SCALE-2: Store position in ref, schedule RAF update
-    pendingPositionRef.current = { type: 'zone', id: zoneDragRef.current.zoneId, x: newX, y: newY };
+    pendingPositionRef.current = { type: 'childBoard', id: childBoardDragRef.current.childBoardId, x: newX, y: newY };
 
     // Only schedule RAF if not already scheduled
     if (rafIdRef.current === null) {
       rafIdRef.current = requestAnimationFrame(updatePositionWithRAF);
     }
 
-    // Ghost Mode: on ne met plus à jour zoneDragElementPositions pendant le drag
+    // Ghost Mode: on ne met plus à jour childBoardDragElementPositions pendant le drag
     // Les éléments sont masqués, pas besoin de calculer leurs positions
   }, [scale, updatePositionWithRAF]);
 
-  const handleZoneMouseUp = useCallback(() => {
+  const handleChildBoardMouseUp = useCallback(() => {
     // Cleanup immédiat AVANT toute opération async
-    document.removeEventListener('mousemove', handleZoneMouseMove);
-    document.removeEventListener('mouseup', handleZoneMouseUp);
+    document.removeEventListener('mousemove', handleChildBoardMouseMove);
+    document.removeEventListener('mouseup', handleChildBoardMouseUp);
 
     // SCALE-2: Cancel pending RAF
     if (rafIdRef.current !== null) {
@@ -126,25 +127,25 @@ export function useZoneDrag({
     // Apply any pending position immediately
     const pos = pendingPositionRef.current || dragPositionRef.current;
     pendingPositionRef.current = null;
-    const dragData = zoneDragRef.current;
+    const dragData = childBoardDragRef.current;
 
     // Reset des states immédiatement
     setDragPosition(null);
-    setZoneDragElementPositions({});
-    setDraggingZoneId(null);
+    setChildBoardDragElementPositions({});
+    setDraggingChildBoardId(null);
     setDraggingElementIds([]);
     setDraggingElementCount(0);
-    zoneDragRef.current = null;
+    childBoardDragRef.current = null;
     setDragging(false);
 
-    if (pos && pos.type === 'zone') {
-      moveZoneLocal(pos.id, pos.x, pos.y);
-      saveZonePosition(pos.id, pos.x, pos.y);
+    if (pos && pos.type === 'childBoard') {
+      moveChildBoardLocal(pos.id, pos.x, pos.y);
+      saveChildBoardPosition(pos.id, pos.x, pos.y);
 
-      // Si zone cristallisée, sauvegarder aussi les positions des éléments
+      // Si child board cristallisé, sauvegarder aussi les positions des éléments
       if (dragData?.containedElements && dragData.containedElements.length > 0) {
-        const dx = pos.x - dragData.zoneStartX;
-        const dy = pos.y - dragData.zoneStartY;
+        const dx = pos.x - dragData.childBoardStartX;
+        const dy = pos.y - dragData.childBoardStartY;
 
         const elementMoves = dragData.containedElements.map(el => ({
           elementId: el.id,
@@ -163,52 +164,71 @@ export function useZoneDrag({
         });
       }
     }
-  }, [moveZoneLocal, saveZonePosition, moveElementLocal, setDragging, handleZoneMouseMove]);
+  }, [moveChildBoardLocal, saveChildBoardPosition, moveElementLocal, setDragging, handleChildBoardMouseMove]);
 
-  const handleZoneMouseDown = useCallback((e: React.MouseEvent, zone: BoardZone) => {
+  const handleChildBoardMouseDown = useCallback((e: React.MouseEvent, childBoard: Board) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    selectZone(zone.id);
+    selectChildBoard(childBoard.id);
 
-    // Si la zone est cristallisée, capturer les éléments contenus pour les déplacer ensemble
+    // Vérifier que le child board a des coordonnées (obligatoire pour un child)
+    if (childBoard.positionX === null || childBoard.positionY === null) {
+      console.warn('Child board sans coordonnées, drag ignoré');
+      return;
+    }
+
+    // Si le child board est cristallisé, capturer les éléments contenus pour les déplacer ensemble
     let containedElements: Array<{ id: string; startX: number; startY: number }> | undefined;
     let elementIds: string[] = [];
 
-    if (zone.crystallizedAt && zone.linkedProjectId) {
-      const elementsInZone = getElementsInZone(elements, zone);
-      containedElements = elementsInZone.map(el => ({
+    if (childBoard.crystallizedAt && childBoard.linkedProjectId) {
+      const elementsInChildBoard = getElementsVisuallyInChildBoard(elements, childBoard);
+      containedElements = elementsInChildBoard.map(el => ({
         id: el.id,
         startX: el.positionX,
         startY: el.positionY,
       }));
-      elementIds = elementsInZone.map(el => el.id);
+      elementIds = elementsInChildBoard.map(el => el.id);
     }
 
-    zoneDragRef.current = {
-      zoneId: zone.id,
+    childBoardDragRef.current = {
+      childBoardId: childBoard.id,
       startX: e.clientX,
       startY: e.clientY,
-      zoneStartX: zone.positionX,
-      zoneStartY: zone.positionY,
+      childBoardStartX: childBoard.positionX,
+      childBoardStartY: childBoard.positionY,
       containedElements,
     };
 
     // Ghost Mode: activer le masquage des éléments
-    setDraggingZoneId(zone.id);
+    setDraggingChildBoardId(childBoard.id);
     setDraggingElementIds(elementIds);
     setDraggingElementCount(elementIds.length);
 
     setDragging(true);
-    document.addEventListener('mousemove', handleZoneMouseMove);
-    document.addEventListener('mouseup', handleZoneMouseUp);
-  }, [elements, selectZone, setDragging, handleZoneMouseMove, handleZoneMouseUp]);
+    document.addEventListener('mousemove', handleChildBoardMouseMove);
+    document.addEventListener('mouseup', handleChildBoardMouseUp);
+  }, [elements, selectChildBoard, setDragging, handleChildBoardMouseMove, handleChildBoardMouseUp]);
 
   return {
     dragPosition,
-    zoneDragElementPositions,
-    draggingZoneId,
+    childBoardDragElementPositions,
+    draggingChildBoardId,
     draggingElementIds,
     draggingElementCount,
-    handleZoneMouseDown,
+    handleChildBoardMouseDown,
   };
 }
+
+// ============================================
+// ALIASES DEPRECATED (pour migration progressive)
+// ============================================
+
+/** @deprecated Use useChildBoardDrag instead */
+export const useZoneDrag = useChildBoardDrag;
+
+/** @deprecated Use handleChildBoardMouseDown instead */
+export type UseZoneDragProps = UseChildBoardDragProps;
+
+/** @deprecated Use UseChildBoardDragReturn instead */
+export type UseZoneDragReturn = UseChildBoardDragReturn;

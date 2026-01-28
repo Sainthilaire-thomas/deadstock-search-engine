@@ -1,13 +1,15 @@
 ﻿// src/features/boards/actions/crystallizationActions.ts
+// UPDATED: UB-4 - Unified Boards Architecture (ADR-032)
+// BoardZone → Board
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/lib/auth/getAuthUser';
-import { zonesRepository } from '../infrastructure/zonesRepository';
+import { boardsRepository } from '../infrastructure/boardsRepository';
 import { elementsRepository } from '../infrastructure/elementsRepository';
 import { createProject as createProjectInDb } from '@/features/journey/infrastructure/projectsRepository';
-import { isElementInZone } from '../utils/zoneUtils';
-import type { BoardZone } from '../domain/types';
+import type { Board } from '../domain/types';
 import type { ActionResult } from '../domain/types';
 import type { ProjectType } from '@/features/journey/domain/types';
 
@@ -15,9 +17,9 @@ import type { ProjectType } from '@/features/journey/domain/types';
 // TYPES
 // ============================================
 
-export interface CrystallizeZoneInput {
-  zoneId: string;
-  boardId: string;
+export interface CrystallizeBoardInput {
+  boardId: string;           // The child board to crystallize (was zoneId)
+  parentBoardId: string;     // The parent board (was boardId)
   projectName: string;
   projectType: ProjectType;
   client?: string;
@@ -26,58 +28,62 @@ export interface CrystallizeZoneInput {
   budgetMax?: number;
 }
 
-export interface CrystallizeZoneResult {
+export interface CrystallizeBoardResult {
   projectId: string;
-  zone: BoardZone;
+  board: Board;              // Was zone
 }
 
+// DEPRECATED ALIAS
+export type CrystallizeZoneInput = CrystallizeBoardInput;
+export type CrystallizeZoneResult = CrystallizeBoardResult;
+
 // ============================================
-// CRYSTALLIZE ZONE ACTION
+// CRYSTALLIZE BOARD ACTION (was crystallizeZoneAction)
 // ============================================
 
-export async function crystallizeZoneAction(
-  input: CrystallizeZoneInput
-): Promise<ActionResult<CrystallizeZoneResult>> {
+export async function crystallizeBoardAction(
+  input: CrystallizeBoardInput
+): Promise<ActionResult<CrystallizeBoardResult>> {
   try {
     const userId = await requireUserId();
 
-    // 1. Vérifier que la zone existe et n'est pas déjà cristallisée
-    const zone = await zonesRepository.getZoneById(input.zoneId);
-    
-    if (!zone) {
-      return { success: false, error: 'Zone introuvable' };
+    // 1. Vérifier que le board existe et n'est pas déjà cristallisé
+    const board = await boardsRepository.getBoard(input.boardId, userId);
+
+    if (!board) {
+      return { success: false, error: 'Pièce introuvable' };
     }
 
-    if (zone.crystallizedAt) {
-      return { success: false, error: 'Cette zone est déjà cristallisée' };
+    if (board.crystallizedAt) {
+      return { success: false, error: 'Cette pièce est déjà cristallisée' };
     }
 
-    // 2. Récupérer les éléments de la zone
-    const allElements = await elementsRepository.getElementsByBoard(input.boardId);
-    const zoneElements = allElements.filter(el => isElementInZone(el, zone));
+    // 2. Récupérer les éléments du board (child board has its own elements now)
+    const elements = await elementsRepository.getElementsByBoard(input.boardId);
 
-    if (zoneElements.length === 0) {
-      return { success: false, error: 'La zone ne contient aucun élément' };
+    if (elements.length === 0) {
+      return { success: false, error: 'La pièce ne contient aucun élément' };
     }
 
-       // 3. Créer le projet avec les données extraites
+    // 3. Créer le projet avec les données extraites
     const project = await createProjectInDb({
       name: input.projectName,
       userId,
       projectType: input.projectType,
-      description: `Créé depuis la zone "${zone.name}"`,
-      sourceBoardId: input.boardId,
-      sourceZoneId: input.zoneId,
+      description: `Créé depuis la pièce "${board.name}"`,
+      sourceBoardId: input.parentBoardId,
+      sourceZoneId: input.boardId,  // Keep for backward compat in projects table
     });
 
-    // 4. Marquer la zone comme cristallisée
-    const updatedZone = await zonesRepository.crystallizeZone(input.zoneId, project.id);
+    // 4. Marquer le board comme cristallisé
+    const updatedBoard = await boardsRepository.crystallizeBoard(input.boardId, project.id);
 
-    if (!updatedZone) {
+    if (!updatedBoard) {
       return { success: false, error: 'Erreur lors de la cristallisation' };
     }
 
     // 5. Revalidate paths
+    revalidatePath(`/boards/${input.parentBoardId}`);
     revalidatePath(`/boards/${input.boardId}`);
     revalidatePath('/projects');
 
@@ -85,14 +91,37 @@ export async function crystallizeZoneAction(
       success: true,
       data: {
         projectId: project.id,
-        zone: updatedZone,
+        board: updatedBoard,
       },
     };
   } catch (error) {
-    console.error('crystallizeZoneAction error:', error);
+    console.error('crystallizeBoardAction error:', error);
     return {
       success: false,
-      error: 'Impossible de cristalliser la zone'
+      error: 'Impossible de cristalliser la pièce'
     };
   }
+}
+
+// ============================================
+// DEPRECATED ALIAS
+// ============================================
+
+/**
+ * @deprecated Use crystallizeBoardAction instead
+ */
+export async function crystallizeZoneAction(
+  input: CrystallizeZoneInput
+): Promise<ActionResult<CrystallizeZoneResult>> {
+  // Map old field names to new
+  return crystallizeBoardAction({
+    boardId: (input as unknown as { zoneId?: string }).zoneId || input.boardId,
+    parentBoardId: input.parentBoardId,
+    projectName: input.projectName,
+    projectType: input.projectType,
+    client: input.client,
+    deadline: input.deadline,
+    budgetMin: input.budgetMin,
+    budgetMax: input.budgetMax,
+  });
 }

@@ -1,4 +1,5 @@
 // src/features/boards/infrastructure/elementsRepository.ts
+// UPDATED: UB-3 - Unified Boards Architecture (ADR-032) - Removed zoneId
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import type {
@@ -58,6 +59,7 @@ export async function getElementById(elementId: string): Promise<BoardElement | 
 
 // ============================================
 // ADD ELEMENT
+// UPDATED UB-3: Removed zoneId
 // ============================================
 
 export async function addElement(input: CreateElementInput): Promise<BoardElement> {
@@ -78,7 +80,7 @@ export async function addElement(input: CreateElementInput): Promise<BoardElemen
     .from('board_elements')
     .insert({
       board_id: input.boardId,
-      zone_id: input.zoneId || null,
+      // REMOVED UB-3: zone_id: input.zoneId || null,
       element_type: input.elementType,
       element_data: JSON.parse(JSON.stringify(input.elementData)),
       position_x: input.positionX ?? 100,
@@ -100,6 +102,7 @@ export async function addElement(input: CreateElementInput): Promise<BoardElemen
 
 // ============================================
 // UPDATE ELEMENT
+// UPDATED UB-3: Removed zoneId
 // ============================================
 
 export async function updateElement(
@@ -109,8 +112,8 @@ export async function updateElement(
   const supabase = createAdminClient();
 
   const updateData: Record<string, unknown> = {};
-  
-  if (input.zoneId !== undefined) updateData.zone_id = input.zoneId;
+
+  // REMOVED UB-3: if (input.zoneId !== undefined) updateData.zone_id = input.zoneId;
   if (input.elementData !== undefined) updateData.element_data = input.elementData as unknown as Record<string, unknown>;
   if (input.positionX !== undefined) updateData.position_x = input.positionX;
   if (input.positionY !== undefined) updateData.position_y = input.positionY;
@@ -137,7 +140,46 @@ export async function updateElement(
 }
 
 // ============================================
-// MOVE ELEMENT
+// NEW UB-3: MOVE ELEMENT TO ANOTHER BOARD
+// (replaces assignElementToZone)
+// ============================================
+
+export async function moveElementToBoard(
+  elementId: string,
+  targetBoardId: string,
+  newPosition?: { x: number; y: number }
+): Promise<BoardElement | null> {
+  const supabase = createAdminClient();
+
+  // UB-5: Repositionner l'élément à des coordonnées visibles dans le nouveau board
+  // Si pas de position spécifiée, utiliser une position aléatoire dans la zone visible
+  const positionX = newPosition?.x ?? 100 + Math.random() * 200;
+  const positionY = newPosition?.y ?? 100 + Math.random() * 200;
+
+  const { data, error } = await supabase
+    .from('board_elements')
+    .update({ 
+      board_id: targetBoardId,
+      position_x: positionX,
+      position_y: positionY,
+    })
+    .eq('id', elementId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    console.error('moveElementToBoard error:', error);
+    throw error;
+  }
+
+  return mapElementFromRow(data as unknown as BoardElementRow);
+}
+
+// ============================================
+// MOVE ELEMENT (position)
 // ============================================
 
 export async function moveElement(
@@ -212,7 +254,7 @@ export async function bulkMoveElements(
   );
 
   const results = await Promise.all(promises);
-  
+
   const hasError = results.some((r) => r.error);
   if (hasError) {
     console.error('bulkMoveElements errors:', results.filter((r) => r.error));
@@ -262,6 +304,7 @@ export const elementsRepository = {
   getElementById,
   addElement,
   updateElement,
+  moveElementToBoard,  // NEW UB-3
   moveElement,
   removeElement,
   bulkMoveElements,
